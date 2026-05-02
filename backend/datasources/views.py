@@ -5,6 +5,7 @@ from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 
 from projects.models import Project
 from .models import DataSource
@@ -46,7 +47,7 @@ def parse_json_body(request):
     except json.JSONDecodeError:
         return None
 
-
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def project_data_sources(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
