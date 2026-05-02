@@ -2,16 +2,20 @@ import { useEffect, useState } from "react";
 import { createProject, getProjects } from "../api/projects.js";
 
 function CreateProjectPage() {
+  // Form input states for the create project form
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
+  // Stores the list of projects shown in the preview section
   const [projects, setProjects] = useState([]);
 
+  // UI feedback states
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [nameError, setNameError] = useState("");
 
+  // Load existing projects when the page is opened
   useEffect(() => {
     async function loadProjects() {
       try {
@@ -26,6 +30,7 @@ function CreateProjectPage() {
     loadProjects();
   }, []);
 
+  // Handles form submission and creates a new project
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -35,6 +40,7 @@ function CreateProjectPage() {
     setErrorMessage("");
     setNameError("");
 
+    // Frontend validation before calling the API
     if (!name.trim()) {
       setNameError("Please enter a project name.");
       return;
@@ -52,6 +58,7 @@ function CreateProjectPage() {
         `Project "${createdProject.name}" was created successfully.`
       );
 
+      // Add the newly created project to the preview list
       setProjects((previousProjects) => [createdProject, ...previousProjects]);
 
       setName("");
@@ -59,6 +66,7 @@ function CreateProjectPage() {
     } catch (error) {
       console.error("Create project failed:", error);
 
+      // Show errors 
       if (error.name) {
         setNameError(error.name[0]);
       } else if (error.error) {
@@ -116,6 +124,7 @@ function CreateProjectPage() {
         {successMessage && <p className="success">{successMessage}</p>}
         {errorMessage && <p className="error">{errorMessage}</p>}
 
+        {/* Preview section for already created projects */}
         <div className="project-preview-section">
           <h2>Created Projects</h2>
 
