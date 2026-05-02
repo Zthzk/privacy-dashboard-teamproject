@@ -1,6 +1,11 @@
+// Mock API for US01.
+// These functions simulate the backend endpoints until the real backend is available.
+
+// Simulates POST /api/projects/
 export async function createProject(projectData) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
+      // Simulate backend validation: project name is required
       if (!projectData.name || projectData.name.trim() === "") {
         reject({
           name: ["This field may not be blank."],
@@ -8,6 +13,7 @@ export async function createProject(projectData) {
         return;
       }
 
+      // Simulate a successful backend response
       resolve({
         id: 1,
         name: projectData.name,
@@ -19,6 +25,7 @@ export async function createProject(projectData) {
   });
 }
 
+// Simulates GET /api/projects/
 export async function getProjects() {
   return [
     {
@@ -30,4 +37,3 @@ export async function getProjects() {
     },
   ];
 }
-
