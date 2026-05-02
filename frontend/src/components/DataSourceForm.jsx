@@ -41,6 +41,7 @@ function DataSourceForm({ projectId, onDataSourceAdded }) {
           setError(data.error)
         }
       })
+      .catch(() => setError('Could not reach the backend. Is the server running?'))
   }
 
   function resetForm() {
