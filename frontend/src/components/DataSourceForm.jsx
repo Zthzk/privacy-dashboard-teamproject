@@ -3,6 +3,7 @@
  * Calls onDataSourceAdded with the created data source on success.
  */
 import { useState } from 'react'
+import { createDataSource } from '../api/dataSources'
 
 const SOURCE_TYPES = ['file', 'database', 'api', 'url', 'manual', 'other']
 const DATA_FORMATS = ['text', 'image', 'csv', 'json', 'other']
@@ -16,34 +17,28 @@ function DataSourceForm({ projectId, onDataSourceAdded }) {
   const [containsPersonalData, setContainsPersonalData] = useState(false)
   const [error, setError] = useState(null)
 
-  function handleSubmit(event) {
+  /** Submits the form data to the backend and adds the result to the list on success. */
+  async function handleSubmit(event) {
     event.preventDefault()
     setError(null)
 
-    fetch(`/api/projects/${projectId}/datasources/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      const newDataSource = await createDataSource(projectId, {
         name,
         source_type: sourceType,
         data_format: dataFormat,
         description,
         location,
         contains_personal_data: containsPersonalData,
-      }),
-    })
-      .then(response => response.json().then(data => ({ status: response.status, data })))
-      .then(({ status, data }) => {
-        if (status === 201) {
-          onDataSourceAdded(data)
-          resetForm()
-        } else {
-          setError(data.error)
-        }
       })
-      .catch(() => setError('Could not reach the backend. Is the server running?'))
+      onDataSourceAdded(newDataSource)
+      resetForm()
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
+  /** Resets all form fields back to their default values. */
   function resetForm() {
     setName('')
     setSourceType('file')

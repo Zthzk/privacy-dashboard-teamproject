@@ -2,6 +2,8 @@
 // These functions simulate the backend endpoints until the real backend is available.
 
 // Simulates POST /api/projects/
+
+/** Maybe we do not need this anymore because we may have implemented everything inside of dataSources.js */
 export async function createProject(projectData) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
