@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class RiskAssessmentsConfig(AppConfig):
-    name = 'risk_assessments'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.risk_assessments"
