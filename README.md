@@ -1,20 +1,73 @@
-# Willkommen zum Teamprojekt!
+# Privacy Dashboard
 
-In diesem Github Repository wird ein großer Teil Eurer Arbeit stattfinden.
-Bitte stellt sicher, dass Ihr
+A web dashboard for monitoring and documenting privacy risks in machine learning pipeline datasets.
 
->  [Anforderungen im Teamprojekt](COURSE-DESCRIPTION.md)
+The application helps ML engineers, data protection officers, and project teams understand whether datasets contain personal data, whether special categories under Art. 9 GDPR may be involved, and where privacy-related action is needed.
 
-lest.
+<!-- ## Tech Stack
 
-## GitHub Tour
+- Frontend: React + Vite
+- Backend: Django + Django REST Framework
+- Database: SQLite for development
+- API Format: JSON over HTTP
+- Authentication: planned with JWT -->
 
-- In [Issues](../../issues) könnt Ihr entdeckte Fehler (Bugs), User Stories und andere Tickets festhalten, damit ihr nicht vergesst diese zu bearbeiten.
+## Project Structure
 
-- [Pull Requests](../../pulls) sind spezielle Issues, die dazu verwendet werden, um Code Reviews durchzuführen.
+```text
+privacy-dashboard-teamproject/
+├── frontend/   # React user interface
+├── backend/    # Django REST API
+├── docs/       # project documentation
+└── README.md
+```
 
-- In [Projects](../../projects) könnt Ihr Euch ein Sprint Board anlegen, um die nächste Iteration zu planen und Euren Fortschritt nachzuvollziehen. Eine Vorlage kann [hier](https://github.com/se-tuebingen/teamprojekt-vorlage/projects/1) gefunden werden.
+## How to Run the Project
+### Backend
+In terminal:
+```text
+cd backend
+source .venv/bin/activate
+python manage.py runserver
+```
+Backend runs at:\
+http://127.0.0.1:8000
 
-- Das [Wiki](../../wiki)  kann genutzt werden, um zum Beispiel weitere inhaltliche Anforderungen zu erfassen, die Definition-of-Done zu dokumentieren oder Protokolle und Entscheidungen des Teams festzuhalten.
+Health check endpoint:\
+http://127.0.0.1:8000/api/health
 
-- [Actions](../../actions) erlauben Euch Continuous Integration (CI) und automatisiertes Testen für jeden Pull Request und jedes Release einzurichten.
+### Frontend
+Open a second terminal:
+
+```text
+cd frontend
+npm run dev
+```
+
+Frontend runs at:\
+http://localhost:5173
+
+Both frontend and backend must run at the same time during development.
+
+## Development Principle
+Every user story should be implemented through a clear frontend/backend flow:
+```text
+React page or component
+↓
+frontend API function
+↓
+Django REST endpoint
+↓
+serializer
+↓
+model/database
+```
+
+## Documentation
+Important project documents are stored in `docs/`: 
+
+- `architecture.md`: technical architecture and folder responsibilities
+- `development-workflow.md`: how to implement a user story
+- `api.md`: API endpoint conventions
+- `user-stories.md`: project user stories and implementation mapping
+- `definition-of-done.md`: completion criteria
