@@ -16,6 +16,7 @@ class AuthenticationTests(TestCase):
         """Create a test user and initialize the API client before each test."""
         self.client = APIClient()
 
+        """Temporary test user"""
         self.username = "admin"
         self.password = "1234"
 
