@@ -1,6 +1,6 @@
 import json
 
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from projects.models import Project
@@ -49,6 +49,23 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(data_source.source_type, DataSource.SourceType.FILE)
         self.assertEqual(data_source.data_format, DataSource.DataFormat.CSV)
         self.assertTrue(data_source.contains_personal_data)
+
+    def test_can_add_data_source_with_csrf_checks_enabled(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+
+        response = csrf_client.post(
+            self.url,
+            data=json.dumps({"name": "API Source"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(
+            DataSource.objects.filter(
+                project=self.project,
+                name="API Source",
+            ).exists()
+        )
 
     def test_lists_only_data_sources_for_requested_project(self):
         DataSource.objects.create(
