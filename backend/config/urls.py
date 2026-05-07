@@ -16,10 +16,27 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 from apps.projects.views import health_check
+from apps.users.views import current_user
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health_check),
+
+    # Authentication API
+    # The React frontend sends username and password here and receives access/refresh tokens.
+    path("api/auth/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+
+    # Authentication API
+    # The React frontend uses this endpoint to refresh an expired access token.
+    path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+
+    # Authentication API
+    # Returns the currently logged-in user when a valid JWT access token is provided.
+    path("api/auth/me/", current_user, name="current_user"),
 ]
+
+
 
