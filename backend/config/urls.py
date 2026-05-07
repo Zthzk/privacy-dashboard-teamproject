@@ -22,5 +22,5 @@ from apps.projects.views import health_check
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("apps.data_sources.urls")),
-    path("api/health/", health_check),
+    path("api/health/", health_check, name="health-check"),
 ]
