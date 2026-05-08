@@ -1,0 +1,20 @@
+{
+  "id": "ds_004",
+  "name": "Medical Notes",
+  "type": "text",
+  "description": "Synthetic medical notes containing health-related information.",
+  "contains_personal_data": true,
+  "contains_art9_data": true,
+  "risk_level": "red",
+  "detected_categories": [
+    "name",
+    "health_data",
+    "diagnosis",
+    "medication"
+  ],
+  "sample_records": [
+    "Patient: Maria Fischer. Diagnosis: diabetes type 2.",
+    "Patient: Lukas Wagner. Medication: antidepressants.",
+    "Patient: Nina Hoffmann. Medical note: asthma treatment follow-up required."
+  ]
+}
