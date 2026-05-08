@@ -15,6 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+<<<<<<< HEAD
 from django.urls import path
 from apps.projects.views import health_check
 
@@ -23,3 +24,11 @@ urlpatterns = [
     path("api/health/", health_check),
 ]
 
+=======
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path("", include("create_projects.urls")),
+]
+>>>>>>> origin/feature/us01-create-project-backend

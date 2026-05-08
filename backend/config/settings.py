@@ -20,7 +20,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+<<<<<<< HEAD
 SECRET_KEY = 'django-insecure-%ax+dr+wlu-&%kh$461lsqqvunesw#c)+!7ied3p5yb51tv*x7'
+=======
+SECRET_KEY = 'django-insecure-#s2c0@!bc0)+jz4h$b0p7on1_qs(*g90a@t8v&x7*0&v7j*_nx'
+>>>>>>> origin/feature/us01-create-project-backend
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -31,13 +35,17 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+<<<<<<< HEAD
     # Django default apps
+=======
+>>>>>>> origin/feature/us01-create-project-backend
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+<<<<<<< HEAD
 
     # Third-party apps
     "rest_framework",
@@ -53,6 +61,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
 
+=======
+    'rest_framework',
+    'create_projects',
+]
+
+MIDDLEWARE = [
+>>>>>>> origin/feature/us01-create-project-backend
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -111,11 +126,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+<<<<<<< HEAD
 # allow the frontend to visit the backend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
 
+=======
+>>>>>>> origin/feature/us01-create-project-backend
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
