@@ -4,3 +4,27 @@
 #
 # Further info:
 #     https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository#Ignoring-Files
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+db.sqlite3
+
+# Django
+backend/staticfiles/
+backend/media/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
