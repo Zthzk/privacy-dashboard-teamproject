@@ -28,12 +28,15 @@ function Sidebar({ projects }) {
               {projects.length === 0 ? (
                 <p className="submenu-empty">No projects yet</p>
               ) : (
-                projects.map((project) => (
+                projects.slice(0, 5).map((project) => (
                   <div key={project.id} className="nav-subitem">
-                    <span className="subitem-icon">📊</span>
+                    <span className="subitem-icon">📋</span>
                     <span className="subitem-label">{project.name}</span>
                   </div>
                 ))
+              )}
+              {projects.length > 5 && (
+                <p className="submenu-more">+{projects.length - 5} more...</p>
               )}
             </div>
           )}

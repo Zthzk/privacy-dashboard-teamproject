@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createProject } from "../api/projects.js";
 import "../styles/create-project-panel.css";
 
 function CreateProjectPanel({ onProjectCreated }) {
+  const descriptionRef = useRef(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -79,6 +80,14 @@ function CreateProjectPanel({ onProjectCreated }) {
               setName(event.target.value);
               setNameError("");
             }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (descriptionRef.current) {
+                  descriptionRef.current.focus();
+                }
+              }
+            }}
             placeholder="e.g., GDPR Compliance Dashboard"
             className={nameError ? "input-error" : ""}
           />
@@ -89,6 +98,7 @@ function CreateProjectPanel({ onProjectCreated }) {
           <label htmlFor="project-description">Description</label>
           <textarea
             id="project-description"
+            ref={descriptionRef}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Describe your project's purpose and scope..."

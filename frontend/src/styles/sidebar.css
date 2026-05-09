@@ -114,6 +114,16 @@
   margin: 0;
 }
 
+.submenu-more {
+  padding: 0.75rem 2rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  font-style: italic;
+  margin: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
 /* Footer */
 .sidebar-footer {
   padding: 1.5rem;

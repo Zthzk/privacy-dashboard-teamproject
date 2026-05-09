@@ -7,16 +7,30 @@
 
 .dashboard-main {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 2rem;
 }
 
 .dashboard-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(380px, 1fr);
   gap: 2rem;
+  align-items: start;
+  height: calc(100vh - 4rem);
+}
+
+.dashboard-content > * {
+  width: 100%;
+  overflow-y: auto;
+  max-height: calc(100vh - 4rem);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-content {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 /* Global Error */
@@ -45,6 +59,18 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .dashboard-content {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+
+  .dashboard-content > * {
+    max-height: 60vh;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-container {
     flex-direction: column;
@@ -52,9 +78,16 @@
 
   .dashboard-main {
     padding: 1rem;
+    overflow: hidden;
   }
 
   .dashboard-content {
     gap: 1.5rem;
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-content > * {
+    max-height: 50vh;
   }
 }
