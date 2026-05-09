@@ -202,7 +202,29 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-  overflow: hidden;
+
+.rename-input {
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  color: white;
+  font-family: inherit;
+  width: 100%;
+  max-width: 300px;
+}
+
+.rename-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.rename-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 
 .project-meta {

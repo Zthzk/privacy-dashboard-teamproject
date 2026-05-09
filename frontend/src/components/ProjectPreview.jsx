@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import "../styles/project-preview.css";
 
-function ProjectCard({ project }) {
+function ProjectCard({ project, onDelete, onUpdate }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [newName, setNewName] = useState(project.name);
   const cardRef = useRef(null);
+  const renameInputRef = useRef(null);
 
   useEffect(() => {
     function handleOutsideClick(event) {
@@ -16,11 +19,63 @@ function ProjectCard({ project }) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (isRenaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  const handleRenameStart = () => {
+    setIsRenaming(true);
+    setMenuOpen(false);
+  };
+
+  const handleRenameSave = async () => {
+    if (newName.trim() && newName !== project.name) {
+      await onUpdate(project.id, { name: newName.trim() });
+    }
+    setIsRenaming(false);
+  };
+
+  const handleRenameCancel = () => {
+    setNewName(project.name);
+    setIsRenaming(false);
+  };
+
+  const handleRenameKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleRenameSave();
+    } else if (e.key === "Escape") {
+      handleRenameCancel();
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete "${project.name}"?`)) {
+      await onDelete(project.id);
+      setMenuOpen(false);
+    }
+  };
+
   return (
     <div className={`project-item ${menuOpen ? "project-item--open" : ""}`} ref={cardRef}>
       <div className="project-item-top">
         <div className="project-header">
-          <h3>{project.name}</h3>
+          {isRenaming ? (
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onBlur={handleRenameSave}
+              onKeyDown={handleRenameKeyDown}
+              className="rename-input"
+            />
+          ) : (
+            <h3>{project.name}</h3>
+          )}
         </div>
         <div className="project-item-actions">
           <button
@@ -33,13 +88,10 @@ function ProjectCard({ project }) {
           </button>
           {menuOpen && (
             <div className="project-menu">
-              <button type="button" className="project-menu-item">
-                Edit
-              </button>
-              <button type="button" className="project-menu-item">
+              <button type="button" className="project-menu-item" onClick={handleRenameStart}>
                 Rename
               </button>
-              <button type="button" className="project-menu-item project-menu-item-danger">
+              <button type="button" className="project-menu-item project-menu-item-danger" onClick={handleDelete}>
                 Delete
               </button>
             </div>
@@ -59,7 +111,7 @@ function ProjectCard({ project }) {
   );
 }
 
-function ProjectPreview({ projects, loading }) {
+function ProjectPreview({ projects, loading, onDeleteProject, onUpdateProject }) {
   if (loading) {
     return (
       <div className="project-preview-panel">
@@ -89,7 +141,12 @@ function ProjectPreview({ projects, loading }) {
       ) : (
         <div className="project-grid">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onDelete={onDeleteProject}
+              onUpdate={onUpdateProject}
+            />
           ))}
         </div>
       )}

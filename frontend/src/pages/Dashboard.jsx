@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getProjects } from "../api/projects.js";
+import { getProjects, deleteProject, updateProject } from "../api/projects.js";
 import Sidebar from "../components/Sidebar.jsx";
 import CreateProjectPanel from "../components/CreateProjectPanel.jsx";
 import ProjectPreview from "../components/ProjectPreview.jsx";
@@ -32,6 +32,30 @@ function Dashboard() {
     setProjects((prev) => [newProject, ...prev]);
   }
 
+  async function handleDeleteProject(projectId) {
+    try {
+      await deleteProject(projectId);
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setError("");
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      setError("Could not delete project. Please try again.");
+    }
+  }
+
+  async function handleUpdateProject(projectId, updateData) {
+    try {
+      const updatedProject = await updateProject(projectId, updateData);
+      setProjects((prev) =>
+        prev.map((p) => (p.id === projectId ? updatedProject : p))
+      );
+      setError("");
+    } catch (err) {
+      console.error("Failed to update project:", err);
+      setError("Could not update project. Please try again.");
+    }
+  }
+
   return (
     <div className="dashboard-container">
       <Sidebar projects={projects} />
@@ -39,7 +63,12 @@ function Dashboard() {
       <main className="dashboard-main">
         <div className="dashboard-content">
           <CreateProjectPanel onProjectCreated={handleProjectCreated} />
-          <ProjectPreview projects={projects} loading={loading} />
+          <ProjectPreview
+            projects={projects}
+            loading={loading}
+            onDeleteProject={handleDeleteProject}
+            onUpdateProject={handleUpdateProject}
+          />
         </div>
       </main>
 

@@ -38,3 +38,32 @@ export async function getProjects() {
     throw error;
   }
 }
+
+/**
+ * Update a project (rename or edit description)
+ * PATCH /api/projects/<id>/
+ */
+export async function updateProject(projectId, updateData) {
+  try {
+    const response = await apiClient.patch(`/projects/${projectId}/`, updateData);
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 400) {
+      throw error.response.data;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Delete a project
+ * DELETE /api/projects/<id>/
+ */
+export async function deleteProject(projectId) {
+  try {
+    await apiClient.delete(`/projects/${projectId}/`);
+  } catch (error) {
+    console.error("Failed to delete project:", error);
+    throw error;
+  }
+}

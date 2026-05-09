@@ -12,7 +12,9 @@ function CreateProjectPanel({ onProjectCreated }) {
   const [nameError, setNameError] = useState("");
 
   async function handleSubmit(event) {
-    event.preventDefault();
+    if (event) {
+      event.preventDefault();
+    }
 
     setSuccessMessage("");
     setErrorMessage("");
@@ -38,12 +40,10 @@ function CreateProjectPanel({ onProjectCreated }) {
       setName("");
       setDescription("");
 
-      // Notify parent component
       if (onProjectCreated) {
         onProjectCreated(createdProject);
       }
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Create project failed:", error);
@@ -59,6 +59,28 @@ function CreateProjectPanel({ onProjectCreated }) {
       setLoading(false);
     }
   }
+
+  const handleNameKeyDown = (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      handleSubmit(event);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (descriptionRef.current) {
+        descriptionRef.current.focus();
+      }
+    }
+  };
+
+  const handleDescriptionKeyDown = (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      handleSubmit(event);
+    }
+  };
 
   return (
     <div className="create-project-panel">
@@ -80,14 +102,7 @@ function CreateProjectPanel({ onProjectCreated }) {
               setName(event.target.value);
               setNameError("");
             }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                if (descriptionRef.current) {
-                  descriptionRef.current.focus();
-                }
-              }
-            }}
+            onKeyDown={handleNameKeyDown}
             placeholder="e.g., GDPR Compliance Dashboard"
             className={nameError ? "input-error" : ""}
           />
@@ -101,6 +116,7 @@ function CreateProjectPanel({ onProjectCreated }) {
             ref={descriptionRef}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
+            onKeyDown={handleDescriptionKeyDown}
             placeholder="Describe your project's purpose and scope..."
             rows="4"
           />
