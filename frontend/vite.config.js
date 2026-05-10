@@ -10,4 +10,9 @@ export default defineConfig({
       '/api': BACKEND_URL,
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test-setup.js'],
+  },
 })
