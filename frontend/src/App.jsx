@@ -12,6 +12,7 @@ function App() {
     const [projects, setProjects] = useState(null);
     const [error, setError] = useState("");
 
+
     useEffect(() => {
         axios
             .get(`${API_BASE_URL}/api/health/`)
@@ -125,32 +126,33 @@ function App() {
 
                         <label htmlFor="password">Password</label>
                         <input
-                            id="password"
-                            type="password"
-                            required
-                            placeholder="Enter password"
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)}
-                            onKeyDown={(event) => {
+                                id="password"
+                                type="password"
+                                required
+                                placeholder="Enter password"
+                                value={password}
+                                onChange={(event) => setPassword(event.target.value)}
+                                onKeyDown={(event) => {
 
-                                // ArrowUp → username'e dön
-                                if (event.key === "ArrowUp") {
-                                    event.preventDefault();
-                                    document.getElementById("username").focus();
-                                }
+                                    // ArrowUp → username'e dön
+                                    if (event.key === "ArrowUp") {
+                                        event.preventDefault();
+                                        document.getElementById("username").focus();
+                                    }
 
-                                // Enter → login ol
-                                if (event.key === "Enter") {
-                                    event.preventDefault();
-                                    handleLogin(event);
-                                }
-                            }}
-                        />
+                                    // Enter → login ol
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        handleLogin(event);
+                                    }
+                                }}
+                            />
+
                         <button type="submit">Sign in</button>
                         {error && <div className="error-message">{error}</div>}
                     </form>
 
-                    </section>
+                </section>
             </main>
         );
     }

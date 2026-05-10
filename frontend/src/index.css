@@ -1,9 +1,14 @@
 html,
 body,
 #root {
-  margin: 0;
   width: 100%;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow: hidden;
 }
 
 * {

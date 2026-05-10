@@ -7,13 +7,14 @@ body {
 .login-page,
 .dashboard-page {
   min-height: 100vh;
-  width: 100%;
+  width: 100vw;
   display: flex;
   justify-content: center;
   align-items: center;
   background:
-          radial-gradient(circle at top left, #dbeafe, transparent 35%),
-          linear-gradient(135deg, #f8fafc, #e5e7eb);
+          radial-gradient(circle at top left, rgba(240, 147, 251, 0.25), transparent 35%),
+          radial-gradient(circle at bottom right, rgba(102, 126, 234, 0.18), transparent 30%),
+          linear-gradient(135deg, #f5f7fa 0%, #f8f4ff 100%);
 }
 
 .login-card,
@@ -23,8 +24,7 @@ body {
   background: white;
   padding: 36px;
   border-radius: 18px;
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
-  text-align: center;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.12);  text-align: center;
 }
 
 .login-header h1,
@@ -61,8 +61,8 @@ body {
 
 .login-form input:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.18);
 }
 
 .login-form button,
@@ -108,3 +108,11 @@ body {
   border-radius: 10px;
   color: #374151;
 }
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+
+
+
