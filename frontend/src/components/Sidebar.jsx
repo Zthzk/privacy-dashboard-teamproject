@@ -1,7 +1,7 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import "../styles/sidebar.css";
 
-function Sidebar({ projects }) {
+function Sidebar({ projects, selectedProjectId, onSelectProject }) {
   const [projectsExpanded, setProjectsExpanded] = useState(true);
 
   return (
@@ -13,13 +13,13 @@ function Sidebar({ projects }) {
       <nav className="sidebar-nav">
         <div className="nav-section">
           <button
+            type="button"
             className="nav-item nav-main"
             onClick={() => setProjectsExpanded(!projectsExpanded)}
           >
-            <span className="nav-icon">📁</span>
             <span className="nav-label">Projects</span>
             <span className={`expand-icon ${projectsExpanded ? "open" : ""}`}>
-              ▼
+              v
             </span>
           </button>
 
@@ -28,15 +28,19 @@ function Sidebar({ projects }) {
               {projects.length === 0 ? (
                 <p className="submenu-empty">No projects yet</p>
               ) : (
-                projects.slice(0, 5).map((project) => (
-                  <div key={project.id} className="nav-subitem">
-                    <span className="subitem-icon">📋</span>
+                projects.slice(0, 8).map((project) => (
+                  <button
+                    type="button"
+                    key={project.id}
+                    className={`nav-subitem ${project.id === selectedProjectId ? "nav-subitem--active" : ""}`}
+                    onClick={() => onSelectProject(project.id)}
+                  >
                     <span className="subitem-label">{project.name}</span>
-                  </div>
+                  </button>
                 ))
               )}
-              {projects.length > 5 && (
-                <p className="submenu-more">+{projects.length - 5} more...</p>
+              {projects.length > 8 && (
+                <p className="submenu-more">+{projects.length - 8} more...</p>
               )}
             </div>
           )}

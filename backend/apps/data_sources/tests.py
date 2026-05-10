@@ -1,4 +1,4 @@
-import json
+﻿import json
 
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -118,9 +118,87 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("source_type", response.json()["errors"])
 
+    def test_can_update_data_source(self):
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Old Source",
+            source_type=DataSource.SourceType.FILE,
+            data_format=DataSource.DataFormat.TEXT,
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={
+                "project_id": self.project.id,
+                "data_source_id": data_source.id,
+            },
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({
+                "name": "Updated Source",
+                "source_type": DataSource.SourceType.API,
+                "data_format": DataSource.DataFormat.JSON,
+                "location": "https://example.test/api",
+                "contains_personal_data": True,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data_source.refresh_from_db()
+        self.assertEqual(data_source.name, "Updated Source")
+        self.assertEqual(data_source.source_type, DataSource.SourceType.API)
+        self.assertEqual(data_source.data_format, DataSource.DataFormat.JSON)
+        self.assertEqual(data_source.location, "https://example.test/api")
+        self.assertTrue(data_source.contains_personal_data)
+
+    def test_can_delete_data_source(self):
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Temporary Source",
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={
+                "project_id": self.project.id,
+                "data_source_id": data_source.id,
+            },
+        )
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"deleted": data_source.id})
+        self.assertFalse(DataSource.objects.filter(id=data_source.id).exists())
+
+    def test_cannot_update_data_source_from_other_project(self):
+        data_source = DataSource.objects.create(
+            project=self.other_project,
+            name="Other Project Source",
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={
+                "project_id": self.project.id,
+                "data_source_id": data_source.id,
+            },
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({"name": "Should Not Update"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        data_source.refresh_from_db()
+        self.assertEqual(data_source.name, "Other Project Source")
+
     def test_unknown_project_returns_404(self):
         response = self.client.get(
             reverse("project-data-sources", kwargs={"project_id": 9999})
         )
 
         self.assertEqual(response.status_code, 404)
+

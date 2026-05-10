@@ -1,3 +1,5 @@
+﻿import json
+
 from django.contrib import admin
 from django.test import TestCase
 from django.urls import reverse
@@ -47,3 +49,73 @@ class HealthCheckTests(TestCase):
             response.json(),
             {"message": "Privacy Dashboard backend is running"},
         )
+
+
+class ProjectsApiTests(TestCase):
+    def post_json(self, url, payload):
+        return self.client.post(
+            url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def patch_json(self, url, payload):
+        return self.client.patch(
+            url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_can_create_project(self):
+        response = self.post_json(
+            reverse("projects"),
+            {
+                "name": "Privacy Dashboard",
+                "description": "ML privacy project",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Project.objects.count(), 1)
+        payload = response.json()
+        self.assertEqual(payload["name"], "Privacy Dashboard")
+        self.assertEqual(payload["description"], "ML privacy project")
+        self.assertEqual(payload["status"], Project.Status.ACTIVE)
+
+    def test_can_list_projects(self):
+        project = Project.objects.create(name="Privacy Dashboard")
+
+        response = self.client.get(reverse("projects"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["projects"]), 1)
+        self.assertEqual(payload["projects"][0]["id"], project.id)
+
+    def test_rejects_blank_project_name(self):
+        response = self.post_json(reverse("projects"), {"name": ""})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.json()["errors"])
+        self.assertIn("name", response.json())
+
+    def test_can_rename_project(self):
+        project = Project.objects.create(name="Old Name")
+        url = reverse("project-detail", kwargs={"project_id": project.id})
+
+        response = self.patch_json(url, {"name": "New Name"})
+
+        self.assertEqual(response.status_code, 200)
+        project.refresh_from_db()
+        self.assertEqual(project.name, "New Name")
+        self.assertEqual(response.json()["name"], "New Name")
+
+    def test_can_delete_project(self):
+        project = Project.objects.create(name="Temporary Project")
+        url = reverse("project-detail", kwargs={"project_id": project.id})
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"deleted": project.id})
+        self.assertFalse(Project.objects.filter(id=project.id).exists())

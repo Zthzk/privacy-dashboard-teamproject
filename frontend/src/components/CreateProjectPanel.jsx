@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+﻿import { useRef, useState } from "react";
 import { createProject } from "../api/projects.js";
 import "../styles/create-project-panel.css";
 
@@ -85,7 +85,7 @@ function CreateProjectPanel({ onProjectCreated }) {
   return (
     <div className="create-project-panel">
       <div className="panel-header">
-        <h2>✨ Create New Project</h2>
+        <h2>Create New Project</h2>
         <p className="panel-subtitle">
           Start a new privacy dashboard project
         </p>
