@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
 
+// Base URL for backend API requests
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 function App() {
@@ -12,7 +13,7 @@ function App() {
     const [projects, setProjects] = useState(null);
     const [error, setError] = useState("");
 
-
+    // Restore user session if a valid token already exists
     useEffect(() => {
         axios
             .get(`${API_BASE_URL}/api/health/`)
@@ -31,6 +32,7 @@ function App() {
         }
     }, []);
 
+    // Fetch the currently authenticated user
     const fetchCurrentUser = async (token) => {
         try {
             const response = await axios.get(`${API_BASE_URL}/api/auth/me/`, {
@@ -47,10 +49,12 @@ function App() {
         }
     };
 
+    // Fetch protected project data using JWT authentication
     const fetchProjects = async (token) => {
         try {
             const response = await axios.get(`${API_BASE_URL}/api/projects/`, {
                 headers: {
+                    // Send JWT access token with authenticated requests
                     Authorization: `Bearer ${token}`,
                 },
             });
@@ -61,6 +65,7 @@ function App() {
         }
     };
 
+    // Handle user login and store JWT tokens
     const handleLogin = async (event) => {
         event.preventDefault();
         setError("");
@@ -72,7 +77,7 @@ function App() {
             });
 
             const { access, refresh } = response.data;
-
+            // Store JWT tokens in browser localStorage
             localStorage.setItem("accessToken", access);
             localStorage.setItem("refreshToken", refresh);
 
