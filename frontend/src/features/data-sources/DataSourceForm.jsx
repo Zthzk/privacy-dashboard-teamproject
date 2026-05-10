@@ -3,7 +3,7 @@
  * Calls onDataSourceAdded with the created data source on success.
  */
 import { useState } from 'react'
-import { createDataSource } from '../api/dataSources'
+import { createDataSource } from '../../api/dataSources'
 
 const SOURCE_TYPES = ['file', 'database', 'api', 'url', 'manual', 'other']
 const DATA_FORMATS = ['text', 'image', 'csv', 'json', 'other']

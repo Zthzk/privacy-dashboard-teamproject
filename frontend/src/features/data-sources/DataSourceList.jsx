@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from 'react'
 import DataSourceForm from './DataSourceForm'
-import { fetchDataSources } from '../api/dataSources'
+import { fetchDataSources } from '../../api/dataSources'
 
 //Placeholder should be changed when US01 is fully implemented
 const PROJECT_ID = 1

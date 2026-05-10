@@ -1,7 +1,7 @@
 /**
  * Page for viewing and adding data sources for a project.
  */
-import DataSourceList from "../components/DataSourceList";
+import DataSourceList from "./DataSourceList";
 
 function DataSourcesPage() {
   return (
