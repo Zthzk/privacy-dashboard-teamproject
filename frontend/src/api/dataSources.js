@@ -20,7 +20,10 @@ function normalizeError(error) {
 
   return data;
 }
-
+/**
+ * Sends GET request to the backend
+ * RETURN Datasource array
+ */
 export async function getDataSources(projectId) {
   try {
     const response = await apiClient.get(`/projects/${projectId}/datasources/`);
@@ -30,6 +33,11 @@ export async function getDataSources(projectId) {
   }
 }
 
+/**
+ * Creates datasource object
+ * Sends object to the backend
+ * RETURN datasource object
+ */
 export async function createDataSource(projectId, dataSourceData) {
   try {
     const response = await apiClient.post(
@@ -42,6 +50,10 @@ export async function createDataSource(projectId, dataSourceData) {
   }
 }
 
+/**
+ * Updates a datasource and allows to make changes on the datasource
+ * RETURN updated datasource back to the frontend
+ */
 export async function updateDataSource(projectId, dataSourceId, dataSourceData) {
   try {
     const response = await apiClient.patch(
@@ -53,7 +65,9 @@ export async function updateDataSource(projectId, dataSourceId, dataSourceData) 
     throw normalizeError(error);
   }
 }
-
+/**
+ * Delete a datasource
+ */
 export async function deleteDataSource(projectId, dataSourceId) {
   try {
     await apiClient.delete(`/projects/${projectId}/datasources/${dataSourceId}/`);
