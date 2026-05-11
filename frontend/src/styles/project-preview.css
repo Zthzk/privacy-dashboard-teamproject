@@ -196,11 +196,9 @@
   margin: 0 0 1rem 0;
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.95rem;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .rename-input {

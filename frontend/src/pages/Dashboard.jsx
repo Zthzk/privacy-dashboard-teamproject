@@ -61,6 +61,29 @@ function Dashboard() {
       <Sidebar projects={projects} />
 
       <main className="dashboard-main">
+        <header className="dashboard-header">
+          <div>
+            <h1>Privacy Dashboard</h1>
+            <p>Manage projects, settings, and your profile from one place.</p>
+          </div>
+          <div className="dashboard-header-actions">
+            <button
+              type="button"
+              className="header-action-btn"
+              onClick={() => alert("Open dashboard settings")}
+            >
+              Dashboard Settings
+            </button>
+            <button
+              type="button"
+              className="header-action-btn"
+              onClick={() => alert("View account profile")}
+            >
+              Profile
+            </button>
+          </div>
+        </header>
+
         <div className="dashboard-content">
           <CreateProjectPanel onProjectCreated={handleProjectCreated} />
           <ProjectPreview

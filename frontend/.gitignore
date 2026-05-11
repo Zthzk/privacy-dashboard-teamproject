@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ignore cache files
+__pycache__/
+*.py[cod]
+*$py.class
