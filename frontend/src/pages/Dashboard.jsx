@@ -11,6 +11,7 @@ function Dashboard() {
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [navigationActive, setNavigationActive] = useState(false);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) || null,
@@ -45,6 +46,32 @@ function Dashboard() {
     return () => {
       ignore = true;
     };
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (!navigationActive || projects.length === 0) return;
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+      event.preventDefault();
+      const currentIndex = projects.findIndex((p) => p.id === selectedProjectId);
+      if (event.key === "ArrowDown") {
+        const nextIndex = Math.min(currentIndex + 1, projects.length - 1);
+        setSelectedProjectId(projects[nextIndex].id);
+      } else {
+        const prevIndex = Math.max(currentIndex - 1, 0);
+        setSelectedProjectId(projects[prevIndex].id);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [navigationActive, projects, selectedProjectId]);
+
+  useEffect(() => {
+    function handleMouseDown(event) {
+      setNavigationActive(!!event.target.closest("[data-project-nav]"));
+    }
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
 
   function handleProjectCreated(newProject) {

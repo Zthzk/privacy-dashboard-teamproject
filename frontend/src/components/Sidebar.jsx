@@ -31,6 +31,7 @@ function Sidebar({ projects, selectedProjectId, onSelectProject }) {
                 projects.slice(0, 8).map((project) => (
                   <button
                     type="button"
+                    data-project-nav
                     key={project.id}
                     className={`nav-subitem ${project.id === selectedProjectId ? "nav-subitem--active" : ""}`}
                     onClick={() => onSelectProject(project.id)}

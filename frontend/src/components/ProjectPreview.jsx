@@ -69,6 +69,7 @@ function ProjectCard({ project, selected, onSelect, onDelete, onUpdate }) {
   return (
     <button
       type="button"
+      data-project-nav
       className={`project-item ${selected ? "project-item--selected" : ""} ${menuOpen ? "project-item--open" : ""}`}
       onClick={() => onSelect(project.id)}
       ref={cardRef}
