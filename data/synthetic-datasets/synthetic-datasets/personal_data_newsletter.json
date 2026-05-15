@@ -1,0 +1,30 @@
+{
+  "id": "ds_002",
+  "name": "Newsletter Subscribers",
+  "type": "tabular",
+  "description": "Synthetic subscriber list containing names and email addresses.",
+  "contains_personal_data": true,
+  "contains_art9_data": false,
+  "risk_level": "yellow",
+  "detected_categories": [
+    "name",
+    "email"
+  ],
+  "sample_records": [
+    {
+      "name": "Max Mueller",
+      "email": "max.mueller@example.com",
+      "subscription_status": "active"
+    },
+    {
+      "name": "Sarah Klein",
+      "email": "sarah.klein@example.com",
+      "subscription_status": "active"
+    },
+    {
+      "name": "Jonas Becker",
+      "email": "jonas.becker@example.com",
+      "subscription_status": "inactive"
+    }
+  ]
+}
