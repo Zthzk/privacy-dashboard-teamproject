@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getProjects, deleteProject, updateProject } from "../api/projects.js";
 import Sidebar from "../components/Sidebar.jsx";
 import CreateProjectPanel from "../components/CreateProjectPanel.jsx";
@@ -53,7 +53,7 @@ function Dashboard() {
       if (!navigationActive || projects.length === 0) return;
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
       event.preventDefault();
-      const currentIndex = projects.findIndex((p) => p.id === selectedProjectId);
+      const currentIndex = projects.findIndex((project) => project.id === selectedProjectId);
       if (event.key === "ArrowDown") {
         const nextIndex = Math.min(currentIndex + 1, projects.length - 1);
         setSelectedProjectId(projects[nextIndex].id);
@@ -62,6 +62,7 @@ function Dashboard() {
         setSelectedProjectId(projects[prevIndex].id);
       }
     }
+
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [navigationActive, projects, selectedProjectId]);
@@ -70,6 +71,7 @@ function Dashboard() {
     function handleMouseDown(event) {
       setNavigationActive(!!event.target.closest("[data-project-nav]"));
     }
+
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
@@ -100,7 +102,7 @@ function Dashboard() {
     try {
       const updatedProject = await updateProject(projectId, updateData);
       setProjects((prev) =>
-        prev.map((project) => (project.id === projectId ? updatedProject : project))
+        prev.map((project) => (project.id === projectId ? updatedProject : project)),
       );
       setError("");
     } catch (err) {
@@ -118,6 +120,29 @@ function Dashboard() {
       />
 
       <main className="dashboard-main">
+        <header className="dashboard-header">
+          <div>
+            <h1>Privacy Dashboard</h1>
+            <p>Manage projects, settings, and your profile from one place.</p>
+          </div>
+          <div className="dashboard-header-actions">
+            <button
+              type="button"
+              className="header-action-btn"
+              onClick={() => alert("View account profile")}
+            >
+              Profile
+            </button>
+            <button
+              type="button"
+              className="header-action-btn"
+              onClick={() => alert("Open dashboard settings")}
+            >
+              Dashboard Settings
+            </button>
+          </div>
+        </header>
+
         <div className="dashboard-content">
           <CreateProjectPanel onProjectCreated={handleProjectCreated} />
           <ProjectPreview
