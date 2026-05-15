@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import "../styles/project-preview.css";
 
-function ProjectCard({ project, onDelete, onUpdate }) {
+function ProjectCard({ project, selected, onSelect, onDelete, onUpdate }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(project.name);
@@ -26,41 +26,54 @@ function ProjectCard({ project, onDelete, onUpdate }) {
     }
   }, [isRenaming]);
 
-  const handleRenameStart = () => {
+  function handleRenameStart(event) {
+    event.stopPropagation();
     setIsRenaming(true);
     setMenuOpen(false);
-  };
+  }
 
-  const handleRenameSave = async () => {
+  async function handleRenameSave() {
     if (newName.trim() && newName !== project.name) {
       await onUpdate(project.id, { name: newName.trim() });
     }
     setIsRenaming(false);
-  };
+  }
 
-  const handleRenameCancel = () => {
+  function handleRenameCancel() {
     setNewName(project.name);
     setIsRenaming(false);
-  };
+  }
 
-  const handleRenameKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
+  function handleRenameKeyDown(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
       handleRenameSave();
-    } else if (e.key === "Escape") {
+    } else if (event.key === "Escape") {
       handleRenameCancel();
     }
-  };
+  }
 
-  const handleDelete = async () => {
+  async function handleDelete(event) {
+    event.stopPropagation();
     if (window.confirm(`Are you sure you want to delete "${project.name}"?`)) {
       await onDelete(project.id);
       setMenuOpen(false);
     }
-  };
+  }
+
+  function handleMenuClick(event) {
+    event.stopPropagation();
+    setMenuOpen((value) => !value);
+  }
 
   return (
-    <div className={`project-item ${menuOpen ? "project-item--open" : ""}`} ref={cardRef}>
+    <button
+      type="button"
+      data-project-nav
+      className={`project-item ${selected ? "project-item--selected" : ""} ${menuOpen ? "project-item--open" : ""}`}
+      onClick={() => onSelect(project.id)}
+      ref={cardRef}
+    >
       <div className="project-item-top">
         <div className="project-header">
           {isRenaming ? (
@@ -68,7 +81,8 @@ function ProjectCard({ project, onDelete, onUpdate }) {
               ref={renameInputRef}
               type="text"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) => setNewName(event.target.value)}
               onBlur={handleRenameSave}
               onKeyDown={handleRenameKeyDown}
               className="rename-input"
@@ -78,13 +92,14 @@ function ProjectCard({ project, onDelete, onUpdate }) {
           )}
         </div>
         <div className="project-item-actions">
+          <span className="selected-badge">{selected ? "Selected" : "Open"}</span>
           <button
             type="button"
             className="project-menu-button"
-            onClick={() => setMenuOpen((value) => !value)}
+            onClick={handleMenuClick}
             aria-label="Open project actions"
           >
-            ⋮
+            ...
           </button>
           {menuOpen && (
             <div className="project-menu">
@@ -104,19 +119,26 @@ function ProjectCard({ project, onDelete, onUpdate }) {
       </p>
       <div className="project-meta">
         <span className="date">
-          📅 {new Date(project.created_at).toLocaleDateString()}
+          Created {new Date(project.created_at).toLocaleDateString()}
         </span>
       </div>
-    </div>
+    </button>
   );
 }
 
-function ProjectPreview({ projects, loading, onDeleteProject, onUpdateProject }) {
+function ProjectPreview({
+  projects,
+  selectedProjectId,
+  loading,
+  onSelectProject,
+  onDeleteProject,
+  onUpdateProject,
+}) {
   if (loading) {
     return (
       <div className="project-preview-panel">
         <div className="panel-header">
-          <h2>📋 Project Overview</h2>
+          <h2>Project Overview</h2>
         </div>
         <p className="loading">Loading projects...</p>
       </div>
@@ -126,17 +148,16 @@ function ProjectPreview({ projects, loading, onDeleteProject, onUpdateProject })
   return (
     <div className="project-preview-panel">
       <div className="panel-header">
-        <h2>📋 Project Overview</h2>
+        <h2>Project Overview</h2>
         <p className="panel-subtitle">
-          {projects.length} project{projects.length !== 1 ? "s" : ""} created
+          Select a project to manage its data sources.
         </p>
       </div>
 
       {projects.length === 0 ? (
         <div className="empty-state">
-          <p className="empty-icon">📭</p>
           <p className="empty-text">No projects created yet.</p>
-          <p className="empty-hint">Start by creating your first project above.</p>
+          <p className="empty-hint">Start by creating your first project.</p>
         </div>
       ) : (
         <div className="project-grid">
@@ -144,6 +165,8 @@ function ProjectPreview({ projects, loading, onDeleteProject, onUpdateProject })
             <ProjectCard
               key={project.id}
               project={project}
+              selected={project.id === selectedProjectId}
+              onSelect={onSelectProject}
               onDelete={onDeleteProject}
               onUpdate={onUpdateProject}
             />

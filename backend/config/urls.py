@@ -1,4 +1,4 @@
-"""
+﻿"""
 URL configuration for config project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -15,12 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+
 from apps.projects.views import health_check
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/health/", health_check),
-
-    path("", include("create_projects.urls")),
+    path("api/", include("apps.projects.urls")),
+    path("api/", include("apps.data_sources.urls")),
+    path("api/health/", health_check, name="health-check"),
 ]

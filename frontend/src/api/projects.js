@@ -1,12 +1,25 @@
-import axios from "axios";
+﻿import axios from "axios";
 
-// API base URL pointing to the Django backend
-const API_BASE_URL = "http://localhost:8000/api";
-
-// Create axios instance with base URL
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
 });
+
+function normalizeError(error) {
+  const data = error.response?.data;
+
+  if (!data) {
+    return error;
+  }
+
+  if (data.errors) {
+    return {
+      ...data,
+      ...data.errors,
+    };
+  }
+
+  return data;
+}
 
 /**
  * Create a new project
@@ -17,11 +30,7 @@ export async function createProject(projectData) {
     const response = await apiClient.post("/projects/", projectData);
     return response.data;
   } catch (error) {
-    // Handle backend validation errors
-    if (error.response && error.response.status === 400) {
-      throw error.response.data;
-    }
-    throw error;
+    throw normalizeError(error);
   }
 }
 
@@ -32,10 +41,10 @@ export async function createProject(projectData) {
 export async function getProjects() {
   try {
     const response = await apiClient.get("/projects/");
-    return response.data;
+    return response.data.projects ?? response.data;
   } catch (error) {
     console.error("Failed to fetch projects:", error);
-    throw error;
+    throw normalizeError(error);
   }
 }
 
@@ -48,10 +57,7 @@ export async function updateProject(projectId, updateData) {
     const response = await apiClient.patch(`/projects/${projectId}/`, updateData);
     return response.data;
   } catch (error) {
-    if (error.response && error.response.status === 400) {
-      throw error.response.data;
-    }
-    throw error;
+    throw normalizeError(error);
   }
 }
 
@@ -64,6 +70,6 @@ export async function deleteProject(projectId) {
     await apiClient.delete(`/projects/${projectId}/`);
   } catch (error) {
     console.error("Failed to delete project:", error);
-    throw error;
+    throw normalizeError(error);
   }
 }

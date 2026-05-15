@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+﻿import { useRef, useState } from "react";
 import { createProject } from "../api/projects.js";
 import "../styles/create-project-panel.css";
 
@@ -19,16 +19,12 @@ function CreateProjectPanel({ onProjectCreated }) {
     }
   };
 
-  const isTextareaAtStart = (textarea) => {
-    return textarea.selectionStart === 0 && textarea.selectionEnd === 0;
-  };
+  const isTextareaAtStart = (textarea) =>
+    textarea.selectionStart === 0 && textarea.selectionEnd === 0;
 
-  const isTextareaAtEnd = (textarea) => {
-    return (
-      textarea.selectionStart === textarea.value.length &&
-      textarea.selectionEnd === textarea.value.length
-    );
-  };
+  const isTextareaAtEnd = (textarea) =>
+    textarea.selectionStart === textarea.value.length &&
+    textarea.selectionEnd === textarea.value.length;
 
   async function handleSubmit(event) {
     if (event) {
@@ -53,7 +49,7 @@ function CreateProjectPanel({ onProjectCreated }) {
       });
 
       setSuccessMessage(
-        `Project "${createdProject.name}" was created successfully.`
+        `Project "${createdProject.name}" was created successfully.`,
       );
 
       setName("");
@@ -89,7 +85,6 @@ function CreateProjectPanel({ onProjectCreated }) {
     if (event.key === "Enter" || event.key === "ArrowDown") {
       event.preventDefault();
       focusField(descriptionRef);
-      return;
     }
   };
 
@@ -114,7 +109,6 @@ function CreateProjectPanel({ onProjectCreated }) {
     if (event.key === "ArrowDown" && isTextareaAtEnd(textarea)) {
       event.preventDefault();
       focusField(submitButtonRef);
-      return;
     }
   };
 
@@ -128,7 +122,7 @@ function CreateProjectPanel({ onProjectCreated }) {
   return (
     <div className="create-project-panel">
       <div className="panel-header">
-        <h2>✨ Create New Project</h2>
+        <h2>Create New Project</h2>
         <p className="panel-subtitle">
           Start a new privacy dashboard project
         </p>

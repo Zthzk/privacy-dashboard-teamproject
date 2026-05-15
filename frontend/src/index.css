@@ -1,4 +1,4 @@
-/* Global Styles */
+﻿/* Global Styles */
 * {
   margin: 0;
   padding: 0;
@@ -46,7 +46,12 @@ body {
 }
 
 /* Typography */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 700;
   line-height: 1.2;
   color: var(--text);
@@ -111,15 +116,4 @@ button {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
-}
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
