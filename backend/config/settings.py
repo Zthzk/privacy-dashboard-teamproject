@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-%ax+dr+wlu-&%kh$461lsqqvunesw#c)+!7ied3p5yb51tv*x7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
 
 
 # Application definition
@@ -114,6 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # allow the frontend to visit the backend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 
