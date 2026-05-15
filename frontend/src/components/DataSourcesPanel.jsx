@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
   createDataSource,
   deleteDataSource,
@@ -318,3 +318,4 @@ function readError(error) {
 }
 
 export default DataSourcesPanel;
+
