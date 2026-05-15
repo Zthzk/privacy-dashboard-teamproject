@@ -1,7 +1,7 @@
-﻿import axios from "axios";
+import axios from "axios";
 
 const apiClient = axios.create({
-  baseURL: "/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
 });
 
 function normalizeError(error) {
@@ -41,7 +41,7 @@ export async function createProject(projectData) {
 export async function getProjects() {
   try {
     const response = await apiClient.get("/projects/");
-    return response.data.projects;
+    return response.data.projects ?? response.data;
   } catch (error) {
     console.error("Failed to fetch projects:", error);
     throw normalizeError(error);
