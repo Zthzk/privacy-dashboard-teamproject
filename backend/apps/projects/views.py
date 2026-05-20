@@ -1,6 +1,7 @@
-﻿import json
+import json
 
 from django.core.exceptions import ValidationError
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -13,18 +14,19 @@ from .models import Project
 
 @api_view(["GET"])
 def health_check(request):
-    return Response({
-        "message": "Privacy Dashboard backend is running"
-    })
+    return Response({"message": "Privacy Dashboard backend is running"})
 
 
 def serialize_project(project):
+    data_sources_count = getattr(project, "data_sources_count", None)
+    if data_sources_count is None:
+        data_sources_count = project.data_sources.count()
+
     return {
         "id": project.id,
         "name": project.name,
         "description": project.description,
-        "status": project.status,
-        "status_display": project.get_status_display(),
+        "data_sources_count": data_sources_count,
         "created_at": project.created_at.isoformat(),
         "updated_at": project.updated_at.isoformat(),
     }
@@ -49,12 +51,18 @@ def parse_json_body(request):
 @require_http_methods(["GET", "POST"])
 def projects(request):
     if request.method == "GET":
-        return JsonResponse({
-            "projects": [
-                serialize_project(project)
-                for project in Project.objects.all()
-            ]
-        })
+        project_queryset = Project.objects.annotate(
+            data_sources_count=Count("data_sources"),
+        )
+
+        return JsonResponse(
+            {
+                "projects": [
+                    serialize_project(project)
+                    for project in project_queryset
+                ],
+            }
+        )
 
     payload = parse_json_body(request)
     if payload is None:
@@ -80,9 +88,12 @@ def projects(request):
 
 
 @csrf_exempt
-@require_http_methods(["PATCH", "DELETE"])
+@require_http_methods(["GET", "PATCH", "DELETE"])
 def project_detail(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
+
+    if request.method == "GET":
+        return JsonResponse(serialize_project(project))
 
     if request.method == "DELETE":
         deleted_id = project.id
@@ -99,8 +110,6 @@ def project_detail(request, project_id):
         project.name = payload.get("name", "")
     if "description" in payload:
         project.description = payload.get("description", "")
-    if "status" in payload:
-        project.status = payload.get("status", project.status)
 
     try:
         project.full_clean()

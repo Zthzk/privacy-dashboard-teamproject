@@ -54,7 +54,7 @@ Response:
   "id": 1,
   "name": "Medical Dataset Review",
   "description": "Privacy assessment for a medical ML pipeline",
-  "overall_status": "green",
+  "data_sources_count": 0,
   "created_at": "2026-05-06T10:00:00Z",
   "updated_at": "2026-05-06T10:00:00Z"
 }
@@ -70,21 +70,25 @@ Updates a project.
 Deletes a project.
 
 ## Data Sources
-### GET `/projects/{project_id}/data-sources/`
+### GET `/datasources/`
+Returns all data sources across projects.
+
+### GET `/projects/{project_id}/datasources/`
 Returns all data sources belonging to one project.
 
-### POST `/projects/{project_id}/data-sources/`
+### POST `/projects/{project_id}/datasources/`
 Creates a data source for one project.
 
 Request:
 ```
 {
   "name": "Customer emails",
-  "source_type": "text",
-  "description": "Text dataset containing support emails",
-  "contains_personal_data": true,
-  "contains_art9_data": false,
-  "preview_text": "Example row or text preview"
+  "source_type": "manual",
+  "data_format": "text",
+  "location": "manual input",
+  "metadata": {
+    "manual_data": "Example customer note"
+  }
 }
 ```
 
@@ -94,22 +98,26 @@ Response:
   "id": 1,
   "project": 1,
   "name": "Customer emails",
-  "source_type": "text",
-  "description": "Text dataset containing support emails",
-  "contains_personal_data": true,
-  "contains_art9_data": false,
-  "risk_level": "yellow",
-  "preview_text": "Example row or text preview"
+  "source_type": "manual",
+  "source_type_display": "Manual",
+  "data_format": "text",
+  "data_format_display": "Text",
+  "location": "manual input",
+  "metadata": {
+    "manual_data": "Example customer note"
+  },
+  "created_at": "2026-05-06T10:00:00Z",
+  "updated_at": "2026-05-06T10:00:00Z"
 }
 ```
 
-### GET `/data-sources/{id}/`
+### GET `/projects/{project_id}/datasources/{data_source_id}/`
 Returns one data source.
 
-### PATCH `/data-sources/{id}/`
+### PATCH `/projects/{project_id}/datasources/{data_source_id}/`
 Updates one data source.
 
-### DELETE `/data-sources/{id}/`
+### DELETE `/projects/{project_id}/datasources/{data_source_id}/`
 Deletes one data source.
 
 ## Risk Assessment
@@ -142,10 +150,12 @@ Example request body:
   "data_sources": [
     {
       "name": "Patient notes",
-      "source_type": "text",
-      "contains_personal_data": true,
-      "contains_art9_data": true,
-      "preview_text": "Example medical note"
+      "source_type": "manual",
+      "data_format": "text",
+      "location": "manual input",
+      "metadata": {
+        "manual_data": "Example medical note"
+      }
     }
   ]
 }
@@ -159,9 +169,5 @@ The report should include:
 
 - project name
 - project description
-- overall risk status
 - data source list
-- personal data status
-- Art. 9 GDPR status
-- recommendations
 - generation date
