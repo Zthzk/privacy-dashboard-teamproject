@@ -20,6 +20,20 @@ function normalizeError(error) {
 
   return data;
 }
+
+/**
+ * Sends GET request to the backend
+ * RETURN all datasource array across projects
+ */
+export async function getAllDataSources() {
+  try {
+    const response = await apiClient.get("/datasources/");
+    return response.data.data_sources;
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
+
 /**
  * Sends GET request to the backend
  * RETURN Datasource array
@@ -28,6 +42,21 @@ export async function getDataSources(projectId) {
   try {
     const response = await apiClient.get(`/projects/${projectId}/datasources/`);
     return response.data.data_sources;
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
+
+/**
+ * Sends GET request to the backend
+ * RETURN one datasource object
+ */
+export async function getDataSource(projectId, dataSourceId) {
+  try {
+    const response = await apiClient.get(
+      `/projects/${projectId}/datasources/${dataSourceId}/`,
+    );
+    return response.data;
   } catch (error) {
     throw normalizeError(error);
   }

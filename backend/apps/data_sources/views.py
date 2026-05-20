@@ -12,8 +12,36 @@ from apps.projects.models import Project
 from .models import DataSource
 
 
-def serialize_data_source(data_source):
-    return {
+RISK_LABELS = {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+}
+
+
+def normalize_risk_level(data_source):
+    risk_level = data_source.metadata.get("risk_level")
+    if risk_level in RISK_LABELS:
+        return risk_level
+    if data_source.contains_personal_data:
+        return "medium"
+    return "low"
+
+
+def normalize_art_9_data(data_source):
+    art_9_data = data_source.metadata.get("art_9_data")
+    if isinstance(art_9_data, bool):
+        return "possible" if art_9_data else "no"
+    if art_9_data in {"possible", "yes", "no", "unknown"}:
+        return art_9_data
+    return "unknown"
+
+
+def serialize_data_source(data_source, include_project=False):
+    risk_level = normalize_risk_level(data_source)
+    art_9_data = normalize_art_9_data(data_source)
+
+    payload = {
         "id": data_source.id,
         "project": data_source.project_id,
         "name": data_source.name,
@@ -24,6 +52,10 @@ def serialize_data_source(data_source):
         "description": data_source.description,
         "location": data_source.location,
         "contains_personal_data": data_source.contains_personal_data,
+        "risk_level": risk_level,
+        "risk_level_display": RISK_LABELS[risk_level],
+        "art_9_data": art_9_data,
+        "art_9_data_display": art_9_data.replace("_", " ").title(),
         "metadata": data_source.metadata,
         "last_scanned_at": (
             data_source.last_scanned_at.isoformat()
@@ -33,6 +65,23 @@ def serialize_data_source(data_source):
         "created_at": data_source.created_at.isoformat(),
         "updated_at": data_source.updated_at.isoformat(),
     }
+
+    if include_project:
+        payload["project_name"] = data_source.project.name
+
+    return payload
+
+
+@require_http_methods(["GET"])
+def data_sources(request):
+    return JsonResponse(
+        {
+            "data_sources": [
+                serialize_data_source(data_source, include_project=True)
+                for data_source in DataSource.objects.select_related("project").all()
+            ],
+        }
+    )
 
 
 def json_error(message, status=400, errors=None):
@@ -121,17 +170,20 @@ def project_data_sources(request, project_id):
             "A data source with this name already exists in this project."
         )
 
-    return JsonResponse(serialize_data_source(data_source), status=201)
+    return JsonResponse(serialize_data_source(data_source, include_project=True), status=201)
 
 
 @csrf_exempt
-@require_http_methods(["PATCH", "DELETE"])
+@require_http_methods(["GET", "PATCH", "DELETE"])
 def project_data_source_detail(request, project_id, data_source_id):
     data_source = get_object_or_404(
         DataSource,
         pk=data_source_id,
         project_id=project_id,
     )
+
+    if request.method == "GET":
+        return JsonResponse(serialize_data_source(data_source, include_project=True))
 
     if request.method == "DELETE":
         deleted_id = data_source.id
@@ -144,6 +196,8 @@ def project_data_source_detail(request, project_id, data_source_id):
     if not isinstance(payload, dict):
         return json_error("JSON body must be an object.")
 
+    if "project" in payload:
+        data_source.project = get_object_or_404(Project, pk=payload.get("project"))
     if "name" in payload:
         data_source.name = payload.get("name", "")
     if "source_type" in payload:
@@ -180,4 +234,4 @@ def project_data_source_detail(request, project_id, data_source_id):
             "A data source with this name already exists in this project."
         )
 
-    return JsonResponse(serialize_data_source(data_source))
+    return JsonResponse(serialize_data_source(data_source, include_project=True))

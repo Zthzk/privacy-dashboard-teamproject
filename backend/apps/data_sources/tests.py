@@ -51,6 +51,27 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(data_source.data_format, DataSource.DataFormat.CSV)
         self.assertTrue(data_source.contains_personal_data)
 
+    def test_can_add_data_source_with_frontend_payload(self):
+        response = self.post_json(
+            self.url,
+            {
+                "name": "Manual customer notes",
+                "source_type": DataSource.SourceType.MANUAL,
+                "data_format": DataSource.DataFormat.TEXT,
+                "location": "manual input",
+                "metadata": {"manual_data": "Example customer note"},
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["name"], "Manual customer notes")
+        self.assertEqual(payload["source_type"], DataSource.SourceType.MANUAL)
+        self.assertEqual(payload["data_format"], DataSource.DataFormat.TEXT)
+        self.assertEqual(payload["location"], "manual input")
+        self.assertFalse(payload["contains_personal_data"])
+        self.assertEqual(payload["metadata"]["manual_data"], "Example customer note")
+
     def test_can_add_data_source_with_csrf_checks_enabled(self):
         csrf_client = Client(enforce_csrf_checks=True)
 
@@ -89,6 +110,28 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(payload["project"]["id"], self.project.id)
         self.assertEqual(len(payload["data_sources"]), 1)
         self.assertEqual(payload["data_sources"][0]["name"], "Project data")
+
+    def test_can_list_all_data_sources_across_projects(self):
+        DataSource.objects.create(
+            project=self.project,
+            name="Project data",
+            contains_personal_data=True,
+            metadata={"risk_level": "high", "art_9_data": "possible"},
+        )
+        DataSource.objects.create(
+            project=self.other_project,
+            name="Other data",
+        )
+
+        response = self.client.get(reverse("data-sources"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["data_sources"]), 2)
+        first_source = payload["data_sources"][0]
+        self.assertIn("project_name", first_source)
+        self.assertIn("risk_level", first_source)
+        self.assertIn("art_9_data", first_source)
 
     def test_rejects_duplicate_data_source_name_within_project(self):
         DataSource.objects.create(project=self.project, name="Duplicate")
@@ -152,6 +195,58 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(data_source.data_format, DataSource.DataFormat.JSON)
         self.assertEqual(data_source.location, "https://example.test/api")
         self.assertTrue(data_source.contains_personal_data)
+
+    def test_can_move_data_source_to_another_project(self):
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Movable Source",
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={
+                "project_id": self.project.id,
+                "data_source_id": data_source.id,
+            },
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({"project": self.other_project.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data_source.refresh_from_db()
+        self.assertEqual(data_source.project, self.other_project)
+        self.assertEqual(response.json()["project"], self.other_project.id)
+        self.assertEqual(response.json()["project_name"], self.other_project.name)
+
+    def test_rejects_move_when_name_already_exists_in_target_project(self):
+        DataSource.objects.create(
+            project=self.other_project,
+            name="Duplicate In Target",
+        )
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Duplicate In Target",
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={
+                "project_id": self.project.id,
+                "data_source_id": data_source.id,
+            },
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({"project": self.other_project.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        data_source.refresh_from_db()
+        self.assertEqual(data_source.project, self.project)
 
     def test_can_delete_data_source(self):
         data_source = DataSource.objects.create(
