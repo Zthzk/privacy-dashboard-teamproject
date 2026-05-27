@@ -1,3 +1,4 @@
+import React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
@@ -258,7 +259,7 @@ export default function EditDataSource() {
                         value={form.name}
                         error={Boolean(errors.name)}
                         helperText={errors.name || `${form.name.length} / 100`}
-                        inputProps={{ maxLength: 100 }}
+                        slotProps={{ htmlInput: { maxLength: 100 } }}
                         onChange={(event) => updateField('name', event.target.value)}
                       />
                       <TextField
@@ -340,7 +341,7 @@ export default function EditDataSource() {
                       placeholder={'Name: Anna Mueller\nEmail: anna@example.com\nComment: I live in Tuebingen and would like product support.'}
                       value={form.manual_data}
                       helperText={`${form.manual_data.length} / 2000`}
-                      inputProps={{ maxLength: 2000 }}
+                      slotProps={{ htmlInput: { maxLength: 2000 } }}
                       onChange={(event) => updateField('manual_data', event.target.value)}
                     />
                     <Typography variant="caption" color="text.secondary">
