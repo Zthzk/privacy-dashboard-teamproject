@@ -49,6 +49,20 @@ export async function getProjects() {
 }
 
 /**
+ * Get one project
+ * GET /api/projects/<id>/
+ */
+export async function getProject(projectId) {
+  try {
+    const response = await apiClient.get(`/projects/${projectId}/`);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch project:", error);
+    throw normalizeError(error);
+  }
+}
+
+/**
  * Update a project (rename or edit description)
  * PATCH /api/projects/<id>/
  */

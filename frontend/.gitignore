@@ -10,7 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+coverage
 *.local
+vite-dev.*.log
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
@@ -27,3 +30,4 @@ dist-ssr
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/

@@ -309,8 +309,7 @@ Example project data:
 ```text
 name
 description
-owner
-overall_status
+data_sources_count
 created_at
 updated_at
 ```
@@ -378,7 +377,6 @@ Example:
 class Project(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    overall_status = models.CharField(max_length=20, default="green")
 ```
 ```text
 model = database structure
@@ -446,7 +444,7 @@ Project API endpoint
     ↓
 createProject() frontend API function
     ↓
-CreateProjectPage
+Projects page create dialog
     ↓
 User can create a project in the browser
 ```
