@@ -1,0 +1,19 @@
+{
+  "id": "ds_005",
+  "name": "Survey Responses",
+  "type": "text",
+  "description": "Synthetic survey answers containing special category data under Art. 9 GDPR.",
+  "contains_personal_data": true,
+  "contains_art9_data": true,
+  "risk_level": "red",
+  "detected_categories": [
+    "name",
+    "political_opinion",
+    "religion"
+  ],
+  "sample_records": [
+    "Name: Tobias Keller. Political opinion: supports environmental policy.",
+    "Name: Emma Hoffmann. Religion: Protestant.",
+    "Name: Daniel Braun. Political opinion: prefers stricter climate regulation."
+  ]
+}
