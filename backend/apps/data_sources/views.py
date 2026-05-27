@@ -18,6 +18,18 @@ RISK_LABELS = {
     "high": "High",
 }
 
+TRAFFIC_LIGHTS = {
+    "low": "green",
+    "medium": "yellow",
+    "high": "red",
+}
+
+TRAFFIC_LIGHT_LABELS = {
+    "green": "No action needed",
+    "yellow": "Review recommended",
+    "red": "Action needed",
+}
+
 
 def normalize_risk_level(data_source):
     risk_level = data_source.metadata.get("risk_level")
@@ -39,6 +51,7 @@ def normalize_art_9_data(data_source):
 
 def serialize_data_source(data_source, include_project=False):
     risk_level = normalize_risk_level(data_source)
+    traffic_light = TRAFFIC_LIGHTS[risk_level]
     art_9_data = normalize_art_9_data(data_source)
 
     payload = {
@@ -56,6 +69,8 @@ def serialize_data_source(data_source, include_project=False):
         "risk_level_display": RISK_LABELS[risk_level],
         "art_9_data": art_9_data,
         "art_9_data_display": art_9_data.replace("_", " ").title(),
+        "traffic_light": traffic_light,
+        "traffic_light_label": TRAFFIC_LIGHT_LABELS[traffic_light],
         "metadata": data_source.metadata,
         "last_scanned_at": (
             data_source.last_scanned_at.isoformat()

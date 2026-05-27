@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from apps.data_sources.views import normalize_risk_level
 
 from .models import Project
 
@@ -19,14 +20,19 @@ def health_check(request):
 
 def serialize_project(project):
     data_sources_count = getattr(project, "data_sources_count", None)
+
     if data_sources_count is None:
         data_sources_count = project.data_sources.count()
+
+    traffic_light = get_project_traffic_light(project)
 
     return {
         "id": project.id,
         "name": project.name,
         "description": project.description,
         "data_sources_count": data_sources_count,
+        "traffic_light": traffic_light["traffic_light"],
+        "traffic_light_label": traffic_light["traffic_light_label"],
         "created_at": project.created_at.isoformat(),
         "updated_at": project.updated_at.isoformat(),
     }
@@ -121,3 +127,29 @@ def project_detail(request, project_id):
         )
 
     return JsonResponse(serialize_project(project))
+
+
+def get_project_traffic_light(project):
+    data_sources = project.data_sources.all()
+
+    risk_levels = [
+        normalize_risk_level(data_source)
+        for data_source in data_sources
+    ]
+
+    if "high" in risk_levels:
+        return {
+            "traffic_light": "red",
+            "traffic_light_label": "Action needed",
+        }
+
+    if "medium" in risk_levels:
+        return {
+            "traffic_light": "yellow",
+            "traffic_light_label": "Review recommended",
+        }
+
+    return {
+        "traffic_light": "green",
+        "traffic_light_label": "No action needed",
+    }

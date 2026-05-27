@@ -3,6 +3,7 @@
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from apps.data_sources.models import DataSource
 from apps.projects.models import Project
 
 from .models import DataSource
@@ -297,3 +298,110 @@ class ProjectDataSourcesApiTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+
+class DataSourceTrafficLightTests(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="US04 Test Project",
+            description="Testing traffic light backend",
+        )
+
+    def test_low_risk_data_source_returns_green_traffic_light(self):
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Low Risk Source",
+            source_type="file",
+            data_format="csv",
+            description="No sensitive data",
+            location="local file",
+            contains_personal_data=False,
+            metadata={"risk_level": "low"},
+        )
+
+        response = self.client.get(
+            f"/api/projects/{self.project.id}/datasources/"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertEqual(data[0]["id"], data_source.id)
+        self.assertEqual(data[0]["risk_level"], "low")
+        self.assertEqual(data[0]["traffic_light"], "green")
+        self.assertEqual(data[0]["traffic_light_label"], "No action needed")
+
+    def test_medium_risk_data_source_returns_yellow_traffic_light(self):
+        DataSource.objects.create(
+            project=self.project,
+            name="Medium Risk Source",
+            source_type="database",
+            data_format="json",
+            description="Contains some personal data",
+            location="test database",
+            contains_personal_data=True,
+            metadata={"risk_level": "medium"},
+        )
+
+        response = self.client.get(
+            f"/api/projects/{self.project.id}/datasources/"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertEqual(data[0]["risk_level"], "medium")
+        self.assertEqual(data[0]["traffic_light"], "yellow")
+        self.assertEqual(data[0]["traffic_light_label"], "Review recommended")
+
+    def test_high_risk_data_source_returns_red_traffic_light(self):
+        DataSource.objects.create(
+            project=self.project,
+            name="High Risk Source",
+            source_type="database",
+            data_format="csv",
+            description="Contains too much private information",
+            location="customer database",
+            contains_personal_data=True,
+            metadata={"risk_level": "high"},
+        )
+
+        response = self.client.get(
+            f"/api/projects/{self.project.id}/datasources/"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertEqual(data[0]["risk_level"], "high")
+        self.assertEqual(data[0]["traffic_light"], "red")
+        self.assertEqual(data[0]["traffic_light_label"], "Action needed")
+
+    def test_create_high_risk_data_source_returns_red_traffic_light(self):
+        payload = {
+            "name": "High Risk Source",
+            "source_type": "database",
+            "data_format": "csv",
+            "description": "Contains too much private information",
+            "location": "customer database",
+            "contains_personal_data": True,
+            "metadata": {
+                "risk_level": "high",
+            },
+        }
+
+        response = self.client.post(
+            f"/api/projects/{self.project.id}/datasources/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+        data = response.json()
+
+        self.assertEqual(data["risk_level"], "high")
+        self.assertEqual(data["traffic_light"], "red")
+        self.assertEqual(data["traffic_light_label"], "Action needed")
