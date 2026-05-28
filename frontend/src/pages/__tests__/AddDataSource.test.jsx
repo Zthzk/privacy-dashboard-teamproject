@@ -40,6 +40,7 @@ function renderAddDataSource(initialEntry = '/data-sources/new?project=1') {
         <Route path="/data-sources/new" element={<AddDataSource />} />
         <Route path="/data-sources" element={<div>Data sources destination</div>} />
         <Route path="/projects" element={<div>Projects destination</div>} />
+        <Route path="/projects/:projectId" element={<div>Project details destination</div>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -80,10 +81,21 @@ describe('AddDataSource page', () => {
           metadata: { manual_data: 'Example support ticket' },
         }),
       )
-      expect(screen.getByText('Data sources destination')).toBeInTheDocument()
+      expect(screen.getByText('Project details destination')).toBeInTheDocument()
     })
 
     expect(readCachedDataSources()).toEqual([createdDataSource])
+  })
+
+  test('cancels back to the selected project details page', async () => {
+    const user = userEvent.setup()
+
+    renderAddDataSource()
+
+    await screen.findByDisplayValue('Customer Support NLP')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Project details destination')).toBeInTheDocument()
   })
 
   test('shows validation errors when required fields are missing', async () => {

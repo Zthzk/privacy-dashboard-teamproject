@@ -6,6 +6,7 @@ const apiClient = axios.create({
 
 function normalizeError(error) {
   const data = error.response?.data;
+  const status = error.response?.status;
 
   if (!data) {
     return error;
@@ -13,12 +14,23 @@ function normalizeError(error) {
 
   if (data.errors) {
     return {
+      status,
       ...data,
       ...data.errors,
     };
   }
 
-  return data;
+  if (typeof data === "object") {
+    return {
+      status,
+      ...data,
+    };
+  }
+
+  return {
+    status,
+    error: data,
+  };
 }
 
 /**

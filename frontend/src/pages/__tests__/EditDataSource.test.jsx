@@ -43,6 +43,7 @@ function renderEditDataSource(initialEntry = '/data-sources/11/edit?project=1') 
       <Routes>
         <Route path="/data-sources/:dataSourceId/edit" element={<EditDataSource />} />
         <Route path="/data-sources" element={<div>Data sources destination</div>} />
+        <Route path="/projects/:projectId" element={<div>Project details destination</div>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -90,7 +91,7 @@ describe('EditDataSource page', () => {
           metadata: expect.objectContaining({ manual_data: 'Example support ticket' }),
         }),
       )
-      expect(screen.getByText('Data sources destination')).toBeInTheDocument()
+      expect(screen.getByText('Project details destination')).toBeInTheDocument()
     })
 
     expect(readCachedDataSources()).toEqual([updatedDataSource])
@@ -108,10 +109,21 @@ describe('EditDataSource page', () => {
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalledWith('Delete "Support Tickets"?')
       expect(deleteDataSource).toHaveBeenCalledWith(1, 11)
-      expect(screen.getByText('Data sources destination')).toBeInTheDocument()
+      expect(screen.getByText('Project details destination')).toBeInTheDocument()
     })
 
     expect(readCachedDataSources()).toEqual([])
+  })
+
+  test('cancels back to the current project details page', async () => {
+    const user = userEvent.setup()
+
+    renderEditDataSource()
+
+    await screen.findByDisplayValue('Support Tickets')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Project details destination')).toBeInTheDocument()
   })
 
   test('shows an error for an invalid edit route', () => {

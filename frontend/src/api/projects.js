@@ -6,6 +6,7 @@ const apiClient = axios.create({
 
 function normalizeError(error) {
   const data = error.response?.data;
+  const status = error.response?.status;
 
   if (!data) {
     return error;
@@ -13,12 +14,23 @@ function normalizeError(error) {
 
   if (data.errors) {
     return {
+      status,
       ...data,
       ...data.errors,
     };
   }
 
-  return data;
+  if (typeof data === "object") {
+    return {
+      status,
+      ...data,
+    };
+  }
+
+  return {
+    status,
+    error: data,
+  };
 }
 
 /**
@@ -58,6 +70,20 @@ export async function getProject(projectId) {
     return response.data;
   } catch (error) {
     console.error("Failed to fetch project:", error);
+    throw normalizeError(error);
+  }
+}
+
+/**
+ * Get all data needed by the project detail overview page
+ * GET /api/projects/<id>/overview/
+ */
+export async function getProjectOverview(projectId) {
+  try {
+    const response = await apiClient.get(`/projects/${projectId}/overview/`);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch project overview:", error);
     throw normalizeError(error);
   }
 }

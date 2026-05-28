@@ -14,6 +14,12 @@ def assert_serialized_project(test_case, payload, project):
     test_case.assertEqual(payload["name"], project.name)
     test_case.assertEqual(payload["description"], project.description)
     test_case.assertIn("data_sources_count", payload)
+    test_case.assertIn("overall_status", payload)
+    test_case.assertIn("risk_level", payload)
+    test_case.assertIn("personal_data_sources", payload)
+    test_case.assertIn("high_risk_sources", payload)
+    test_case.assertIn("medium_risk_sources", payload)
+    test_case.assertIn("art_9_sources", payload)
     test_case.assertIn("created_at", payload)
     test_case.assertIn("updated_at", payload)
 
@@ -62,6 +68,9 @@ class ProjectsApiTests(TestCase):
 
     def detail_url(self, project):
         return reverse("project-detail", kwargs={"project_id": project.id})
+
+    def overview_url(self, project):
+        return reverse("project-overview", kwargs={"project_id": project.id})
 
     def test_can_create_project(self):
         response = self.post_json(
@@ -112,6 +121,25 @@ class ProjectsApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["data_sources_count"], 1)
 
+    def test_project_list_includes_risk_summary_for_frontend_table(self):
+        project = Project.objects.create(name="Privacy Dashboard")
+        DataSource.objects.create(
+            project=project,
+            name="Medical Notes",
+            contains_personal_data=True,
+            metadata={"risk_level": "red", "contains_art9_data": True},
+        )
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["projects"][0]
+        self.assertEqual(payload["overall_status"], "red")
+        self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["personal_data_sources"], 1)
+        self.assertEqual(payload["high_risk_sources"], 1)
+        self.assertEqual(payload["art_9_sources"], 1)
+
     def test_rejects_blank_project_name(self):
         response = self.post_json(self.list_url, {"name": ""})
 
@@ -148,6 +176,40 @@ class ProjectsApiTests(TestCase):
     def test_missing_project_detail_returns_404(self):
         response = self.client.get(
             reverse("project-detail", kwargs={"project_id": 9999})
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_project_overview_returns_project_sources_and_risk_assessment(self):
+        project = Project.objects.create(
+            name="Privacy Dashboard",
+            description="ML project inventory",
+        )
+        DataSource.objects.create(
+            project=project,
+            name="Medical Notes",
+            contains_personal_data=True,
+            metadata={"risk_level": "red", "contains_art9_data": True},
+        )
+        DataSource.objects.create(
+            project=Project.objects.create(name="Other Project"),
+            name="Other Source",
+        )
+
+        response = self.client.get(self.overview_url(project))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["project"]["id"], project.id)
+        self.assertEqual(payload["project"]["data_sources_count"], 1)
+        self.assertEqual(len(payload["data_sources"]), 1)
+        self.assertEqual(payload["data_sources"][0]["name"], "Medical Notes")
+        self.assertEqual(payload["risk_assessment"]["overall_status"], "red")
+        self.assertEqual(payload["risk_assessment"]["metrics"]["art_9_sources"], 1)
+
+    def test_missing_project_overview_returns_404(self):
+        response = self.client.get(
+            reverse("project-overview", kwargs={"project_id": 9999})
         )
 
         self.assertEqual(response.status_code, 404)

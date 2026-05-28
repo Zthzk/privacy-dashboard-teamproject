@@ -53,6 +53,10 @@ function SectionTitle({ number, children }) {
   )
 }
 
+function getProjectDetailsPath(projectId) {
+  return projectId ? `/projects/${projectId}` : '/data-sources'
+}
+
 export default function AddDataSource() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -133,7 +137,7 @@ export default function AddDataSource() {
         project_name: createdDataSource.project_name ?? selectedProject?.name ?? '',
       })
 
-      navigate('/data-sources')
+      navigate(getProjectDetailsPath(createdDataSource.project ?? form.project))
     } catch (saveError) {
       setError(saveError?.error ?? 'Could not save data source. Please check the form and try again.')
       setSaving(false)
@@ -331,7 +335,7 @@ export default function AddDataSource() {
           }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
-            <Button variant="outlined" color="secondary" onClick={() => navigate('/data-sources')}>
+            <Button variant="outlined" color="secondary" onClick={() => navigate(getProjectDetailsPath(form.project))}>
               Cancel
             </Button>
             <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={saving || projects.length === 0 || !form.name.trim()}>

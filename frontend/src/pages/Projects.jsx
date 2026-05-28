@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
@@ -24,11 +26,13 @@ import Typography from '@mui/material/Typography'
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   FileTextOutlined,
   FolderOutlined,
   MoreOutlined,
   PlusOutlined,
   SearchOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 
 import MainCard from 'components/MainCard'
@@ -53,6 +57,28 @@ function formatDate(value) {
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(value))
+}
+
+function getProjectRisk(project) {
+  const riskValue = project.overall_status ?? project.risk_status ?? project.risk_level
+
+  if (riskValue === 'red' || riskValue === 'high') {
+    return { level: 'high', label: 'High', color: 'error' }
+  }
+
+  if (riskValue === 'yellow' || riskValue === 'medium') {
+    return { level: 'medium', label: 'Medium', color: 'warning' }
+  }
+
+  if ((project.high_risk_sources ?? 0) > 0) {
+    return { level: 'high', label: 'High', color: 'error' }
+  }
+
+  if ((project.medium_risk_sources ?? 0) > 0 || (project.personal_data_sources ?? 0) > 0) {
+    return { level: 'medium', label: 'Medium', color: 'warning' }
+  }
+
+  return { level: 'low', label: 'Low', color: 'success' }
 }
 
 function SummaryCard({ title, value, helper, color, icon: Icon }) {
@@ -93,6 +119,7 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
 }
 
 export default function Projects() {
+  const navigate = useNavigate()
   const [projects, setProjects] = useState(() => readCachedProjects())
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(() => readCachedProjects().length === 0)
@@ -146,36 +173,40 @@ export default function Projects() {
   }, [projects, search])
 
   const summaryCards = useMemo(
-    () => [
-      {
-        title: 'Total Projects',
-        value: projects.length,
-        helper: projects.length === 1 ? '1 project created' : `${projects.length} projects created`,
-        color: 'primary',
-        icon: FolderOutlined,
-      },
-      {
-        title: 'Data Sources',
-        value: projects.reduce((total, project) => total + (project.data_sources_count ?? 0), 0),
-        helper: 'Across all projects',
-        color: 'secondary',
-        icon: FileTextOutlined,
-      },
-      {
-        title: 'Empty Projects',
-        value: projects.filter((project) => (project.data_sources_count ?? 0) === 0).length,
-        helper: 'No data sources yet',
-        color: 'warning',
-        icon: FolderOutlined,
-      },
-      {
-        title: 'Active Inventory',
-        value: projects.filter((project) => (project.data_sources_count ?? 0) > 0).length,
-        helper: 'Projects with sources',
-        color: 'success',
-        icon: FolderOutlined,
-      },
-    ],
+    () => {
+      const projectRisks = projects.map(getProjectRisk)
+
+      return [
+        {
+          title: 'Total Projects',
+          value: projects.length,
+          helper: projects.length === 1 ? '1 project created' : `${projects.length} projects created`,
+          color: 'primary',
+          icon: FolderOutlined,
+        },
+        {
+          title: 'Data Sources',
+          value: projects.reduce((total, project) => total + (project.data_sources_count ?? 0), 0),
+          helper: 'Across all projects',
+          color: 'secondary',
+          icon: FileTextOutlined,
+        },
+        {
+          title: 'Medium Risk',
+          value: projectRisks.filter((risk) => risk.level === 'medium').length,
+          helper: 'Projects needing review',
+          color: 'warning',
+          icon: WarningOutlined,
+        },
+        {
+          title: 'High Risk',
+          value: projectRisks.filter((risk) => risk.level === 'high').length,
+          helper: 'Projects requiring action',
+          color: 'error',
+          icon: WarningOutlined,
+        },
+      ]
+    },
     [projects],
   )
 
@@ -346,20 +377,21 @@ export default function Projects() {
 
       <MainCard content={false}>
         <TableContainer>
-          <Table sx={{ minWidth: 900, tableLayout: 'fixed' }} aria-label="Projects table">
+          <Table sx={{ minWidth: 1040, tableLayout: 'fixed' }} aria-label="Projects table">
             <TableHead>
               <TableRow>
                 <TableCell sx={{ width: 200 }}>Project Name</TableCell>
                 <TableCell>Description</TableCell>
                 <TableCell sx={{ width: 140 }}>Data Sources</TableCell>
+                <TableCell sx={{ width: 120 }}>Risk</TableCell>
                 <TableCell sx={{ width: 170 }}>Last Updated</TableCell>
-                <TableCell align="right" sx={{ width: 120 }}>Actions</TableCell>
+                <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                     <Typography color="text.secondary">Loading projects...</Typography>
                   </TableCell>
                 </TableRow>
@@ -367,7 +399,7 @@ export default function Projects() {
 
               {!loading && filteredProjects.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                     <Typography variant="subtitle1">
                       {projects.length === 0 ? 'No projects created yet.' : 'No projects match your search.'}
                     </Typography>
@@ -381,44 +413,68 @@ export default function Projects() {
               )}
 
               {!loading &&
-                filteredProjects.map((project) => (
-                  <TableRow key={project.id} hover>
-                    <TableCell>
-                      <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>
-                        {project.name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        title={project.description || 'No description provided.'}
-                        sx={{
-                          display: '-webkit-box',
-                          overflow: 'hidden',
-                          overflowWrap: 'anywhere',
-                          WebkitBoxOrient: 'vertical',
-                          WebkitLineClamp: 2,
-                        }}
-                      >
-                        {project.description || 'No description provided.'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{project.data_sources_count ?? 0}</TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(project.updated_at)}</TableCell>
-                    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                        <IconButton
-                          size="small"
-                          aria-label={`More actions for ${project.name}`}
-                          onClick={(event) => openProjectMenu(event, project)}
+                filteredProjects.map((project) => {
+                  const risk = getProjectRisk(project)
+
+                  return (
+                    <TableRow
+                      key={project.id}
+                      hover
+                      onDoubleClick={() => navigate(`/projects/${project.id}`)}
+                      sx={{ cursor: 'default' }}
+                    >
+                      <TableCell>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            overflowWrap: 'anywhere',
+                          }}
                         >
-                          <MoreOutlined />
-                        </IconButton>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {project.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          title={project.description || 'No description provided.'}
+                          sx={{
+                            display: '-webkit-box',
+                            overflow: 'hidden',
+                            overflowWrap: 'anywhere',
+                            WebkitBoxOrient: 'vertical',
+                            WebkitLineClamp: 2,
+                          }}
+                        >
+                          {project.description || 'No description provided.'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{project.data_sources_count ?? 0}</TableCell>
+                      <TableCell>
+                        <Chip label={risk.label} color={risk.color} size="small" variant="outlined" />
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(project.updated_at)}</TableCell>
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                          <IconButton
+                            size="small"
+                            aria-label={`Open details for ${project.name}`}
+                            onClick={() => navigate(`/projects/${project.id}`)}
+                          >
+                            <EyeOutlined />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label={`More actions for ${project.name}`}
+                            onClick={(event) => openProjectMenu(event, project)}
+                          >
+                            <MoreOutlined />
+                          </IconButton>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
             </TableBody>
           </Table>
         </TableContainer>

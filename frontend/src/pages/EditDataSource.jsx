@@ -94,6 +94,10 @@ function SidebarCard({ icon: Icon, iconColor = 'primary.main', iconBg = 'primary
   )
 }
 
+function getProjectDetailsPath(projectId) {
+  return projectId ? `/projects/${projectId}` : '/data-sources'
+}
+
 export default function EditDataSource() {
   const navigate = useNavigate()
   const { dataSourceId } = useParams()
@@ -186,7 +190,7 @@ export default function EditDataSource() {
       })
 
       upsertCachedDataSource(updatedSource)
-      navigate('/data-sources')
+      navigate(getProjectDetailsPath(updatedSource.project ?? form.project))
     } catch (saveError) {
       if (saveError?.name?.[0]) {
         setErrors({ name: saveError.name[0] })
@@ -206,7 +210,7 @@ export default function EditDataSource() {
     try {
       await deleteDataSource(dataSource.project, dataSource.id)
       removeCachedDataSource(dataSource.id)
-      navigate('/data-sources')
+      navigate(getProjectDetailsPath(dataSource.project))
     } catch {
       setError('Could not delete data source. Please try again.')
       setSaving(false)
@@ -420,7 +424,7 @@ export default function EditDataSource() {
               }}
             >
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
-                <Button variant="outlined" color="secondary" onClick={() => navigate('/data-sources')}>
+                <Button variant="outlined" color="secondary" onClick={() => navigate(getProjectDetailsPath(form.project || dataSource.project))}>
                   Cancel
                 </Button>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>

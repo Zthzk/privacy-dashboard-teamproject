@@ -1,0 +1,19 @@
+{
+  "id": "ds_007",
+  "name": "Anonymized Product Reviews",
+  "type": "text",
+  "description": "Synthetic review data with uncertain personal data indicators.",
+  "contains_personal_data": "unknown",
+  "contains_art9_data": false,
+  "risk_level": "yellow",
+  "detected_categories": [
+    "possible_name",
+    "location"
+  ],
+  "confidence": 0.62,
+  "sample_records": [
+    "User M.K. from Berlin reported problems with the product.",
+    "Customer A. gave negative feedback after delivery.",
+    "Reviewer J. mentioned a delayed shipment to Munich."
+  ]
+}

@@ -1,16 +1,15 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getDataSources } from 'api/dataSources'
-import { getProject } from 'api/projects'
-import { getProjectRiskAssessment } from 'api/riskAssessments'
+import { deleteDataSource } from 'api/dataSources'
+import { getProjectOverview } from 'api/projects'
 import ProjectDetails from '../ProjectDetails'
 
 vi.mock('api/dataSources')
 vi.mock('api/projects')
-vi.mock('api/riskAssessments')
 
 const project = {
   id: 1,
@@ -80,9 +79,12 @@ function renderProjectDetails() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  getProject.mockResolvedValue(project)
-  getDataSources.mockResolvedValue(dataSources)
-  getProjectRiskAssessment.mockResolvedValue(riskAssessment)
+  getProjectOverview.mockResolvedValue({
+    project,
+    data_sources: dataSources,
+    risk_assessment: riskAssessment,
+  })
+  deleteDataSource.mockResolvedValue()
 })
 
 describe('ProjectDetails page', () => {
@@ -95,13 +97,48 @@ describe('ProjectDetails page', () => {
       expect(screen.getByText('Customer Support NLP')).toBeInTheDocument()
     })
 
-    expect(getProject).toHaveBeenCalledWith('1')
-    expect(getDataSources).toHaveBeenCalledWith('1')
-    expect(getProjectRiskAssessment).toHaveBeenCalledWith('1')
-    expect(screen.getByText('Medium Risk')).toBeInTheDocument()
-    expect(screen.getByText('Support Tickets')).toBeInTheDocument()
+    expect(getProjectOverview).toHaveBeenCalledWith('1')
+    expect(screen.getAllByText('Medium Risk').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Support Tickets').length).toBeGreaterThan(0)
     expect(screen.getByText('Customer Chat Logs')).toBeInTheDocument()
-    expect(screen.getByText('Personal Data')).toBeInTheDocument()
+    expect(screen.getAllByText('Personal Data').length).toBeGreaterThan(0)
     expect(screen.getByText('High Risk')).toBeInTheDocument()
+    expect(screen.queryByText('Risk Drivers')).not.toBeInTheDocument()
+  })
+
+  test('deletes a data source from project details and refreshes overview data', async () => {
+    const user = userEvent.setup()
+    getProjectOverview
+      .mockResolvedValueOnce({
+        project,
+        data_sources: dataSources,
+        risk_assessment: riskAssessment,
+      })
+      .mockResolvedValueOnce({
+        project: { ...project, data_sources_count: 1 },
+        data_sources: [dataSources[1]],
+        risk_assessment: {
+          ...riskAssessment,
+          metrics: {
+            total_data_sources: 1,
+            personal_data_sources: 1,
+            high_risk_sources: 0,
+            medium_risk_sources: 1,
+            art_9_sources: 0,
+          },
+        },
+      })
+
+    renderProjectDetails()
+
+    await screen.findByText('Customer Support NLP')
+    await user.click(screen.getByRole('button', { name: 'Delete Support Tickets' }))
+    expect(screen.getByText('Delete "Support Tickets" from this project? This will update the project metrics and risk assessment.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => {
+      expect(deleteDataSource).toHaveBeenCalledWith(1, 11)
+      expect(getProjectOverview).toHaveBeenCalledTimes(2)
+    })
   })
 })

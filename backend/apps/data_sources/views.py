@@ -4,10 +4,12 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from apps.projects.models import Project
+from apps.risk_assessments.services import apply_data_source_risk_assessment
 
 from .models import DataSource
 
@@ -158,6 +160,8 @@ def project_data_sources(request, project_id):
     )
 
     try:
+        apply_data_source_risk_assessment(data_source)
+        data_source.last_scanned_at = timezone.now()
         data_source.full_clean()
         data_source.save()
     except ValidationError as error:
@@ -222,6 +226,8 @@ def project_data_source_detail(request, project_id, data_source_id):
         data_source.contains_personal_data = contains_personal_data
 
     try:
+        apply_data_source_risk_assessment(data_source)
+        data_source.last_scanned_at = timezone.now()
         data_source.full_clean()
         data_source.save()
     except ValidationError as error:
