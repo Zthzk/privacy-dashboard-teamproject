@@ -33,6 +33,7 @@ import MainCard from 'components/MainCard'
 import { deleteDataSource, getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { readCachedDataSources, removeCachedDataSource, writeCachedDataSources } from 'utils/data-source-cache'
+import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
 
 function formatDate(value) {
   if (!value) return '-'
@@ -82,11 +83,11 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
 
 export default function DataSources() {
   const navigate = useNavigate()
-  const [dataSources, setDataSources] = useState(() => readCachedDataSources())
-  const [projects, setProjects] = useState([])
+  const [dataSources, setDataSources] = useState(() => mergeUniqueById(readCachedDataSources(), sampleDataSources))
+  const [projects, setProjects] = useState(sampleProjects)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(() => readCachedDataSources().length === 0)
-  const [projectsLoaded, setProjectsLoaded] = useState(false)
+  const [projectsLoaded, setProjectsLoaded] = useState(true)
   const [error, setError] = useState('')
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuSource, setMenuSource] = useState(null)
@@ -94,11 +95,10 @@ export default function DataSources() {
   useEffect(() => {
     let isActive = true
 
-    Promise.all([getAllDataSources(), getProjects()])
-      .then(([sourceList, projectList]) => {
+    getAllDataSources()
+      .then((sourceList) => {
         if (isActive) {
-          setDataSources(sourceList)
-          setProjects(projectList)
+          setDataSources(mergeUniqueById(sourceList, sampleDataSources))
           writeCachedDataSources(sourceList)
         }
       })
@@ -110,7 +110,19 @@ export default function DataSources() {
       .finally(() => {
         if (isActive) {
           setLoading(false)
+        }
+      })
+
+    getProjects()
+      .then((projectList) => {
+        if (isActive) {
+          setProjects(mergeUniqueById(projectList, sampleProjects))
           setProjectsLoaded(true)
+        }
+      })
+      .catch(() => {
+        if (isActive && projects.length === 0) {
+          setError('Could not load projects. Please check the backend connection and refresh the page.')
         }
       })
 
@@ -314,9 +326,13 @@ export default function DataSources() {
                         </Stack>
                       </TableCell>
                       <TableCell>
+                        {source.isSample ? (
+                        <Typography color="text.secondary">{source.project_name}</Typography>
+                      ) : (
                         <Link component={RouterLink} to={`/projects/${source.project}`} underline="hover">
                           {source.project_name}
                         </Link>
+                      )}
                       </TableCell>
                       <TableCell>{source.source_type_display}</TableCell>
                       <TableCell>{source.data_format_display}</TableCell>
@@ -332,9 +348,11 @@ export default function DataSources() {
                       <TableCell>{formatDate(source.updated_at)}</TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                          <IconButton size="small" aria-label={`More actions for ${source.name}`} onClick={(event) => openMenu(event, source)}>
-                            <MoreOutlined />
-                          </IconButton>
+                          {!source.isSample && (
+                            <IconButton size="small" aria-label={`More actions for ${source.name}`} onClick={(event) => openMenu(event, source)}>
+                              <MoreOutlined />
+                            </IconButton>
+                          )}
                         </Stack>
                       </TableCell>
                     </TableRow>

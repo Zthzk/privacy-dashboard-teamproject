@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import Avatar from '@mui/material/Avatar'
+import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -29,55 +31,11 @@ import {
 } from '@ant-design/icons'
 
 import MainCard from 'components/MainCard'
+import { getAllDataSources } from 'api/dataSources'
+import { getProjects } from 'api/projects'
+import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
 
-const projects = [
-  {
-    id: 1,
-    name: 'Customer Support NLP',
-    description: 'NLP pipeline for analyzing customer support tickets.',
-    sources: 3,
-    risk: 'medium',
-    updated: 'May 14, 2024',
-    icon: MessageOutlined,
-    color: 'primary',
-  },
-  {
-    id: 2,
-    name: 'E-commerce Recommender',
-    description: 'Product recommendation model for our e-commerce platform.',
-    sources: 4,
-    risk: 'low',
-    updated: 'May 10, 2024',
-    icon: ShoppingCartOutlined,
-    color: 'success',
-  },
-  {
-    id: 3,
-    name: 'Traffic Monitoring Vision',
-    description: 'Computer vision pipeline for traffic analysis.',
-    sources: 2,
-    risk: 'high',
-    updated: 'May 8, 2024',
-    icon: CarOutlined,
-    color: 'error',
-  },
-  {
-    id: 4,
-    name: 'Health Insights',
-    description: 'Predictive model for patient health outcomes.',
-    sources: 5,
-    risk: 'medium',
-    updated: 'May 5, 2024',
-    icon: HeartOutlined,
-    color: 'secondary',
-  },
-]
-
-const dataSources = [
-  { name: 'support_emails.csv', type: 'Email', format: 'CSV', personal: 'Yes', risk: 'Medium' },
-  { name: 'customer_notes.json', type: 'Document', format: 'JSON', personal: 'Yes', risk: 'Medium' },
-  { name: 'traffic_images.zip', type: 'Images', format: 'ZIP', personal: 'Yes', risk: 'High' },
-]
+const dataSources = sampleDataSources
 
 const riskSummary = [
   { label: 'Email addresses detected', value: '1,248', icon: MailOutlined, color: 'primary' },
@@ -85,14 +43,26 @@ const riskSummary = [
   { label: 'Potential PII fields', value: '12', icon: TeamOutlined, color: 'success' },
 ]
 
+function formatDate(value) {
+  if (!value) return '-'
+
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value))
+}
+
 function riskChipProps(risk) {
-  if (risk === 'low') return { color: 'success', label: 'Low Risk' }
-  if (risk === 'high') return { color: 'error', label: 'High Risk' }
+  const normalizedRisk = String(risk ?? '').toLowerCase()
+
+  if (normalizedRisk === 'low') return { color: 'success', label: 'Low Risk' }
+  if (normalizedRisk === 'high') return { color: 'error', label: 'High Risk' }
   return { color: 'warning', label: 'Medium Risk' }
 }
 
 function ProjectIcon({ project }) {
-  const Icon = project.icon
+  const Icon = project.icon || MessageOutlined
 
   return (
     <Avatar
@@ -100,7 +70,7 @@ function ProjectIcon({ project }) {
       sx={{
         width: 40,
         height: 40,
-        bgcolor: `${project.color}.main`,
+        bgcolor: `${project.color ?? 'primary'}.main`,
         color: 'common.white',
       }}
     >
@@ -110,8 +80,44 @@ function ProjectIcon({ project }) {
 }
 
 export default function Dashboard() {
-  const [selectedProjectId, setSelectedProjectId] = useState(projects[0].id)
-  const selectedProject = projects.find((project) => project.id === selectedProjectId) || projects[0]
+  const navigate = useNavigate()
+  const [projects, setProjects] = useState(sampleProjects)
+  const [dataSources, setDataSources] = useState(sampleDataSources)
+  const [selectedProjectId, setSelectedProjectId] = useState(sampleProjects[0]?.id ?? null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let isActive = true
+
+    Promise.all([getProjects(), getAllDataSources()])
+      .then(([projectList, sourceList]) => {
+        if (!isActive) return
+
+        setProjects(mergeUniqueById(projectList, sampleProjects))
+        setDataSources(mergeUniqueById(sourceList, sampleDataSources))
+      })
+      .catch(() => {
+        if (isActive) {
+          setError('Could not load dashboard data. Please refresh the page.')
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  const selectedProject = projects.find((project) => String(project.id) === String(selectedProjectId)) || projects[0]
+  const selectedProjectSources = useMemo(
+    () => dataSources.filter((source) => String(source.project) === String(selectedProject?.id)),
+    [dataSources, selectedProject],
+  )
 
   return (
     <Stack spacing={2.5}>
@@ -131,6 +137,8 @@ export default function Dashboard() {
 
       </Stack>
 
+      {error && <Alert severity="error">{error}</Alert>}
+
       <MainCard content={false}>
         <TableContainer>
           <Table sx={{ minWidth: 860 }} aria-label="Project privacy overview">
@@ -145,8 +153,8 @@ export default function Dashboard() {
             </TableHead>
             <TableBody>
               {projects.map((project) => {
-                const risk = riskChipProps(project.risk)
-                const selected = project.id === selectedProjectId
+                const risk = riskChipProps(project.risk ?? project.risk_level)
+                const selected = String(project.id) === String(selectedProjectId)
 
                 return (
                   <TableRow
@@ -177,13 +185,13 @@ export default function Dashboard() {
                     <TableCell>
                       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                         <DatabaseOutlined />
-                        <Typography>{project.sources}</Typography>
+                        <Typography>{project.data_sources_count ?? project.sources ?? 0}</Typography>
                       </Stack>
                     </TableCell>
                     <TableCell>
                       <Chip size="small" variant="outlined" color={risk.color} label={risk.label} />
                     </TableCell>
-                    <TableCell>{project.updated}</TableCell>
+                    <TableCell>{project.updated ?? formatDate(project.updated_at)}</TableCell>
                     <TableCell align="right">
                       <RightOutlined />
                     </TableCell>
@@ -215,10 +223,10 @@ export default function Dashboard() {
               }}
             >
               {[
-                ['Overall Risk', riskChipProps(selectedProject.risk).label],
+                ['Overall Risk', riskChipProps(selectedProject.risk ?? selectedProject.risk_level).label],
                 ['Contains Personal Data', 'Yes'],
                 ['Art. 9 GDPR Data', 'Possible'],
-                ['Last Updated', `${selectedProject.updated}\n10:42 AM`],
+                ['Last Updated', `${selectedProject.updated ?? formatDate(selectedProject.updated_at)}\n10:42 AM`],
               ].map(([label, value], index) => (
                 <Box
                   key={label}
@@ -285,7 +293,7 @@ export default function Dashboard() {
               </Table>
             </TableContainer>
 
-            <Button color="primary" endIcon={<RightOutlined aria-hidden="true" />} sx={{ alignSelf: 'flex-start' }}>
+            <Button color="primary" endIcon={<RightOutlined aria-hidden="true" />} sx={{ alignSelf: 'flex-start' }} onClick={() => navigate('/data-sources')}>
               View all data sources
             </Button>
           </Stack>

@@ -38,6 +38,7 @@ import {
 import MainCard from 'components/MainCard'
 import { createProject, deleteProject, getProjects, updateProject } from 'api/projects'
 import { readCachedProjects, writeCachedProjects } from 'utils/project-cache'
+import { mergeUniqueById, sampleProjects } from 'constants/dashboardSampleData'
 
 const initialCreateForm = {
   name: '',
@@ -120,7 +121,7 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
 
 export default function Projects() {
   const navigate = useNavigate()
-  const [projects, setProjects] = useState(() => readCachedProjects())
+  const [projects, setProjects] = useState(() => mergeUniqueById(readCachedProjects(), sampleProjects))
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(() => readCachedProjects().length === 0)
   const [error, setError] = useState('')
@@ -136,12 +137,14 @@ export default function Projects() {
 
   useEffect(() => {
     let isActive = true
-    const hasCachedProjects = readCachedProjects().length > 0
+    const cachedProjects = readCachedProjects()
+    const hasCachedProjects = cachedProjects.length > 0
 
     getProjects()
       .then((projectList) => {
         if (isActive) {
-          setProjects(projectList)
+          const nextProjects = mergeUniqueById(projectList, sampleProjects)
+          setProjects(nextProjects)
           writeCachedProjects(projectList)
         }
       })
@@ -419,9 +422,9 @@ export default function Projects() {
                   return (
                     <TableRow
                       key={project.id}
-                      hover
-                      onDoubleClick={() => navigate(`/projects/${project.id}`)}
-                      sx={{ cursor: 'default' }}
+                      hover={!project.isSample}
+                      onDoubleClick={() => !project.isSample && navigate(`/projects/${project.id}`)}
+                      sx={{ cursor: project.isSample ? 'default' : 'pointer' }}
                     >
                       <TableCell>
                         <Typography
@@ -459,17 +462,20 @@ export default function Projects() {
                           <IconButton
                             size="small"
                             aria-label={`Open details for ${project.name}`}
-                            onClick={() => navigate(`/projects/${project.id}`)}
+                            onClick={() => !project.isSample && navigate(`/projects/${project.id}`)}
+                            disabled={project.isSample}
                           >
                             <EyeOutlined />
                           </IconButton>
-                          <IconButton
-                            size="small"
-                            aria-label={`More actions for ${project.name}`}
-                            onClick={(event) => openProjectMenu(event, project)}
-                          >
-                            <MoreOutlined />
-                          </IconButton>
+                          {!project.isSample && (
+                            <IconButton
+                              size="small"
+                              aria-label={`More actions for ${project.name}`}
+                              onClick={(event) => openProjectMenu(event, project)}
+                            >
+                              <MoreOutlined />
+                            </IconButton>
+                          )}
                         </Stack>
                       </TableCell>
                     </TableRow>
