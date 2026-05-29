@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { createDataSource } from 'api/dataSources'
+import { createDataSource, getDataFormatHints } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import AddDataSource from '../AddDataSource'
 
@@ -55,6 +55,7 @@ beforeEach(() => {
   window.sessionStorage.clear()
   getProjects.mockResolvedValue([project])
   createDataSource.mockResolvedValue(createdDataSource)
+  getDataFormatHints.mockResolvedValue({})
 })
 
 describe('AddDataSource page', () => {

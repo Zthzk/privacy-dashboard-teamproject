@@ -22,9 +22,19 @@ import {
   DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
+  PictureOutlined,
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
+
+// Maps data_format values to an icon component and a display color.
+const DATA_FORMAT_ICONS = {
+  text: { icon: FileTextOutlined, color: '#1677ff' },
+  csv: { icon: DatabaseOutlined, color: '#52c41a' },
+  json: { icon: ApiOutlined, color: '#fa8c16' },
+  image: { icon: PictureOutlined, color: '#722ed1' },
+  other: { icon: FileTextOutlined, color: '#8c8c8c' },
+}
 
 import MainCard from 'components/MainCard'
 import { deleteDataSource, getAllDataSources } from 'api/dataSources'
@@ -295,7 +305,10 @@ export default function DataSources() {
                     <TableRow key={source.id} hover>
                       <TableCell>
                         <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
-                          <FileTextOutlined style={{ color: '#1677ff' }} />
+                          {(() => {
+                            const fmt = DATA_FORMAT_ICONS[source.data_format] ?? DATA_FORMAT_ICONS.other
+                            return <fmt.icon style={{ color: fmt.color }} />
+                          })()}
                           <Box sx={{ minWidth: 0 }}>
                             <Typography
                               variant="subtitle2"
