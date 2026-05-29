@@ -376,3 +376,30 @@ class ProjectDataSourcesApiTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+
+class DataFormatHintsApiTests(TestCase):
+    def test_returns_hints_for_all_known_formats(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+
+        for data_format in ["image", "text", "csv", "json", "other"]:
+            self.assertIn(data_format, payload)
+            self.assertIn("hint", payload[data_format])
+            self.assertIn("art9_risk", payload[data_format])
+            self.assertIn("suggested_categories", payload[data_format])
+
+    def test_image_format_has_art9_risk(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        self.assertTrue(payload["image"]["art9_risk"])
+
+    def test_non_image_formats_have_no_art9_risk(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        for data_format in ["text", "csv", "json", "other"]:
+            self.assertFalse(payload[data_format]["art9_risk"])
+

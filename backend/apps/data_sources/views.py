@@ -39,6 +39,44 @@ def normalize_art_9_data(data_source):
     return "unknown"
 
 
+# Privacy hints shown in the frontend form when a user selects a data format.
+# art9_risk marks formats that commonly contain Art. 9 GDPR special category data.
+DATA_FORMAT_HINTS = {
+    "image": {
+        "hint": "Image datasets may contain faces, license plates, or other visual identifiers.",
+        "art9_risk": True,  # Faces and biometric data fall under Art. 9 GDPR
+        "suggested_categories": ["faces", "license_plates", "biometric_data"],
+    },
+    "text": {
+        "hint": "Text datasets often contain names, email addresses, or other identifying information.",
+        "art9_risk": False,
+        "suggested_categories": ["names", "emails", "addresses"],
+    },
+    "csv": {
+        "hint": "CSV datasets may contain structured personal data such as customer or employee records.",
+        "art9_risk": False,
+        "suggested_categories": ["names", "addresses", "IDs"],
+    },
+    "json": {
+        "hint": "JSON datasets may contain nested personal data across multiple fields.",
+        "art9_risk": False,
+        "suggested_categories": ["names", "emails", "IDs"],
+    },
+    "other": {
+        "hint": "Review this data source manually to identify any personal data it may contain.",
+        "art9_risk": False,
+        "suggested_categories": [],
+    },
+}
+
+
+# Returns the hints config for all data formats.
+# The frontend fetches this once on mount to avoid duplicating the hint texts in two places.
+@require_http_methods(["GET"])
+def data_format_hints(request):
+    return JsonResponse(DATA_FORMAT_HINTS)
+
+
 def serialize_data_source(data_source, include_project=False):
     risk_level = normalize_risk_level(data_source)
     art_9_data = normalize_art_9_data(data_source)

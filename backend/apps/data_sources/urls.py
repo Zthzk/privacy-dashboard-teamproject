@@ -6,6 +6,11 @@ from . import views
 urlpatterns = [
     path("datasources/", views.data_sources, name="data-sources"),
     path(
+        "datasource-format-hints/",
+        views.data_format_hints,
+        name="data-format-hints",
+    ),
+    path(
         "projects/<int:project_id>/datasources/",
         views.project_data_sources,
         name="project-data-sources",
