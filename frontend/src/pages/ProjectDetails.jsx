@@ -23,6 +23,7 @@ import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TablePagination from '@mui/material/TablePagination'
 import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import {
   ApiOutlined,
@@ -44,7 +45,25 @@ import {
 
 import MainCard from 'components/MainCard'
 import { deleteDataSource } from 'api/dataSources'
-import { getProjectOverview } from 'api/projects'
+import { getProjectOverview, updateProject } from 'api/projects'
+import {
+  readCachedProjects,
+  readDeletedSampleProjectIds,
+  readProjectStyleOverrides,
+  readSampleProjectOverrides,
+  writeCachedProjects,
+  writeProjectStyleOverride,
+  writeSampleProjectOverride,
+} from 'utils/project-cache'
+import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
+import { applyProjectStyleOverrides, getProjectStyle, projectIconMap, projectStyleOptions } from 'utils/project-display'
+
+const initialEditForm = {
+  name: '',
+  description: '',
+  icon_key: 'message',
+  color: 'primary',
+}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -83,6 +102,28 @@ function getSourceIcon(sourceType) {
   if (sourceType === 'api') return GlobalOutlined
   if (sourceType === 'manual') return FileTextOutlined
   return FileFilled
+}
+
+function ProjectIcon({ project }) {
+  const style = getProjectStyle(project)
+  const Icon = project.icon || projectIconMap[style.key] || FolderFilled
+
+  return (
+    <Box
+      sx={{
+        width: 68,
+        height: 68,
+        borderRadius: 1,
+        display: 'grid',
+        placeItems: 'center',
+        bgcolor: `${style.color}.main`,
+        color: 'common.white',
+        flexShrink: 0,
+      }}
+    >
+      <Icon style={{ fontSize: 31 }} />
+    </Box>
+  )
 }
 
 function hasArt9Data(source) {
@@ -132,6 +173,39 @@ function buildRiskAssessmentFallback(dataSources) {
   }
 }
 
+function normalizeSampleDataSource(source) {
+  const riskLevel = String(source.risk ?? '').toLowerCase()
+
+  return {
+    contains_personal_data: source.personal_data === 'Yes' || source.personal === 'Yes',
+    data_format_display: source.data_format_display ?? source.format ?? '-',
+    risk_level: riskLevel || 'medium',
+    risk_level_display: source.risk ?? 'Medium',
+    source_type_display: source.source_type_display ?? source.type ?? 'File',
+    ...source,
+  }
+}
+
+function buildLocalProjectOverview(projectId) {
+  const deletedSampleProjectIds = new Set(readDeletedSampleProjectIds().map(String))
+  if (deletedSampleProjectIds.has(String(projectId))) return null
+
+  const projects = applyProjectStyleOverrides(mergeUniqueById(readSampleProjectOverrides(), sampleProjects), readProjectStyleOverrides())
+  const project = projects.find((item) => String(item.id) === String(projectId))
+  if (!project) return null
+
+  const dataSources = sampleDataSources
+    .filter((source) => String(source.project) === String(projectId))
+    .map(normalizeSampleDataSource)
+  const riskAssessment = buildRiskAssessmentFallback(dataSources)
+
+  return {
+    project,
+    data_sources: dataSources,
+    risk_assessment: riskAssessment,
+  }
+}
+
 function SummaryCard({ title, value, helper, color, icon: Icon }) {
   return (
     <MainCard sx={{ borderColor: 'divider', bgcolor: 'background.paper' }}>
@@ -178,6 +252,9 @@ export default function ProjectDetails() {
   const [notFound, setNotFound] = useState(false)
   const [deletingDataSourceId, setDeletingDataSourceId] = useState(null)
   const [dataSourcePendingDelete, setDataSourcePendingDelete] = useState(null)
+  const [editingProject, setEditingProject] = useState(false)
+  const [editForm, setEditForm] = useState(initialEditForm)
+  const [savingProject, setSavingProject] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -186,14 +263,21 @@ export default function ProjectDetails() {
       .then((overview) => {
         if (!isActive) return
 
-        setProject(overview.project)
+        setProject(applyProjectStyleOverrides([overview.project], readProjectStyleOverrides())[0])
         setDataSources(overview.data_sources ?? [])
         setRiskAssessment(overview.risk_assessment ?? null)
         setPage(0)
       })
       .catch((loadError) => {
         if (isActive) {
-          if (loadError?.status === 404) {
+          const localOverview = buildLocalProjectOverview(projectId)
+
+          if (localOverview) {
+            setProject(localOverview.project)
+            setDataSources(localOverview.data_sources)
+            setRiskAssessment(localOverview.risk_assessment)
+            setPage(0)
+          } else if (loadError?.status === 404) {
             setNotFound(true)
             setError('Project not found.')
           } else {
@@ -235,6 +319,71 @@ export default function ProjectDetails() {
       setError('Could not delete data source. Please try again.')
     } finally {
       setDeletingDataSourceId(null)
+    }
+  }
+
+  function openEditProjectDialog() {
+    setEditForm({
+      name: project?.name ?? '',
+      description: project?.description ?? '',
+      icon_key: getProjectStyle(project).key,
+      color: getProjectStyle(project).color,
+    })
+    setEditingProject(true)
+  }
+
+  function closeEditProjectDialog() {
+    setEditingProject(false)
+    setEditForm(initialEditForm)
+    setSavingProject(false)
+  }
+
+  async function handleSaveProject(event) {
+    event.preventDefault()
+
+    if (!project || !editForm.name.trim()) return
+
+    setSavingProject(true)
+    setError('')
+
+    try {
+      const updateData = {
+        name: editForm.name.trim(),
+        description: editForm.description.trim(),
+      }
+      const styleData = {
+        icon_key: editForm.icon_key,
+        color: editForm.color,
+      }
+      const updatedProject = project.isSample
+        ? {
+          ...project,
+          ...updateData,
+          ...styleData,
+          updated_at: new Date().toISOString(),
+        }
+        : {
+          ...(await updateProject(project.id, updateData)),
+          ...styleData,
+        }
+
+      setProject(updatedProject)
+      writeProjectStyleOverride(updatedProject.id, styleData)
+
+      if (updatedProject.isSample) {
+        writeSampleProjectOverride(updatedProject)
+      } else {
+        const cachedProjects = readCachedProjects()
+        const nextCachedProjects = cachedProjects.some((cachedProject) => cachedProject.id === updatedProject.id)
+          ? cachedProjects.map((cachedProject) => (cachedProject.id === updatedProject.id ? updatedProject : cachedProject))
+          : [updatedProject, ...cachedProjects]
+        writeCachedProjects(nextCachedProjects)
+      }
+
+      closeEditProjectDialog()
+    } catch {
+      setError('Could not update the project. Please check the form and try again.')
+      setSavingProject(false)
     }
   }
 
@@ -340,20 +489,7 @@ export default function ProjectDetails() {
               sx={{ alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between' }}
             >
               <Stack direction="row" spacing={2} sx={{ alignItems: 'center', minWidth: 0 }}>
-                <Box
-                  sx={{
-                    width: 68,
-                    height: 68,
-                    borderRadius: 1,
-                    display: 'grid',
-                    placeItems: 'center',
-                    bgcolor: 'primary.main',
-                    color: 'common.white',
-                    flexShrink: 0,
-                  }}
-                >
-                  <FolderFilled style={{ fontSize: 31 }} />
-                </Box>
+                <ProjectIcon project={project} />
                 <Stack spacing={1} sx={{ minWidth: 0 }}>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} sx={{ alignItems: { xs: 'flex-start', sm: 'center' } }}>
                     <Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>
@@ -379,13 +515,18 @@ export default function ProjectDetails() {
                   </Stack>
                 </Stack>
               </Stack>
-              <Button
-                variant="contained"
-                startIcon={<PlusCircleFilled />}
-                onClick={() => navigate(`/data-sources/new?project=${project.id}`)}
-              >
-                Add Data Source
-              </Button>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Button variant="outlined" startIcon={<EditOutlined />} onClick={openEditProjectDialog}>
+                  Edit
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<PlusCircleFilled />}
+                  onClick={() => navigate(`/data-sources/new?project=${project.id}`)}
+                >
+                  Add Data Source
+                </Button>
+              </Stack>
             </Stack>
           </MainCard>
 
@@ -616,6 +757,71 @@ export default function ProjectDetails() {
                 {deletingDataSourceId ? 'Deleting...' : 'Delete'}
               </Button>
             </DialogActions>
+          </Dialog>
+
+          <Dialog open={editingProject} onClose={closeEditProjectDialog} fullWidth maxWidth="sm">
+            <Box component="form" onSubmit={handleSaveProject}>
+              <DialogTitle>Edit Project</DialogTitle>
+              <DialogContent>
+                <Stack spacing={2} sx={{ pt: 1 }}>
+                  <TextField
+                    label="Project Name"
+                    required
+                    value={editForm.name}
+                    onChange={(event) => setEditForm((current) => ({ ...current, name: event.target.value }))}
+                  />
+                  <TextField
+                    label="Description"
+                    multiline
+                    minRows={3}
+                    value={editForm.description}
+                    onChange={(event) => setEditForm((current) => ({ ...current, description: event.target.value }))}
+                  />
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">Project Icon</Typography>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' },
+                        gap: 1,
+                      }}
+                    >
+                      {projectStyleOptions.map((option) => {
+                        const Icon = projectIconMap[option.key] ?? FolderFilled
+                        const selected = editForm.icon_key === option.key
+
+                        return (
+                          <Button
+                            key={option.key}
+                            type="button"
+                            variant={selected ? 'contained' : 'outlined'}
+                            color={selected ? option.color : 'secondary'}
+                            onClick={() => setEditForm((current) => ({ ...current, icon_key: option.key, color: option.color }))}
+                            sx={{
+                              minHeight: 72,
+                              justifyContent: 'center',
+                              flexDirection: 'column',
+                              gap: 0.75,
+                            }}
+                          >
+                            <Icon />
+                            {option.label}
+                          </Button>
+                        )
+                      })}
+                    </Box>
+                  </Stack>
+                </Stack>
+              </DialogContent>
+              <DialogActions sx={{ px: 3, pb: 2 }}>
+                <Button type="button" color="secondary" onClick={closeEditProjectDialog}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="contained" disabled={savingProject || !editForm.name.trim()}>
+                  {savingProject ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogActions>
+            </Box>
           </Dialog>
         </>
       )}

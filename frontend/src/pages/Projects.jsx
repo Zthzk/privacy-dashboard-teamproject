@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import Alert from '@mui/material/Alert'
+import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -37,8 +38,13 @@ import {
 
 import MainCard from 'components/MainCard'
 import { createProject, deleteProject, getProjects, updateProject } from 'api/projects'
-import { readCachedProjects, writeCachedProjects } from 'utils/project-cache'
-import { mergeUniqueById, sampleProjects } from 'constants/dashboardSampleData'
+import {
+  markSampleProjectDeleted,
+  readCachedProjects,
+  writeCachedProjects,
+  writeSampleProjectOverride,
+} from 'utils/project-cache'
+import { getProjectStyle, getVisibleProjects, projectIconMap, sortProjectsNewestFirst } from 'utils/project-display'
 
 const initialCreateForm = {
   name: '',
@@ -82,6 +88,25 @@ function getProjectRisk(project) {
   return { level: 'low', label: 'Low', color: 'success' }
 }
 
+function ProjectIcon({ project }) {
+  const style = getProjectStyle(project)
+  const Icon = project.icon || projectIconMap[style.key] || FolderOutlined
+
+  return (
+    <Avatar
+      variant="rounded"
+      sx={{
+        width: 36,
+        height: 36,
+        bgcolor: `${style.color}.main`,
+        color: 'common.white',
+      }}
+    >
+      <Icon />
+    </Avatar>
+  )
+}
+
 function SummaryCard({ title, value, helper, color, icon: Icon }) {
   return (
     <MainCard
@@ -121,7 +146,7 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
 
 export default function Projects() {
   const navigate = useNavigate()
-  const [projects, setProjects] = useState(() => mergeUniqueById(readCachedProjects(), sampleProjects))
+  const [projects, setProjects] = useState(() => getVisibleProjects(readCachedProjects()))
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(() => readCachedProjects().length === 0)
   const [error, setError] = useState('')
@@ -143,7 +168,7 @@ export default function Projects() {
     getProjects()
       .then((projectList) => {
         if (isActive) {
-          const nextProjects = mergeUniqueById(projectList, sampleProjects)
+          const nextProjects = getVisibleProjects(projectList)
           setProjects(nextProjects)
           writeCachedProjects(projectList)
         }
@@ -246,12 +271,16 @@ export default function Projects() {
         name: createForm.name.trim(),
         description: createForm.description.trim(),
       })
+      const timestampedProject = {
+        ...createdProject,
+        created_at: createdProject.created_at ?? new Date().toISOString(),
+      }
       setProjects((currentProjects) => {
-        const nextProjects = [
-          createdProject,
-          ...currentProjects.filter((project) => project.id !== createdProject.id),
-        ]
-        writeCachedProjects(nextProjects)
+        const nextProjects = sortProjectsNewestFirst([
+          timestampedProject,
+          ...currentProjects.filter((project) => project.id !== timestampedProject.id),
+        ])
+        writeCachedProjects(nextProjects.filter((project) => !project.isSample))
         return nextProjects
       })
       closeCreateDialog()
@@ -289,13 +318,25 @@ export default function Projects() {
     setError('')
 
     try {
-      const updatedProject = await updateProject(editingProject.id, {
+      const updateData = {
         name: editForm.name.trim(),
         description: editForm.description.trim(),
-      })
+      }
+      const updatedProject = editingProject.isSample
+        ? {
+          ...editingProject,
+          ...updateData,
+          updated_at: new Date().toISOString(),
+        }
+        : await updateProject(editingProject.id, updateData)
+
       setProjects((currentProjects) => {
-        const nextProjects = currentProjects.map((project) => (project.id === updatedProject.id ? updatedProject : project))
-        writeCachedProjects(nextProjects)
+        const nextProjects = sortProjectsNewestFirst(currentProjects.map((project) => (project.id === updatedProject.id ? updatedProject : project)))
+        if (updatedProject.isSample) {
+          writeSampleProjectOverride(updatedProject)
+        } else {
+          writeCachedProjects(nextProjects.filter((project) => !project.isSample))
+        }
         return nextProjects
       })
       closeEditDialog()
@@ -315,10 +356,15 @@ export default function Projects() {
     setError('')
 
     try {
-      await deleteProject(project.id)
+      if (project.isSample) {
+        markSampleProjectDeleted(project.id)
+      } else {
+        await deleteProject(project.id)
+      }
+
       setProjects((currentProjects) => {
-        const nextProjects = currentProjects.filter((item) => item.id !== project.id)
-        writeCachedProjects(nextProjects)
+        const nextProjects = sortProjectsNewestFirst(currentProjects.filter((item) => item.id !== project.id))
+        writeCachedProjects(nextProjects.filter((item) => !item.isSample))
         return nextProjects
       })
     } catch {
@@ -422,19 +468,23 @@ export default function Projects() {
                   return (
                     <TableRow
                       key={project.id}
-                      hover={!project.isSample}
-                      onDoubleClick={() => !project.isSample && navigate(`/projects/${project.id}`)}
-                      sx={{ cursor: project.isSample ? 'default' : 'pointer' }}
+                      hover
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                      sx={{ cursor: 'pointer' }}
                     >
                       <TableCell>
-                        <Typography
-                          variant="subtitle2"
-                          sx={{
-                            overflowWrap: 'anywhere',
-                          }}
-                        >
-                          {project.name}
-                        </Typography>
+                        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+                          <ProjectIcon project={project} />
+                          <Typography
+                            variant="subtitle2"
+                            color="primary.main"
+                            sx={{
+                              overflowWrap: 'anywhere',
+                            }}
+                          >
+                            {project.name}
+                          </Typography>
+                        </Stack>
                       </TableCell>
                       <TableCell>
                         <Typography
@@ -462,20 +512,23 @@ export default function Projects() {
                           <IconButton
                             size="small"
                             aria-label={`Open details for ${project.name}`}
-                            onClick={() => !project.isSample && navigate(`/projects/${project.id}`)}
-                            disabled={project.isSample}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              navigate(`/projects/${project.id}`)
+                            }}
                           >
                             <EyeOutlined />
                           </IconButton>
-                          {!project.isSample && (
-                            <IconButton
-                              size="small"
-                              aria-label={`More actions for ${project.name}`}
-                              onClick={(event) => openProjectMenu(event, project)}
-                            >
-                              <MoreOutlined />
-                            </IconButton>
-                          )}
+                          <IconButton
+                            size="small"
+                            aria-label={`More actions for ${project.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              openProjectMenu(event, project)
+                            }}
+                          >
+                            <MoreOutlined />
+                          </IconButton>
                         </Stack>
                       </TableCell>
                     </TableRow>

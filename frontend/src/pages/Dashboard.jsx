@@ -7,6 +7,9 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
+import Dialog from '@mui/material/Dialog'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
@@ -18,14 +21,13 @@ import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
 import {
   CarOutlined,
+  CloseOutlined,
   DatabaseOutlined,
   EyeOutlined,
-  HeartOutlined,
   MailOutlined,
   MessageOutlined,
   MoreOutlined,
   RightOutlined,
-  ShoppingCartOutlined,
   TeamOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
@@ -34,8 +36,7 @@ import MainCard from 'components/MainCard'
 import { getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
-
-const dataSources = sampleDataSources
+import { getProjectStyle, getVisibleProjects, projectIconMap } from 'utils/project-display'
 
 const riskSummary = [
   { label: 'Email addresses detected', value: '1,248', icon: MailOutlined, color: 'primary' },
@@ -61,8 +62,18 @@ function riskChipProps(risk) {
   return { color: 'warning', label: 'Medium Risk' }
 }
 
+function getSourceRisk(source) {
+  const risk = source.risk ?? source.risk_level_display ?? source.risk_level
+  const normalizedRisk = String(risk ?? '').toLowerCase()
+
+  if (normalizedRisk === 'high' || normalizedRisk === 'red') return { label: 'High', color: 'error' }
+  if (normalizedRisk === 'low' || normalizedRisk === 'green') return { label: 'Low', color: 'success' }
+  return { label: risk || 'Medium', color: 'warning' }
+}
+
 function ProjectIcon({ project }) {
-  const Icon = project.icon || MessageOutlined
+  const style = getProjectStyle(project)
+  const Icon = project.icon || projectIconMap[style.key] || MessageOutlined
 
   return (
     <Avatar
@@ -70,7 +81,7 @@ function ProjectIcon({ project }) {
       sx={{
         width: 40,
         height: 40,
-        bgcolor: `${project.color ?? 'primary'}.main`,
+        bgcolor: `${style.color}.main`,
         color: 'common.white',
       }}
     >
@@ -81,9 +92,10 @@ function ProjectIcon({ project }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [projects, setProjects] = useState(sampleProjects)
+  const [projects, setProjects] = useState(() => getVisibleProjects([]))
   const [dataSources, setDataSources] = useState(sampleDataSources)
   const [selectedProjectId, setSelectedProjectId] = useState(sampleProjects[0]?.id ?? null)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -94,7 +106,7 @@ export default function Dashboard() {
       .then(([projectList, sourceList]) => {
         if (!isActive) return
 
-        setProjects(mergeUniqueById(projectList, sampleProjects))
+        setProjects(getVisibleProjects(projectList))
         setDataSources(mergeUniqueById(sourceList, sampleDataSources))
       })
       .catch(() => {
@@ -140,8 +152,18 @@ export default function Dashboard() {
       {error && <Alert severity="error">{error}</Alert>}
 
       <MainCard content={false}>
-        <TableContainer>
-          <Table sx={{ minWidth: 860 }} aria-label="Project privacy overview">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 2 }}
+        >
+          <Typography variant="h5">Project Overview</Typography>
+          <Button color="primary" sx={{ px: 0, minWidth: 'auto' }} onClick={() => navigate('/projects')}>
+            &rarr;View All Projects
+          </Button>
+        </Stack>
+        <TableContainer sx={{ maxHeight: 390, overflowY: 'auto' }}>
+          <Table stickyHeader sx={{ minWidth: 860 }} aria-label="Project privacy overview">
             <TableHead>
               <TableRow>
                 <TableCell>Project</TableCell>
@@ -152,7 +174,23 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {projects.map((project) => {
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">Loading projects...</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!loading && projects.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">No projects available.</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!loading && projects.map((project) => {
                 const risk = riskChipProps(project.risk ?? project.risk_level)
                 const selected = String(project.id) === String(selectedProjectId)
 
@@ -161,7 +199,10 @@ export default function Dashboard() {
                     hover
                     key={project.id}
                     selected={selected}
-                    onClick={() => setSelectedProjectId(project.id)}
+                    onClick={() => {
+                      setSelectedProjectId(project.id)
+                      setPreviewOpen(true)
+                    }}
                     sx={{
                       cursor: 'pointer',
                       '&.Mui-selected': {
@@ -203,8 +244,18 @@ export default function Dashboard() {
         </TableContainer>
       </MainCard>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'minmax(0, 1fr) 420px' }, gap: 2.5 }}>
-        <MainCard>
+      <Dialog open={previewOpen && Boolean(selectedProject)} onClose={() => setPreviewOpen(false)} fullWidth maxWidth="lg">
+        <DialogTitle sx={{ pr: 7 }}>
+          Data Source Preview
+          <IconButton
+            aria-label="Close data source preview"
+            onClick={() => setPreviewOpen(false)}
+            sx={{ position: 'absolute', right: 12, top: 12 }}
+          >
+            <CloseOutlined />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
           <Stack spacing={2}>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
               <ProjectIcon project={selectedProject} />
@@ -265,30 +316,45 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {dataSources.map((source) => (
-                    <TableRow key={source.name}>
-                      <TableCell>{source.name}</TableCell>
-                      <TableCell>{source.type}</TableCell>
-                      <TableCell>{source.format}</TableCell>
-                      <TableCell sx={{ color: 'error.main', fontWeight: 600 }}>{source.personal}</TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          variant="outlined"
-                          color={source.risk === 'High' ? 'error' : 'warning'}
-                          label={source.risk}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small" aria-label={`View ${source.name}`}>
-                          <EyeOutlined />
-                        </IconButton>
-                        <IconButton size="small" aria-label={`More actions for ${source.name}`}>
-                          <MoreOutlined />
-                        </IconButton>
+                  {selectedProjectSources.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">No data sources linked to this project.</Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
+
+                  {selectedProjectSources.map((source) => {
+                    const sourceRisk = getSourceRisk(source)
+                    const containsPersonalData = source.personal ?? (source.contains_personal_data ? 'Yes' : 'No')
+
+                    return (
+                      <TableRow key={source.id ?? source.name}>
+                        <TableCell>{source.name}</TableCell>
+                        <TableCell>{source.type ?? source.source_type_display ?? source.source_type}</TableCell>
+                        <TableCell>{source.format ?? source.data_format_display ?? source.data_format}</TableCell>
+                        <TableCell sx={{ color: containsPersonalData === 'Yes' ? 'error.main' : 'text.primary', fontWeight: 600 }}>
+                          {containsPersonalData}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            color={sourceRisk.color}
+                            label={sourceRisk.label}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" aria-label={`View ${source.name}`}>
+                            <EyeOutlined />
+                          </IconButton>
+                          <IconButton size="small" aria-label={`More actions for ${source.name}`}>
+                            <MoreOutlined />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -297,8 +363,10 @@ export default function Dashboard() {
               View all data sources
             </Button>
           </Stack>
-        </MainCard>
+        </DialogContent>
+      </Dialog>
 
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr' }, gap: 2.5 }}>
         <MainCard>
           <Stack spacing={2.25}>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
