@@ -244,7 +244,8 @@ export default function Dashboard() {
         </TableContainer>
       </MainCard>
 
-      <Dialog open={previewOpen && Boolean(selectedProject)} onClose={() => setPreviewOpen(false)} fullWidth maxWidth="lg">
+      {selectedProject && (
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} fullWidth maxWidth="lg">
         <DialogTitle sx={{ pr: 7 }}>
           Data Source Preview
           <IconButton
@@ -365,6 +366,7 @@ export default function Dashboard() {
           </Stack>
         </DialogContent>
       </Dialog>
+      )}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr' }, gap: 2.5 }}>
         <MainCard>

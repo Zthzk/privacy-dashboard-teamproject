@@ -95,6 +95,8 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(payload["art_9_data"], "no")
         self.assertIn("email", payload["metadata"]["personal_data_categories"])
         self.assertIn("name", payload["metadata"]["personal_data_categories"])
+        self.assertIn("contact_data", payload["metadata"]["data_category_keys"])
+        self.assertIn("direct_identifiers", payload["metadata"]["data_category_keys"])
 
     def test_detects_art_9_risk_from_manual_data(self):
         response = self.post_json(
@@ -116,6 +118,7 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(payload["risk_level"], "high")
         self.assertEqual(payload["art_9_data"], "possible")
         self.assertIn("health", payload["metadata"]["art_9_categories"])
+        self.assertIn("health_data", payload["metadata"]["data_category_keys"])
 
     def test_can_add_data_source_with_csrf_checks_enabled(self):
         csrf_client = Client(enforce_csrf_checks=True)
