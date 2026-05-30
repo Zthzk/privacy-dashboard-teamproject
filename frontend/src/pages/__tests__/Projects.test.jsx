@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { deleteProject, getProjects, updateProject } from 'api/projects'
+import { createProject, deleteProject, getProjects, updateProject } from 'api/projects'
 import Projects from '../Projects'
 
 vi.mock('api/projects')
@@ -115,6 +115,53 @@ describe('Projects page', () => {
     expect(screen.queryByText('Customer Support NLP')).not.toBeInTheDocument()
   })
 
+  test('paginates projects with the selected page size', async () => {
+    const sampleNameProjects = ['E-commerce Recommender', 'Traffic Monitoring Vision', 'Health Insights', 'Customer Support NLP'].map((name, index) => ({
+      ...baseProject,
+      id: index + 1,
+      name,
+      updated_at: `2026-05-0${index + 1}T10:00:00Z`,
+    }))
+    const extraProjects = Array.from({ length: 8 }, (_, index) => ({
+      ...baseProject,
+      id: index + 5,
+      name: `Project ${String(index + 5).padStart(2, '0')}`,
+      updated_at: `2026-05-${String(index + 5).padStart(2, '0')}T10:00:00Z`,
+    }))
+
+    getProjects.mockResolvedValue([...sampleNameProjects, ...extraProjects])
+
+    renderProjects()
+
+    await screen.findByText('Showing 1 to 10 of 12 projects')
+    expect(screen.queryByText('E-commerce Recommender')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByLabelText('Next page'))
+
+    expect(screen.getByText('Showing 11 to 12 of 12 projects')).toBeInTheDocument()
+    expect(screen.getByText('E-commerce Recommender')).toBeInTheDocument()
+  })
+
+  test('moves focus between create project fields with arrow keys', async () => {
+    createProject.mockResolvedValue(baseProject)
+    const user = userEvent.setup()
+
+    renderProjects()
+    await screen.findByText('Customer Support NLP')
+
+    await user.click(screen.getByRole('button', { name: 'New Project' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Create New Project' })
+    const nameInput = within(dialog).getByLabelText(/Project Name/i)
+    const descriptionInput = within(dialog).getByLabelText(/Description/i)
+
+    await user.click(nameInput)
+    await user.keyboard('{ArrowDown}')
+    expect(descriptionInput).toHaveFocus()
+
+    await user.keyboard('{ArrowUp}')
+    expect(nameInput).toHaveFocus()
+  })
+
   test('updates a project and writes the updated list back to cache', async () => {
     const user = userEvent.setup()
     const updatedProject = {
@@ -160,6 +207,8 @@ describe('Projects page', () => {
     await openProjectMenu()
     const menu = screen.getByRole('menu')
     await userEvent.click(within(menu).getByText('Delete'))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Project' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete Project' }))
 
     await waitFor(() => {
       expect(deleteProject).toHaveBeenCalledWith(1)
