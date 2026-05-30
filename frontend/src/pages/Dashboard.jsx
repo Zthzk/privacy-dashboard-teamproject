@@ -262,6 +262,17 @@ export default function Dashboard() {
               <ProjectIcon project={selectedProject} />
               <Typography variant="h4">{selectedProject.name}</Typography>
               <Chip size="small" color="success" label="Active" />
+              <Button
+                size="small"
+                color="primary"
+                endIcon={<RightOutlined aria-hidden="true" />}
+                onClick={() => {
+                  setPreviewOpen(false)
+                  navigate(`/projects/${selectedProject.id}`)
+                }}
+              >
+                to details
+              </Button>
             </Stack>
 
             <Box
