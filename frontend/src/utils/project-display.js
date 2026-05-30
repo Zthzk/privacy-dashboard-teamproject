@@ -12,14 +12,24 @@ import {
   readSampleProjectOverrides,
 } from 'utils/project-cache'
 
-export const projectStyleOptions = [
-  { key: 'message', label: 'Support', color: 'primary' },
-  { key: 'shopping', label: 'Commerce', color: 'success' },
-  { key: 'traffic', label: 'Traffic', color: 'warning' },
-  { key: 'health', label: 'Health', color: 'error' },
+export const projectIconOptions = [
+  { key: 'message', label: 'Support' },
+  { key: 'shopping', label: 'Commerce' },
+  { key: 'traffic', label: 'Traffic' },
+  { key: 'health', label: 'Health' },
 ]
 
-export const defaultProjectStyle = projectStyleOptions[0]
+export const projectColorOptions = [
+  { key: 'primary', label: 'Blue' },
+  { key: 'success', label: 'Green' },
+  { key: 'warning', label: 'Amber' },
+  { key: 'error', label: 'Red' },
+]
+
+export const defaultProjectStyle = {
+  ...projectIconOptions[0],
+  color: projectColorOptions[0].key,
+}
 
 export const projectIconMap = {
   message: MessageOutlined,
@@ -29,7 +39,7 @@ export const projectIconMap = {
 }
 
 export function getProjectStyle(project) {
-  const option = projectStyleOptions.find((item) => item.key === project?.icon_key) ?? defaultProjectStyle
+  const option = projectIconOptions.find((item) => item.key === project?.icon_key) ?? defaultProjectStyle
 
   return {
     ...option,

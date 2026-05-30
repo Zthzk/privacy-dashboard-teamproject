@@ -56,7 +56,7 @@ import {
   writeSampleProjectOverride,
 } from 'utils/project-cache'
 import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
-import { applyProjectStyleOverrides, getProjectStyle, projectIconMap, projectStyleOptions } from 'utils/project-display'
+import { applyProjectStyleOverrides, getProjectStyle, projectColorOptions, projectIconMap, projectIconOptions } from 'utils/project-display'
 
 const initialEditForm = {
   name: '',
@@ -786,7 +786,7 @@ export default function ProjectDetails() {
                         gap: 1,
                       }}
                     >
-                      {projectStyleOptions.map((option) => {
+                      {projectIconOptions.map((option) => {
                         const Icon = projectIconMap[option.key] ?? FolderFilled
                         const selected = editForm.icon_key === option.key
 
@@ -794,9 +794,9 @@ export default function ProjectDetails() {
                           <Button
                             key={option.key}
                             type="button"
-                            variant={selected ? 'contained' : 'outlined'}
-                            color={selected ? option.color : 'secondary'}
-                            onClick={() => setEditForm((current) => ({ ...current, icon_key: option.key, color: option.color }))}
+                            variant={selected ? 'outlined' : 'text'}
+                            color={selected ? 'primary' : 'secondary'}
+                            onClick={() => setEditForm((current) => ({ ...current, icon_key: option.key }))}
                             sx={{
                               minHeight: 72,
                               justifyContent: 'center',
@@ -804,12 +804,57 @@ export default function ProjectDetails() {
                               gap: 0.75,
                             }}
                           >
-                            <Icon />
+                            <Box
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 1,
+                                display: 'grid',
+                                placeItems: 'center',
+                                bgcolor: `${editForm.color}.main`,
+                                color: 'common.white',
+                              }}
+                            >
+                              <Icon />
+                            </Box>
                             {option.label}
                           </Button>
                         )
                       })}
                     </Box>
+                  </Stack>
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">Background Color</Typography>
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+                      {projectColorOptions.map((option) => {
+                        const selected = editForm.color === option.key
+
+                        return (
+                          <Button
+                            key={option.key}
+                            type="button"
+                            variant={selected ? 'contained' : 'outlined'}
+                            color={option.key}
+                            onClick={() => setEditForm((current) => ({ ...current, color: option.key }))}
+                            startIcon={
+                              <Box
+                                component="span"
+                                sx={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: '50%',
+                                  bgcolor: `${option.key}.main`,
+                                  border: '1px solid',
+                                  borderColor: selected ? 'common.white' : `${option.key}.main`,
+                                }}
+                              />
+                            }
+                          >
+                            {option.label}
+                          </Button>
+                        )
+                      })}
+                    </Stack>
                   </Stack>
                 </Stack>
               </DialogContent>

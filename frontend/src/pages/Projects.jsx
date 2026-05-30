@@ -42,13 +42,24 @@ import {
   markSampleProjectDeleted,
   readCachedProjects,
   writeCachedProjects,
+  writeProjectStyleOverride,
   writeSampleProjectOverride,
 } from 'utils/project-cache'
-import { getProjectStyle, getVisibleProjects, projectIconMap, sortProjectsNewestFirst } from 'utils/project-display'
+import {
+  defaultProjectStyle,
+  getProjectStyle,
+  getVisibleProjects,
+  projectColorOptions,
+  projectIconMap,
+  projectIconOptions,
+  sortProjectsNewestFirst,
+} from 'utils/project-display'
 
 const initialCreateForm = {
   name: '',
   description: '',
+  icon_key: defaultProjectStyle.key,
+  color: defaultProjectStyle.color,
 }
 
 const initialEditForm = {
@@ -273,8 +284,14 @@ export default function Projects() {
       })
       const timestampedProject = {
         ...createdProject,
+        icon_key: createForm.icon_key,
+        color: createForm.color,
         created_at: createdProject.created_at ?? new Date().toISOString(),
       }
+      writeProjectStyleOverride(timestampedProject.id, {
+        icon_key: createForm.icon_key,
+        color: createForm.color,
+      })
       setProjects((currentProjects) => {
         const nextProjects = sortProjectsNewestFirst([
           timestampedProject,
@@ -575,6 +592,85 @@ export default function Projects() {
                 value={createForm.description}
                 onChange={(event) => setCreateForm((current) => ({ ...current, description: event.target.value }))}
               />
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Project Icon</Typography>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' },
+                    gap: 1,
+                  }}
+                >
+                  {projectIconOptions.map((option) => {
+                    const Icon = projectIconMap[option.key] ?? FolderOutlined
+                    const selected = createForm.icon_key === option.key
+
+                    return (
+                      <Button
+                        key={option.key}
+                        type="button"
+                        variant={selected ? 'outlined' : 'text'}
+                        color={selected ? 'primary' : 'secondary'}
+                        onClick={() => setCreateForm((current) => ({ ...current, icon_key: option.key }))}
+                        sx={{
+                          minHeight: 72,
+                          justifyContent: 'center',
+                          flexDirection: 'column',
+                          gap: 0.75,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 1,
+                            display: 'grid',
+                            placeItems: 'center',
+                            bgcolor: `${createForm.color}.main`,
+                            color: 'common.white',
+                          }}
+                        >
+                          <Icon />
+                        </Box>
+                        {option.label}
+                      </Button>
+                    )
+                  })}
+                </Box>
+              </Stack>
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Background Color</Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+                  {projectColorOptions.map((option) => {
+                    const selected = createForm.color === option.key
+
+                    return (
+                      <Button
+                        key={option.key}
+                        type="button"
+                        variant={selected ? 'contained' : 'outlined'}
+                        color={option.key}
+                        onClick={() => setCreateForm((current) => ({ ...current, color: option.key }))}
+                        startIcon={
+                          <Box
+                            component="span"
+                            sx={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: '50%',
+                              bgcolor: `${option.key}.main`,
+                              border: '1px solid',
+                              borderColor: selected ? 'common.white' : `${option.key}.main`,
+                            }}
+                          />
+                        }
+                      >
+                        {option.label}
+                      </Button>
+                    )
+                  })}
+                </Stack>
+              </Stack>
             </Stack>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
