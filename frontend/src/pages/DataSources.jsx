@@ -7,8 +7,6 @@ import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Link from '@mui/material/Link'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
 import OutlinedInput from '@mui/material/OutlinedInput'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
@@ -24,7 +22,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
-  MoreOutlined,
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
@@ -33,7 +30,7 @@ import MainCard from 'components/MainCard'
 import { deleteDataSource, getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { readCachedDataSources, removeCachedDataSource, writeCachedDataSources } from 'utils/data-source-cache'
-import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
+import { mergeUniqueById, sampleProjects } from 'constants/dashboardSampleData'
 
 function formatDate(value) {
   if (!value) return '-'
@@ -83,14 +80,12 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
 
 export default function DataSources() {
   const navigate = useNavigate()
-  const [dataSources, setDataSources] = useState(() => mergeUniqueById(readCachedDataSources(), sampleDataSources))
+  const [dataSources, setDataSources] = useState(() => readCachedDataSources())
   const [projects, setProjects] = useState(sampleProjects)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(() => readCachedDataSources().length === 0)
   const [projectsLoaded, setProjectsLoaded] = useState(true)
   const [error, setError] = useState('')
-  const [menuAnchor, setMenuAnchor] = useState(null)
-  const [menuSource, setMenuSource] = useState(null)
 
   useEffect(() => {
     let isActive = true
@@ -98,7 +93,7 @@ export default function DataSources() {
     getAllDataSources()
       .then((sourceList) => {
         if (isActive) {
-          setDataSources(mergeUniqueById(sourceList, sampleDataSources))
+          setDataSources(sourceList)
           writeCachedDataSources(sourceList)
         }
       })
@@ -180,29 +175,13 @@ export default function DataSources() {
     [dataSources, loading],
   )
 
-  function openMenu(event, dataSource) {
-    setMenuAnchor(event.currentTarget)
-    setMenuSource(dataSource)
-  }
-
-  function closeMenu() {
-    setMenuAnchor(null)
-    setMenuSource(null)
-  }
-
-  function handleEditDataSource() {
-    const dataSource = menuSource
-    closeMenu()
-
+  function handleEditDataSource(dataSource) {
     if (dataSource) {
       navigate(`/data-sources/${dataSource.id}/edit?project=${dataSource.project}`)
     }
   }
 
-  async function handleDeleteDataSource() {
-    const dataSource = menuSource
-    closeMenu()
-
+  async function handleDeleteDataSource(dataSource) {
     if (!dataSource || !window.confirm(`Delete "${dataSource.name}"?`)) {
       return
     }
@@ -326,13 +305,9 @@ export default function DataSources() {
                         </Stack>
                       </TableCell>
                       <TableCell>
-                        {source.isSample ? (
-                        <Typography color="text.secondary">{source.project_name}</Typography>
-                      ) : (
                         <Link component={RouterLink} to={`/projects/${source.project}`} underline="hover">
                           {source.project_name}
                         </Link>
-                      )}
                       </TableCell>
                       <TableCell>{source.source_type_display}</TableCell>
                       <TableCell>{source.data_format_display}</TableCell>
@@ -348,11 +323,12 @@ export default function DataSources() {
                       <TableCell>{formatDate(source.updated_at)}</TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                          {!source.isSample && (
-                            <IconButton size="small" aria-label={`More actions for ${source.name}`} onClick={(event) => openMenu(event, source)}>
-                              <MoreOutlined />
-                            </IconButton>
-                          )}
+                          <IconButton size="small" aria-label={`Edit ${source.name}`} onClick={() => handleEditDataSource(source)}>
+                            <EditOutlined />
+                          </IconButton>
+                          <IconButton size="small" color="error" aria-label={`Delete ${source.name}`} onClick={() => handleDeleteDataSource(source)}>
+                            <DeleteOutlined />
+                          </IconButton>
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -361,17 +337,6 @@ export default function DataSources() {
           </Table>
         </TableContainer>
       </MainCard>
-
-      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-        <MenuItem onClick={handleEditDataSource}>
-          <EditOutlined style={{ marginRight: 10 }} />
-          Edit
-        </MenuItem>
-        <MenuItem onClick={handleDeleteDataSource} sx={{ color: 'error.main' }}>
-          <DeleteOutlined style={{ marginRight: 10 }} />
-          Delete
-        </MenuItem>
-      </Menu>
 
     </Stack>
   )

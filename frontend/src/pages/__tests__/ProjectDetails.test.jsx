@@ -32,6 +32,7 @@ const dataSources = [
     contains_personal_data: true,
     risk_level: 'high',
     art_9_data: 'unknown',
+    metadata: { data_category_keys: ['contact_data', 'direct_identifiers'] },
     updated_at: '2026-05-18T10:00:00Z',
   },
   {
@@ -45,6 +46,7 @@ const dataSources = [
     contains_personal_data: true,
     risk_level: 'medium',
     art_9_data: 'unknown',
+    metadata: { data_category_keys: ['contact_data'] },
     updated_at: '2026-05-17T10:00:00Z',
   },
 ]
@@ -61,6 +63,22 @@ const riskAssessment = {
     medium_risk_sources: 1,
     art_9_sources: 0,
   },
+  top_detected_data_categories: [
+    {
+      key: 'contact_data',
+      label: 'Contact Data',
+      group: 'personal_data',
+      is_art_9: false,
+      source_count: 2,
+    },
+    {
+      key: 'direct_identifiers',
+      label: 'Direct Identifiers',
+      group: 'personal_data',
+      is_art_9: false,
+      source_count: 1,
+    },
+  ],
   recommendations: [
     'Review legal basis for processing and ensure documentation is up to date.',
     'Minimize directly identifying attributes where possible.',
@@ -103,6 +121,8 @@ describe('ProjectDetails page', () => {
     expect(screen.getByText('Customer Chat Logs')).toBeInTheDocument()
     expect(screen.getAllByText('Personal Data').length).toBeGreaterThan(0)
     expect(screen.getByText('High Risk')).toBeInTheDocument()
+    expect(screen.getByText('Contact Data')).toBeInTheDocument()
+    expect(screen.getByText('Direct Identifiers')).toBeInTheDocument()
     expect(screen.queryByText('Risk Drivers')).not.toBeInTheDocument()
   })
 

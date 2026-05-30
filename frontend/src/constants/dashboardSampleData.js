@@ -58,6 +58,7 @@ export const sampleDataSources = [
     updated_at: '2024-05-14T09:05:00Z',
     personal_data: 'Yes',
     risk: 'Medium',
+    metadata: { data_category_keys: ['contact_data', 'direct_identifiers'] },
     isSample: true,
   },
   {
@@ -72,6 +73,7 @@ export const sampleDataSources = [
     updated_at: '2024-05-14T09:12:00Z',
     personal_data: 'Yes',
     risk: 'Medium',
+    metadata: { data_category_keys: ['contact_data', 'direct_identifiers'] },
     isSample: true,
   },
   {
@@ -86,6 +88,7 @@ export const sampleDataSources = [
     updated_at: '2024-05-08T15:50:00Z',
     personal_data: 'Yes',
     risk: 'High',
+    metadata: { data_category_keys: ['location_data', 'online_identifiers'] },
     isSample: true,
   },
 ]
