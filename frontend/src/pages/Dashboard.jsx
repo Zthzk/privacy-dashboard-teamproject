@@ -47,12 +47,26 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-function riskChipProps(risk) {
-  const normalizedRisk = String(risk ?? '').toLowerCase()
+function projectRiskChipProps(project) {
+  const riskValue = project.overall_status ?? project.risk_status ?? project.risk_level
 
-  if (normalizedRisk === 'low') return { color: 'success', label: 'Low Risk' }
-  if (normalizedRisk === 'high') return { color: 'error', label: 'High Risk' }
-  return { color: 'warning', label: 'Medium Risk' }
+  if (project.art_9_sources > 0 || riskValue === 'red') {
+    return { color: 'error', label: 'High Risk' }
+  }
+
+  if (riskValue === 'yellow' || riskValue === 'medium' || riskValue === 'high') {
+    return { color: 'warning', label: 'Medium Risk' }
+  }
+
+  if ((project.high_risk_sources ?? 0) > 0) {
+    return { color: 'error', label: 'High Risk' }
+  }
+
+  if ((project.medium_risk_sources ?? 0) > 0 || (project.personal_data_sources ?? 0) > 0) {
+    return { color: 'warning', label: 'Medium Risk' }
+  }
+
+  return { color: 'success', label: 'Low Risk' }
 }
 
 function getSourceRisk(source) {
@@ -73,7 +87,7 @@ function hasArt9Data(source) {
 }
 
 function getProjectRisk(project) {
-  return riskChipProps(project.overall_status ?? project.risk_status ?? project.risk_level)
+  return projectRiskChipProps(project)
 }
 
 function countSourcesByCategory(dataSources, categoryKey) {
