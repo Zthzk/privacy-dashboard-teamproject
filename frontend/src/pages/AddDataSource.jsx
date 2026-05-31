@@ -187,7 +187,7 @@ export default function AddDataSource() {
                   <TextField
                     label="Data Source Name"
                     required
-                    placeholder="e.g. support_emails.csv"
+                        placeholder="e.g. training_reviews.json"
                     value={form.name}
                     error={Boolean(errors.name)}
                     helperText={errors.name || `${form.name.length} / 100`}

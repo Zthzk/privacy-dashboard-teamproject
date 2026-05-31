@@ -1,11 +1,20 @@
 const dataSourcesCacheKey = 'privacy-dashboard.data-sources'
 
+function isLegacySampleDataSource(dataSource) {
+  return (
+    dataSource?.isSample === true ||
+    String(dataSource?.id ?? '').startsWith('sample-')
+  )
+}
+
 export function readCachedDataSources() {
   if (typeof window === 'undefined') return []
 
   try {
     const cachedDataSources = JSON.parse(window.sessionStorage.getItem(dataSourcesCacheKey) || '[]')
-    return Array.isArray(cachedDataSources) ? cachedDataSources : []
+    return Array.isArray(cachedDataSources)
+      ? cachedDataSources.filter((dataSource) => !isLegacySampleDataSource(dataSource))
+      : []
   } catch {
     return []
   }
@@ -15,7 +24,10 @@ export function writeCachedDataSources(dataSources) {
   if (typeof window === 'undefined') return
 
   try {
-    window.sessionStorage.setItem(dataSourcesCacheKey, JSON.stringify(dataSources))
+    const safeDataSources = Array.isArray(dataSources)
+      ? dataSources.filter((dataSource) => !isLegacySampleDataSource(dataSource))
+      : []
+    window.sessionStorage.setItem(dataSourcesCacheKey, JSON.stringify(safeDataSources))
   } catch {
     // Cache failures should never block data source workflows.
   }

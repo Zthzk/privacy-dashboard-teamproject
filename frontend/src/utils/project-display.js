@@ -5,12 +5,7 @@ import {
   ShoppingCartOutlined,
 } from '@ant-design/icons'
 
-import { mergeUniqueById, sampleProjects } from 'constants/dashboardSampleData'
-import {
-  readDeletedSampleProjectIds,
-  readProjectStyleOverrides,
-  readSampleProjectOverrides,
-} from 'utils/project-cache'
+import { readProjectStyleOverrides } from 'utils/project-cache'
 
 export const projectIconOptions = [
   { key: 'message', label: 'Support' },
@@ -64,11 +59,5 @@ export function applyProjectStyleOverrides(projects, styleOverrides) {
 }
 
 export function getVisibleProjects(primaryProjects) {
-  const deletedSampleProjectIds = new Set(readDeletedSampleProjectIds().map(String))
-  const primaryProjectNames = new Set(primaryProjects.map((project) => project.name?.trim().toLowerCase()).filter(Boolean))
-  const visibleSampleProjects = mergeUniqueById(readSampleProjectOverrides(), sampleProjects).filter(
-    (project) => !deletedSampleProjectIds.has(String(project.id)) && !primaryProjectNames.has(project.name?.trim().toLowerCase()),
-  )
-
-  return sortProjectsNewestFirst(applyProjectStyleOverrides(mergeUniqueById(primaryProjects, visibleSampleProjects), readProjectStyleOverrides()))
+  return sortProjectsNewestFirst(applyProjectStyleOverrides(primaryProjects, readProjectStyleOverrides()))
 }

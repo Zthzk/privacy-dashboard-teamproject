@@ -40,11 +40,9 @@ import {
 import MainCard from 'components/MainCard'
 import { createProject, deleteProject, getProjects, updateProject } from 'api/projects'
 import {
-  markSampleProjectDeleted,
   readCachedProjects,
   writeCachedProjects,
   writeProjectStyleOverride,
-  writeSampleProjectOverride,
 } from 'utils/project-cache'
 import {
   defaultProjectStyle,
@@ -91,11 +89,11 @@ function formatDate(value) {
 function getProjectRisk(project) {
   const riskValue = project.overall_status ?? project.risk_status ?? project.risk_level
 
-  if (project.name === 'Health Insights' || project.art_9_sources > 0 || riskValue === 'red') {
+  if (project.art_9_sources > 0 || riskValue === 'red') {
     return { level: 'high', label: 'High', color: 'error' }
   }
 
-  if (project.name === 'Traffic Monitoring Vision' || riskValue === 'yellow' || riskValue === 'medium' || riskValue === 'high') {
+  if (riskValue === 'yellow' || riskValue === 'medium' || riskValue === 'high') {
     return { level: 'medium', label: 'Medium', color: 'warning' }
   }
 
@@ -485,7 +483,7 @@ export default function Projects() {
           timestampedProject,
           ...currentProjects.filter((project) => project.id !== timestampedProject.id),
         ])
-        writeCachedProjects(nextProjects.filter((project) => !project.isSample))
+        writeCachedProjects(nextProjects)
         return nextProjects
       })
       closeCreateDialog()
@@ -529,21 +527,11 @@ export default function Projects() {
         name: form.name.trim(),
         description: form.description.trim(),
       }
-      const updatedProject = editingProject.isSample
-        ? {
-          ...editingProject,
-          ...updateData,
-          updated_at: new Date().toISOString(),
-        }
-        : await updateProject(editingProject.id, updateData)
+      const updatedProject = await updateProject(editingProject.id, updateData)
 
       setProjects((currentProjects) => {
         const nextProjects = sortProjectsNewestFirst(currentProjects.map((project) => (project.id === updatedProject.id ? updatedProject : project)))
-        if (updatedProject.isSample) {
-          writeSampleProjectOverride(updatedProject)
-        } else {
-          writeCachedProjects(nextProjects.filter((project) => !project.isSample))
-        }
+        writeCachedProjects(nextProjects)
         return nextProjects
       })
       closeEditDialog()
@@ -559,15 +547,11 @@ export default function Projects() {
     setError('')
 
     try {
-      if (deleteDialogProject.isSample) {
-        markSampleProjectDeleted(deleteDialogProject.id)
-      } else {
-        await deleteProject(deleteDialogProject.id)
-      }
+      await deleteProject(deleteDialogProject.id)
 
       setProjects((currentProjects) => {
         const nextProjects = sortProjectsNewestFirst(currentProjects.filter((item) => item.id !== deleteDialogProject.id))
-        writeCachedProjects(nextProjects.filter((item) => !item.isSample))
+        writeCachedProjects(nextProjects)
         return nextProjects
       })
       closeDeleteDialog()

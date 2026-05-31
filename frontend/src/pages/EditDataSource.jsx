@@ -19,7 +19,6 @@ import MainCard from 'components/MainCard'
 import { deleteDataSource, getDataSource, updateDataSource } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { removeCachedDataSource, upsertCachedDataSource } from 'utils/data-source-cache'
-import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
 
 const sourceTypeOptions = [
   { value: 'file', label: 'File' },
@@ -99,16 +98,6 @@ function getProjectDetailsPath(projectId) {
   return projectId ? `/projects/${projectId}` : '/data-sources'
 }
 
-function normalizeSampleDataSource(source) {
-  if (!source) return null
-
-  return {
-    ...source,
-    source_type: source.source_type ?? 'file',
-    data_format: source.data_format ?? String(source.data_format_display ?? 'text').toLowerCase(),
-  }
-}
-
 export default function EditDataSource() {
   const navigate = useNavigate()
   const { dataSourceId } = useParams()
@@ -132,7 +121,7 @@ export default function EditDataSource() {
       .then(([source, projectList]) => {
         if (!isActive) return
 
-        setProjects(mergeUniqueById(projectList, sampleProjects))
+        setProjects(projectList)
         setDataSource(source)
         setForm({
           project: String(source.project ?? ''),
@@ -145,23 +134,7 @@ export default function EditDataSource() {
       })
       .catch(() => {
         if (isActive) {
-          const sampleSource = normalizeSampleDataSource(sampleDataSources.find((source) => String(source.id) === String(dataSourceId)))
-
-          if (sampleSource) {
-            setProjects(sampleProjects)
-            setDataSource(sampleSource)
-            setForm({
-              project: String(sampleSource.project ?? ''),
-              name: sampleSource.name ?? '',
-              location: sampleSource.location ?? '',
-              source_type: sampleSource.source_type ?? 'file',
-              data_format: sampleSource.data_format ?? 'text',
-              manual_data: sampleSource.metadata?.manual_data ?? '',
-            })
-            setError('')
-          } else {
-            setError('Could not load this data source. Please check the backend connection and try again.')
-          }
+          setError('Could not load this data source. Please check the backend connection and try again.')
         }
       })
       .finally(() => {
@@ -215,16 +188,7 @@ export default function EditDataSource() {
           manual_data: form.manual_data.trim(),
         },
       }
-      const updatedSource = dataSource.isSample
-        ? {
-          ...dataSource,
-          ...updateData,
-          project_name: selectedProject?.name ?? dataSource.project_name,
-          source_type_display: sourceTypeOptions.find((option) => option.value === updateData.source_type)?.label ?? updateData.source_type,
-          data_format_display: dataFormatOptions.find((option) => option.value === updateData.data_format)?.label ?? updateData.data_format,
-          updated_at: new Date().toISOString(),
-        }
-        : await updateDataSource(dataSource.project, dataSource.id, updateData)
+      const updatedSource = await updateDataSource(dataSource.project, dataSource.id, updateData)
 
       upsertCachedDataSource(updatedSource)
       navigate(getProjectDetailsPath(updatedSource.project ?? form.project))
@@ -245,9 +209,7 @@ export default function EditDataSource() {
     setError('')
 
     try {
-      if (!dataSource.isSample) {
-        await deleteDataSource(dataSource.project, dataSource.id)
-      }
+      await deleteDataSource(dataSource.project, dataSource.id)
       removeCachedDataSource(dataSource.id)
       navigate(getProjectDetailsPath(dataSource.project))
     } catch {
@@ -298,7 +260,7 @@ export default function EditDataSource() {
                       <TextField
                         label="Data Source Name"
                         required
-                        placeholder="e.g. support_emails.csv"
+                        placeholder="e.g. training_reviews.json"
                         value={form.name}
                         error={Boolean(errors.name)}
                         helperText={errors.name || `${form.name.length} / 100`}

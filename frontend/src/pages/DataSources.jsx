@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 
 import Alert from '@mui/material/Alert'
@@ -30,7 +30,6 @@ import MainCard from 'components/MainCard'
 import { deleteDataSource, getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { readCachedDataSources, removeCachedDataSource, writeCachedDataSources } from 'utils/data-source-cache'
-import { mergeUniqueById, sampleProjects } from 'constants/dashboardSampleData'
 
 function formatDate(value) {
   if (!value) return '-'
@@ -81,12 +80,11 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
 export default function DataSources() {
   const navigate = useNavigate()
   const [dataSources, setDataSources] = useState(() => readCachedDataSources())
-  const [projects, setProjects] = useState(sampleProjects)
+  const [projects, setProjects] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(() => readCachedDataSources().length === 0)
-  const [projectsLoaded, setProjectsLoaded] = useState(true)
+  const [projectsLoaded, setProjectsLoaded] = useState(false)
   const [error, setError] = useState('')
-  const hasInitialProjects = useRef(projects.length > 0)
 
   useEffect(() => {
     let isActive = true
@@ -112,13 +110,17 @@ export default function DataSources() {
     getProjects()
       .then((projectList) => {
         if (isActive) {
-          setProjects(mergeUniqueById(projectList, sampleProjects))
-          setProjectsLoaded(true)
+          setProjects(projectList)
         }
       })
       .catch(() => {
-        if (isActive && !hasInitialProjects.current) {
+        if (isActive) {
           setError('Could not load projects. Please check the backend connection and refresh the page.')
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setProjectsLoaded(true)
         }
       })
 

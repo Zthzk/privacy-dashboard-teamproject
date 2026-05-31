@@ -13,7 +13,7 @@ vi.mock('api/projects')
 
 const project = {
   id: 1,
-  name: 'Customer Support NLP',
+  name: 'Support Analytics Project',
   description: 'Project inventory for support tickets.',
   data_sources_count: 2,
   created_at: '2026-05-01T10:00:00Z',
@@ -112,7 +112,7 @@ describe('ProjectDetails page', () => {
     expect(screen.getByText('Loading project details...')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText('Customer Support NLP')).toBeInTheDocument()
+      expect(screen.getByText('Support Analytics Project')).toBeInTheDocument()
     })
 
     expect(getProjectOverview).toHaveBeenCalledWith('1')
@@ -151,7 +151,7 @@ describe('ProjectDetails page', () => {
 
     renderProjectDetails()
 
-    await screen.findByText('Customer Support NLP')
+    await screen.findByText('Support Analytics Project')
     await user.click(screen.getByRole('button', { name: 'Delete Support Tickets' }))
     expect(screen.getByText('Delete "Support Tickets" from this project? This will update the project metrics and risk assessment.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Delete' }))

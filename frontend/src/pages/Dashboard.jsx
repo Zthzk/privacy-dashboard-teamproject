@@ -35,14 +35,7 @@ import {
 import MainCard from 'components/MainCard'
 import { getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
-import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
 import { getProjectStyle, getVisibleProjects, projectIconMap } from 'utils/project-display'
-
-const riskSummary = [
-  { label: 'Email addresses detected', value: '1,248', icon: MailOutlined, color: 'primary' },
-  { label: 'License plates detected', value: '342', icon: CarOutlined, color: 'secondary' },
-  { label: 'Potential PII fields', value: '12', icon: TeamOutlined, color: 'success' },
-]
 
 function formatDate(value) {
   if (!value) return '-'
@@ -71,6 +64,22 @@ function getSourceRisk(source) {
   return { label: risk || 'Medium', color: 'warning' }
 }
 
+function hasArt9Data(source) {
+  return (
+    ['possible', 'yes', true].includes(source.art_9_data) ||
+    ['possible', 'yes', true].includes(source.metadata?.art_9_data) ||
+    source.metadata?.contains_art9_data === true
+  )
+}
+
+function getProjectRisk(project) {
+  return riskChipProps(project.overall_status ?? project.risk_status ?? project.risk_level)
+}
+
+function countSourcesByCategory(dataSources, categoryKey) {
+  return dataSources.filter((source) => source.metadata?.data_category_keys?.includes(categoryKey)).length
+}
+
 function ProjectIcon({ project }) {
   const style = getProjectStyle(project)
   const Icon = project.icon || projectIconMap[style.key] || MessageOutlined
@@ -93,8 +102,8 @@ function ProjectIcon({ project }) {
 export default function Dashboard() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState(() => getVisibleProjects([]))
-  const [dataSources, setDataSources] = useState(sampleDataSources)
-  const [selectedProjectId, setSelectedProjectId] = useState(sampleProjects[0]?.id ?? null)
+  const [dataSources, setDataSources] = useState([])
+  const [selectedProjectId, setSelectedProjectId] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -106,8 +115,10 @@ export default function Dashboard() {
       .then(([projectList, sourceList]) => {
         if (!isActive) return
 
-        setProjects(getVisibleProjects(projectList))
-        setDataSources(mergeUniqueById(sourceList, sampleDataSources))
+        const visibleProjects = getVisibleProjects(projectList)
+        setProjects(visibleProjects)
+        setDataSources(sourceList)
+        setSelectedProjectId((currentProjectId) => currentProjectId ?? visibleProjects[0]?.id ?? null)
       })
       .catch(() => {
         if (isActive) {
@@ -129,6 +140,25 @@ export default function Dashboard() {
   const selectedProjectSources = useMemo(
     () => dataSources.filter((source) => String(source.project) === String(selectedProject?.id)),
     [dataSources, selectedProject],
+  )
+  const selectedProjectMetrics = useMemo(() => {
+    const personalDataSources = selectedProjectSources.filter((source) => source.contains_personal_data).length
+    const art9Sources = selectedProjectSources.filter(hasArt9Data).length
+
+    return {
+      personalDataSources,
+      art9Sources,
+      personalDataLabel: `${personalDataSources} ${personalDataSources === 1 ? 'source' : 'sources'}`,
+      art9Label: `${art9Sources} ${art9Sources === 1 ? 'source' : 'sources'}`,
+    }
+  }, [selectedProjectSources])
+  const riskSummary = useMemo(
+    () => [
+      { label: 'Contact data sources', value: countSourcesByCategory(dataSources, 'contact_data'), icon: MailOutlined, color: 'primary' },
+      { label: 'Location data sources', value: countSourcesByCategory(dataSources, 'location_data'), icon: CarOutlined, color: 'secondary' },
+      { label: 'Personal data sources', value: dataSources.filter((source) => source.contains_personal_data).length, icon: TeamOutlined, color: 'success' },
+    ],
+    [dataSources],
   )
 
   return (
@@ -191,7 +221,7 @@ export default function Dashboard() {
               )}
 
               {!loading && projects.map((project) => {
-                const risk = riskChipProps(project.risk ?? project.risk_level)
+                const risk = getProjectRisk(project)
                 const selected = String(project.id) === String(selectedProjectId)
 
                 return (
@@ -286,10 +316,10 @@ export default function Dashboard() {
               }}
             >
               {[
-                ['Overall Risk', riskChipProps(selectedProject.risk ?? selectedProject.risk_level).label],
-                ['Contains Personal Data', 'Yes'],
-                ['Art. 9 GDPR Data', 'Possible'],
-                ['Last Updated', `${selectedProject.updated ?? formatDate(selectedProject.updated_at)}\n10:42 AM`],
+                ['Overall Risk', getProjectRisk(selectedProject).label],
+                ['Contains Personal Data', selectedProjectMetrics.personalDataLabel],
+                ['Art. 9 GDPR Data', selectedProjectMetrics.art9Label],
+                ['Last Updated', selectedProject.updated ?? formatDate(selectedProject.updated_at)],
               ].map(([label, value], index) => (
                 <Box
                   key={label}
@@ -305,7 +335,13 @@ export default function Dashboard() {
                   </Typography>
                   <Typography
                     variant="subtitle2"
-                    color={label === 'Contains Personal Data' ? 'error.main' : label === 'Art. 9 GDPR Data' ? 'warning.dark' : 'text.primary'}
+                    color={
+                      label === 'Contains Personal Data' && selectedProjectMetrics.personalDataSources > 0
+                        ? 'error.main'
+                        : label === 'Art. 9 GDPR Data' && selectedProjectMetrics.art9Sources > 0
+                          ? 'warning.dark'
+                          : 'text.primary'
+                    }
                     sx={{ whiteSpace: 'pre-line' }}
                   >
                     {value}
@@ -428,7 +464,7 @@ export default function Dashboard() {
               <Box>
                 <Typography variant="subtitle1">Recommendation</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Consider pseudonymizing email addresses and applying data minimization to customer notes.
+                  Review projects with personal data or Art. 9 categories before using their data sources in model training.
                 </Typography>
                 <Button size="small" endIcon={<RightOutlined aria-hidden="true" />}>
                   View details

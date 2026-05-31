@@ -54,14 +54,10 @@ import { getProjectOverview, updateProject } from 'api/projects'
 import { readCachedDataSources, writeCachedDataSources } from 'utils/data-source-cache'
 import {
   readCachedProjects,
-  readDeletedSampleProjectIds,
   readProjectStyleOverrides,
-  readSampleProjectOverrides,
   writeCachedProjects,
   writeProjectStyleOverride,
-  writeSampleProjectOverride,
 } from 'utils/project-cache'
-import { mergeUniqueById, sampleDataSources, sampleProjects } from 'constants/dashboardSampleData'
 import { applyProjectStyleOverrides, getProjectStyle, projectColorOptions, projectIconMap, projectIconOptions } from 'utils/project-display'
 
 const initialEditForm = {
@@ -384,17 +380,11 @@ function normalizeSampleDataSource(source) {
 }
 
 function buildLocalProjectOverview(projectId) {
-  const deletedSampleProjectIds = new Set(readDeletedSampleProjectIds().map(String))
-  if (deletedSampleProjectIds.has(String(projectId))) return null
-
-  const projects = applyProjectStyleOverrides(
-    mergeUniqueById(readCachedProjects(), mergeUniqueById(readSampleProjectOverrides(), sampleProjects)),
-    readProjectStyleOverrides(),
-  )
+  const projects = applyProjectStyleOverrides(readCachedProjects(), readProjectStyleOverrides())
   const project = projects.find((item) => String(item.id) === String(projectId))
   if (!project) return null
 
-  const dataSources = mergeUniqueById(readCachedDataSources(), sampleDataSources)
+  const dataSources = readCachedDataSources()
     .filter((source) => String(source.project) === String(projectId))
     .map(normalizeSampleDataSource)
   const riskAssessment = buildRiskAssessmentFallback(dataSources)
@@ -786,30 +776,19 @@ export default function ProjectDetails() {
         icon_key: editForm.icon_key,
         color: editForm.color,
       }
-      const updatedProject = project.isSample
-        ? {
-          ...project,
-          ...updateData,
-          ...styleData,
-          updated_at: new Date().toISOString(),
-        }
-        : {
-          ...(await updateProject(project.id, updateData)),
-          ...styleData,
-        }
+      const updatedProject = {
+        ...(await updateProject(project.id, updateData)),
+        ...styleData,
+      }
 
       setProject(updatedProject)
       writeProjectStyleOverride(updatedProject.id, styleData)
 
-      if (updatedProject.isSample) {
-        writeSampleProjectOverride(updatedProject)
-      } else {
-        const cachedProjects = readCachedProjects()
-        const nextCachedProjects = cachedProjects.some((cachedProject) => cachedProject.id === updatedProject.id)
-          ? cachedProjects.map((cachedProject) => (cachedProject.id === updatedProject.id ? updatedProject : cachedProject))
-          : [updatedProject, ...cachedProjects]
-        writeCachedProjects(nextCachedProjects)
-      }
+      const cachedProjects = readCachedProjects()
+      const nextCachedProjects = cachedProjects.some((cachedProject) => cachedProject.id === updatedProject.id)
+        ? cachedProjects.map((cachedProject) => (cachedProject.id === updatedProject.id ? updatedProject : cachedProject))
+        : [updatedProject, ...cachedProjects]
+      writeCachedProjects(nextCachedProjects)
 
       closeEditProjectDialog()
     } catch {

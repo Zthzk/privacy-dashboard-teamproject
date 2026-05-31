@@ -11,7 +11,7 @@ vi.mock('api/projects')
 
 const baseProject = {
   id: 1,
-  name: 'Customer Support NLP',
+  name: 'Support Analytics Project',
   description: 'Project inventory for customer support tickets.',
   data_sources_count: 3,
   created_at: '2026-05-01T10:00:00Z',
@@ -49,7 +49,7 @@ describe('Projects page', () => {
     expect(screen.getByText('Loading projects...')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText('Customer Support NLP')).toBeInTheDocument()
+      expect(screen.getByText('Support Analytics Project')).toBeInTheDocument()
     })
 
     expect(getProjects).toHaveBeenCalledTimes(1)
@@ -73,7 +73,7 @@ describe('Projects page', () => {
     expect(screen.queryByText('Loading projects...')).not.toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText('Customer Support NLP')).toBeInTheDocument()
+      expect(screen.getByText('Support Analytics Project')).toBeInTheDocument()
     })
   })
 
@@ -107,16 +107,16 @@ describe('Projects page', () => {
 
     renderProjects()
 
-    await screen.findByText('Customer Support NLP')
+    await screen.findByText('Support Analytics Project')
 
     await userEvent.type(screen.getByPlaceholderText('Search projects...'), 'road')
 
     expect(screen.getByText('Traffic Vision')).toBeInTheDocument()
-    expect(screen.queryByText('Customer Support NLP')).not.toBeInTheDocument()
+    expect(screen.queryByText('Support Analytics Project')).not.toBeInTheDocument()
   })
 
   test('paginates projects with the selected page size', async () => {
-    const sampleNameProjects = ['E-commerce Recommender', 'Traffic Monitoring Vision', 'Health Insights', 'Customer Support NLP'].map((name, index) => ({
+    const pageFixtureProjects = ['Invoices Project', 'Road Analytics Project', 'Patient Trends Project', 'Support Analytics Project'].map((name, index) => ({
       ...baseProject,
       id: index + 1,
       name,
@@ -129,17 +129,17 @@ describe('Projects page', () => {
       updated_at: `2026-05-${String(index + 5).padStart(2, '0')}T10:00:00Z`,
     }))
 
-    getProjects.mockResolvedValue([...sampleNameProjects, ...extraProjects])
+    getProjects.mockResolvedValue([...pageFixtureProjects, ...extraProjects])
 
     renderProjects()
 
     await screen.findByText('Showing 1 to 10 of 12 projects')
-    expect(screen.queryByText('E-commerce Recommender')).not.toBeInTheDocument()
+    expect(screen.queryByText('Invoices Project')).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByLabelText('Next page'))
 
     expect(screen.getByText('Showing 11 to 12 of 12 projects')).toBeInTheDocument()
-    expect(screen.getByText('E-commerce Recommender')).toBeInTheDocument()
+    expect(screen.getByText('Invoices Project')).toBeInTheDocument()
   })
 
   test('moves focus between create project fields with arrow keys', async () => {
@@ -147,7 +147,7 @@ describe('Projects page', () => {
     const user = userEvent.setup()
 
     renderProjects()
-    await screen.findByText('Customer Support NLP')
+    await screen.findByText('Support Analytics Project')
 
     await user.click(screen.getByRole('button', { name: 'New Project' }))
     const dialog = await screen.findByRole('dialog', { name: 'Create New Project' })
@@ -172,12 +172,12 @@ describe('Projects page', () => {
     updateProject.mockResolvedValue(updatedProject)
 
     renderProjects()
-    await screen.findByText('Customer Support NLP')
+    await screen.findByText('Support Analytics Project')
 
     await openProjectMenu()
     await user.click(within(screen.getByRole('menu')).getByText('Edit'))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Project' })
-    const nameInput = within(dialog).getByDisplayValue('Customer Support NLP')
+    const nameInput = within(dialog).getByDisplayValue('Support Analytics Project')
     const descriptionInput = within(dialog).getByDisplayValue('Project inventory for customer support tickets.')
 
     await user.clear(nameInput)
@@ -202,7 +202,7 @@ describe('Projects page', () => {
 
   test('deletes a project after confirmation and updates the cache', async () => {
     renderProjects()
-    await screen.findByText('Customer Support NLP')
+    await screen.findByText('Support Analytics Project')
 
     await openProjectMenu()
     const menu = screen.getByRole('menu')
@@ -212,7 +212,7 @@ describe('Projects page', () => {
 
     await waitFor(() => {
       expect(deleteProject).toHaveBeenCalledWith(1)
-      expect(screen.queryByText('Customer Support NLP')).not.toBeInTheDocument()
+      expect(screen.queryByText('Support Analytics Project')).not.toBeInTheDocument()
     })
 
     expect(readCachedProjects()).toEqual([])

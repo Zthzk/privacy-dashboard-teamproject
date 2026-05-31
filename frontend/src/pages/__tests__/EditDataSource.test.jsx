@@ -13,14 +13,14 @@ vi.mock('api/projects')
 
 const project = {
   id: 1,
-  name: 'Customer Support NLP',
+  name: 'Support Analytics Project',
   description: 'Project inventory for support tickets.',
 }
 
 const dataSource = {
   id: 11,
   project: 1,
-  project_name: 'Customer Support NLP',
+  project_name: 'Support Analytics Project',
   name: 'Support Tickets',
   location: 'datasets/support.json',
   source_type: 'manual',
