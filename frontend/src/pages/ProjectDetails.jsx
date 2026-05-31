@@ -23,10 +23,12 @@ import TableHead from '@mui/material/TableHead'
 import TablePagination from '@mui/material/TablePagination'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import {
   CalendarOutlined,
   ClockCircleOutlined,
+  CloseOutlined,
   CreditCardOutlined,
   DatabaseFilled,
   DeleteOutlined,
@@ -556,63 +558,69 @@ function DataCategoryCard({ categories }) {
           const Icon = category.icon
 
           return (
-            <Stack
+            <Box
               key={category.key}
-              direction="row"
-              spacing={1.5}
               sx={{
+                display: 'grid',
+                gridTemplateColumns: '32px minmax(0, 1fr) 92px',
+                columnGap: 1.25,
                 alignItems: 'center',
-                justifyContent: 'space-between',
                 borderRadius: 1,
-                py: 0.75,
+                minHeight: 58,
+                py: 0.65,
               }}
             >
-              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-                <Box
+              <Box
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 1,
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: category.color,
+                  bgcolor: category.bg,
+                }}
+              >
+                <Icon style={{ fontSize: 17 }} />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>{category.label}</Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
                   sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 1,
-                    display: 'grid',
-                    placeItems: 'center',
-                    color: category.color,
-                    bgcolor: category.bg,
-                    flexShrink: 0,
+                    display: '-webkit-box',
+                    lineHeight: 1.25,
+                    overflow: 'hidden',
+                    WebkitBoxOrient: 'vertical',
+                    WebkitLineClamp: 2,
                   }}
                 >
-                  <Icon style={{ fontSize: 17 }} />
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>{category.label}</Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
+                  {category.description}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', minWidth: 0 }}>
+                {Number.isFinite(category.source_count) && (
+                  <Chip
+                    label={`${category.source_count} ${category.source_count === 1 ? 'source' : 'sources'}`}
+                    size="small"
+                    variant="outlined"
                     sx={{
-                      display: '-webkit-box',
-                      lineHeight: 1.25,
-                      overflow: 'hidden',
-                      WebkitBoxOrient: 'vertical',
-                      WebkitLineClamp: 2,
+                      minWidth: 74,
+                      maxWidth: 92,
+                      color: category.color,
+                      borderColor: category.color,
+                      bgcolor: category.bg,
+                      '& .MuiChip-label': {
+                        px: 0.75,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      },
                     }}
-                  >
-                    {category.description}
-                  </Typography>
-                </Box>
-              </Stack>
-              {Number.isFinite(category.source_count) && (
-                <Chip
-                  label={`${category.source_count} ${category.source_count === 1 ? 'source' : 'sources'}`}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    flexShrink: 0,
-                    color: category.color,
-                    borderColor: category.color,
-                    bgcolor: category.bg,
-                  }}
-                />
-              )}
-            </Stack>
+                  />
+                )}
+              </Box>
+            </Box>
           )
         })}
         {hiddenCategoryCount > 0 && (
@@ -1015,6 +1023,23 @@ export default function ProjectDetails() {
                       <SearchOutlined />
                     </InputAdornment>
                   }
+                  endAdornment={
+                    search ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          aria-label="Clear data source search"
+                          onClick={() => {
+                            setSearch('')
+                            setPage(0)
+                          }}
+                        >
+                          <CloseOutlined />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null
+                  }
                   sx={{ width: { xs: '100%', md: 300 }, bgcolor: 'background.paper' }}
                 />
               </Stack>
@@ -1045,9 +1070,24 @@ export default function ProjectDetails() {
                     {filteredDataSources.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                          <Typography variant="subtitle1">
-                            {dataSources.length === 0 ? 'No data sources added yet.' : 'No data sources match your search.'}
-                          </Typography>
+                          <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
+                            <Typography variant="subtitle1">
+                              {dataSources.length === 0 ? 'No data sources added yet.' : 'No data sources match your search.'}
+                            </Typography>
+                            {dataSources.length === 0 ? (
+                              <Button
+                                variant="contained"
+                                startIcon={<PlusCircleFilled />}
+                                onClick={() => navigate(`/data-sources/new?project=${project.id}`)}
+                              >
+                                Add Data Source
+                              </Button>
+                            ) : (
+                              <Button color="secondary" onClick={() => setSearch('')}>
+                                Clear Search
+                              </Button>
+                            )}
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     )}
@@ -1099,22 +1139,30 @@ export default function ProjectDetails() {
                           <TableCell>{formatDate(source.updated_at)}</TableCell>
                           <TableCell align="right">
                             <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                              <IconButton
-                                size="small"
-                                aria-label={`Edit ${source.name}`}
-                                onClick={() => navigate(`/data-sources/${source.id}/edit?project=${source.project}`)}
-                              >
-                                <EditOutlined />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                aria-label={`Delete ${source.name}`}
-                                disabled={deletingDataSourceId === source.id}
-                                onClick={() => setDataSourcePendingDelete(source)}
-                              >
-                                <DeleteOutlined />
-                              </IconButton>
+                              <Tooltip title="Edit data source">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    aria-label={`Edit ${source.name}`}
+                                    onClick={() => navigate(`/data-sources/${source.id}/edit?project=${source.project}`)}
+                                  >
+                                    <EditOutlined />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              <Tooltip title="Delete data source">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    aria-label={`Delete ${source.name}`}
+                                    disabled={deletingDataSourceId === source.id}
+                                    onClick={() => setDataSourcePendingDelete(source)}
+                                  >
+                                    <DeleteOutlined />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
                             </Stack>
                           </TableCell>
                         </TableRow>
@@ -1148,7 +1196,7 @@ export default function ProjectDetails() {
             <DialogTitle>Delete Data Source</DialogTitle>
             <DialogContent>
               <DialogContentText>
-                Delete &quot;{dataSourcePendingDelete?.name}&quot; from this project? This will update the project metrics and risk assessment.
+                Delete &quot;{dataSourcePendingDelete?.name}&quot; from this project? The project metrics and risk assessment will update immediately after deletion.
               </DialogContentText>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import Alert from '@mui/material/Alert'
@@ -7,6 +7,11 @@ import Box from '@mui/material/Box'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
 import Link from '@mui/material/Link'
 import MenuItem from '@mui/material/MenuItem'
@@ -111,6 +116,10 @@ export default function EditDataSource() {
   const [loading, setLoading] = useState(!invalidRoute)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const nameInputRef = useRef(null)
+  const locationInputRef = useRef(null)
+  const manualDataInputRef = useRef(null)
 
   useEffect(() => {
     let isActive = true
@@ -152,17 +161,44 @@ export default function EditDataSource() {
     () => projects.find((project) => String(project.id) === String(form.project)),
     [form.project, projects],
   )
+  const submitDisabled = saving || !form.name.trim()
+
+  useEffect(() => {
+    if (!loading && dataSource) {
+      nameInputRef.current?.focus()
+    }
+  }, [loading, dataSource])
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: '' }))
   }
 
+  function updateSourceType(value) {
+    setForm((current) => ({
+      ...current,
+      source_type: value,
+      location: value === 'manual' && !current.location.trim() ? 'manual input' : current.location,
+    }))
+  }
+
+  function moveFocusOnArrow(event, nextRef, previousRef) {
+    if (event.key === 'ArrowDown' && nextRef?.current) {
+      event.preventDefault()
+      nextRef.current.focus()
+    }
+
+    if (event.key === 'ArrowUp' && previousRef?.current) {
+      event.preventDefault()
+      previousRef.current.focus()
+    }
+  }
+
   function validateForm() {
     const nextErrors = {}
     if (!form.project) nextErrors.project = 'Project is required.'
     if (!form.name.trim()) nextErrors.name = 'Data source name is required.'
-    if (!form.location.trim()) nextErrors.location = 'Location or reference is required.'
+    if (!form.location.trim() && form.source_type !== 'manual') nextErrors.location = 'Location or reference is required.'
 
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
@@ -177,10 +213,11 @@ export default function EditDataSource() {
     setError('')
 
     try {
+      const location = form.location.trim() || (form.source_type === 'manual' ? 'manual input' : '')
       const updateData = {
         project: form.project,
         name: form.name.trim(),
-        location: form.location.trim(),
+        location,
         source_type: form.source_type,
         data_format: form.data_format,
         metadata: {
@@ -203,7 +240,7 @@ export default function EditDataSource() {
   }
 
   async function handleDelete() {
-    if (!dataSource || !window.confirm(`Delete "${dataSource.name}"?`)) return
+    if (!dataSource) return
 
     setSaving(true)
     setError('')
@@ -264,8 +301,10 @@ export default function EditDataSource() {
                         value={form.name}
                         error={Boolean(errors.name)}
                         helperText={errors.name || `${form.name.length} / 100`}
+                        inputRef={nameInputRef}
                         slotProps={{ htmlInput: { maxLength: 100 } }}
                         onChange={(event) => updateField('name', event.target.value)}
+                        onKeyDown={(event) => moveFocusOnArrow(event, locationInputRef)}
                       />
                       <TextField
                         select
@@ -302,7 +341,7 @@ export default function EditDataSource() {
                         required
                         value={form.source_type}
                         helperText="How is this data source provided?"
-                        onChange={(event) => updateField('source_type', event.target.value)}
+                        onChange={(event) => updateSourceType(event.target.value)}
                       >
                         {sourceTypeOptions.map((option) => (
                           <MenuItem key={option.value} value={option.value}>
@@ -329,9 +368,11 @@ export default function EditDataSource() {
                         required
                         value={form.location}
                         error={Boolean(errors.location)}
-                        helperText={errors.location || 'Where is this data sourced from?'}
+                        helperText={errors.location || (form.source_type === 'manual' ? 'Auto-filled for manual entries if left empty.' : 'Where is this data sourced from?')}
                         placeholder='e.g., "manual input" or "demo_reviews.txt"'
+                        inputRef={locationInputRef}
                         onChange={(event) => updateField('location', event.target.value)}
+                        onKeyDown={(event) => moveFocusOnArrow(event, manualDataInputRef, nameInputRef)}
                       />
                     </Box>
                   </Stack>
@@ -346,8 +387,10 @@ export default function EditDataSource() {
                       placeholder={'Name: Anna Mueller\nEmail: anna@example.com\nComment: I live in Tuebingen and would like product support.'}
                       value={form.manual_data}
                       helperText={`${form.manual_data.length} / 2000`}
+                      inputRef={manualDataInputRef}
                       slotProps={{ htmlInput: { maxLength: 2000 } }}
                       onChange={(event) => updateField('manual_data', event.target.value)}
+                      onKeyDown={(event) => moveFocusOnArrow(event, null, locationInputRef)}
                     />
                     <Typography variant="caption" color="text.secondary">
                       Use only small demo data for testing.
@@ -429,10 +472,10 @@ export default function EditDataSource() {
                   Cancel
                 </Button>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <Button variant="outlined" color="error" startIcon={<DeleteOutlined />} disabled={saving} onClick={handleDelete}>
+                  <Button variant="outlined" color="error" startIcon={<DeleteOutlined />} disabled={saving} onClick={() => setDeleteDialogOpen(true)}>
                     Delete Data Source
                   </Button>
-                  <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={saving || !form.name.trim()}>
+                  <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={submitDisabled}>
                     {saving ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </Stack>
@@ -440,6 +483,23 @@ export default function EditDataSource() {
             </Box>
           </>
         )}
+
+        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Delete Data Source</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Delete &quot;{dataSource?.name}&quot; from this project? The project metrics and risk assessment will update after deletion.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button color="secondary" disabled={saving} onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button color="error" variant="contained" disabled={saving} onClick={handleDelete}>
+              {saving ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
     </Box>
   )

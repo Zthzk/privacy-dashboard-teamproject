@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -56,7 +56,6 @@ function readCachedDataSources() {
 beforeEach(() => {
   vi.clearAllMocks()
   window.sessionStorage.clear()
-  window.confirm = vi.fn(() => true)
   getProjects.mockResolvedValue([project])
   getDataSource.mockResolvedValue(dataSource)
   updateDataSource.mockResolvedValue(updatedDataSource)
@@ -105,9 +104,11 @@ describe('EditDataSource page', () => {
 
     await screen.findByDisplayValue('Support Tickets')
     await user.click(screen.getByRole('button', { name: /Delete Data Source/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Data Source' })
+    expect(within(dialog).getByText('Delete "Support Tickets" from this project? The project metrics and risk assessment will update after deletion.')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalledWith('Delete "Support Tickets"?')
       expect(deleteDataSource).toHaveBeenCalledWith(1, 11)
       expect(screen.getByText('Project details destination')).toBeInTheDocument()
     })

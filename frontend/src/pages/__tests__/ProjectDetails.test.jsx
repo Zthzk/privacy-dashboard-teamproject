@@ -153,7 +153,7 @@ describe('ProjectDetails page', () => {
 
     await screen.findByText('Support Analytics Project')
     await user.click(screen.getByRole('button', { name: 'Delete Support Tickets' }))
-    expect(screen.getByText('Delete "Support Tickets" from this project? This will update the project metrics and risk assessment.')).toBeInTheDocument()
+    expect(screen.getByText('Delete "Support Tickets" from this project? The project metrics and risk assessment will update immediately after deletion.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {

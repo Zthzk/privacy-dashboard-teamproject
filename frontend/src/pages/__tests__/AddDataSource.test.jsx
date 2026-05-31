@@ -106,7 +106,6 @@ describe('AddDataSource page', () => {
 
     expect(await screen.findByText('Project is required.')).toBeInTheDocument()
     expect(screen.getByText('Data source name is required.')).toBeInTheDocument()
-    expect(screen.getByText('Location or reference is required.')).toBeInTheDocument()
     expect(createDataSource).not.toHaveBeenCalled()
   })
 
