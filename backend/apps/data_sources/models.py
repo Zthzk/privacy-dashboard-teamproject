@@ -13,6 +13,8 @@ class DataSource(models.Model):
     class DataFormat(models.TextChoices):
         TEXT = "text", "Text"
         IMAGE = "image", "Image"
+        AUDIO = "audio", "Audio"
+        VIDEO = "video", "Video"
         CSV = "csv", "CSV"
         JSON = "json", "JSON"
         OTHER = "other", "Other"

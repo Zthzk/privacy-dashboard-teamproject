@@ -62,6 +62,16 @@ DATA_FORMAT_HINTS = {
         "art9_risk": False,
         "suggested_categories": ["names", "emails", "IDs"],
     },
+    "audio": {
+        "hint": "Audio datasets may contain voice recordings that can identify individuals.",
+        "art9_risk": True,  # Voice is a biometric identifier under Art. 9 GDPR
+        "suggested_categories": ["voice_data", "biometric_data"],
+    },
+    "video": {
+        "hint": "Video datasets may contain faces, movements, or behavioral patterns that identify individuals.",
+        "art9_risk": True,  # Facial and movement data are biometric identifiers under Art. 9 GDPR
+        "suggested_categories": ["faces", "biometric_data", "behavioral_data"],
+    },
     "other": {
         "hint": "Review this data source manually to identify any personal data it may contain.",
         "art9_risk": False,

@@ -39,6 +39,8 @@ const dataFormatOptions = [
   { value: 'csv', label: 'CSV' },
   { value: 'json', label: 'JSON' },
   { value: 'image', label: 'Image' },
+  { value: 'audio', label: 'Audio' },
+  { value: 'video', label: 'Video' },
   { value: 'other', label: 'Other' },
 ]
 

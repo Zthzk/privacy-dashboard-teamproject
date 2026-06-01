@@ -18,6 +18,7 @@ import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
 import {
   ApiOutlined,
+  AudioOutlined,
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -25,6 +26,7 @@ import {
   PictureOutlined,
   PlusOutlined,
   SearchOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons'
 
 // Maps data_format values to an icon component and a display color.
@@ -33,6 +35,8 @@ const DATA_FORMAT_ICONS = {
   csv: { icon: DatabaseOutlined, color: '#52c41a' },
   json: { icon: ApiOutlined, color: '#fa8c16' },
   image: { icon: PictureOutlined, color: '#722ed1' },
+  audio: { icon: AudioOutlined, color: '#eb2f96' },
+  video: { icon: VideoCameraOutlined, color: '#13c2c2' },
   other: { icon: FileTextOutlined, color: '#8c8c8c' },
 }
 
