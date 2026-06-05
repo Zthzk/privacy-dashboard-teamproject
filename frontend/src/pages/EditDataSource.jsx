@@ -6,13 +6,17 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
+import Collapse from '@mui/material/Collapse'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import FormGroup from '@mui/material/FormGroup'
 import Link from '@mui/material/Link'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
@@ -120,6 +124,8 @@ export default function EditDataSource() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [dataFormatHints, setDataFormatHints] = useState({})
+  const [isNotCompliant, setIsNotCompliant] = useState(false)
+  const [violations, setViolations] = useState([])
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const nameInputRef = useRef(null)
   const locationInputRef = useRef(null)
@@ -185,6 +191,10 @@ export default function EditDataSource() {
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: '' }))
+    if (field === 'data_format') {
+      setIsNotCompliant(false)
+      setViolations([])
+    }
   }
 
   function updateSourceType(value) {
@@ -391,6 +401,55 @@ export default function EditDataSource() {
 
                     {/* key forces a remount on format change so the collapse state resets. */}
                     <DataFormatHintAlert key={form.data_format} hint={activeHint} />
+
+                    {activeHint && (
+                      <Stack spacing={1}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={isNotCompliant}
+                              onChange={(e) => {
+                                setIsNotCompliant(e.target.checked)
+                                if (!e.target.checked) setViolations([])
+                              }}
+                              sx={{
+                                color: 'error.main',
+                                '&:hover': { color: 'error.dark' },
+                                '&.Mui-checked': { color: 'error.dark' },
+                              }}
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" sx={{ color: isNotCompliant ? 'error.dark' : 'error.main' }}>
+                              Data is not compliant
+                            </Typography>
+                          }
+                        />
+                        <Collapse in={isNotCompliant}>
+                          <Stack spacing={0.5} sx={{ pl: 1 }}>
+                            <Typography variant="body2" fontWeight={500}>Select all that apply:</Typography>
+                            <FormGroup>
+                              {activeHint.checklist?.map((item) => (
+                                <FormControlLabel
+                                  key={item}
+                                  control={
+                                    <Checkbox
+                                      size="small"
+                                      checked={violations.includes(item)}
+                                      onChange={(e) => setViolations((prev) =>
+                                        e.target.checked ? [...prev, item] : prev.filter((v) => v !== item)
+                                      )}
+                                    />
+                                  }
+                                  label={<Typography variant="body2">{item}</Typography>}
+                                />
+                              ))}
+                            </FormGroup>
+                          </Stack>
+                        </Collapse>
+                      </Stack>
+                    )}
                   </Stack>
 
                   <Divider />

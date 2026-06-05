@@ -388,7 +388,8 @@ class DataFormatHintsApiTests(TestCase):
             self.assertIn(data_format, payload)
             self.assertIn("hint", payload[data_format])
             self.assertIn("art9_risk", payload[data_format])
-            self.assertIn("suggested_categories", payload[data_format])
+            self.assertIn("relevant_articles", payload[data_format])
+            self.assertIn("checklist", payload[data_format])
 
     def test_image_format_has_art9_risk(self):
         response = self.client.get(reverse("data-format-hints"))
