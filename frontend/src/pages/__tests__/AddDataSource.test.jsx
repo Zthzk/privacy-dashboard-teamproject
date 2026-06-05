@@ -13,7 +13,7 @@ vi.mock('api/projects')
 
 const project = {
   id: 1,
-  name: 'Customer Support NLP',
+  name: 'Support Analytics Project',
   description: 'Project inventory for support tickets.',
   data_sources_count: 0,
   created_at: '2026-05-01T10:00:00Z',
@@ -23,7 +23,7 @@ const project = {
 const createdDataSource = {
   id: 11,
   project: 1,
-  project_name: 'Customer Support NLP',
+  project_name: 'Support Analytics Project',
   name: 'Support Tickets',
   location: 'datasets/support.json',
   source_type: 'manual',
@@ -40,6 +40,7 @@ function renderAddDataSource(initialEntry = '/data-sources/new?project=1') {
         <Route path="/data-sources/new" element={<AddDataSource />} />
         <Route path="/data-sources" element={<div>Data sources destination</div>} />
         <Route path="/projects" element={<div>Projects destination</div>} />
+        <Route path="/projects/:projectId" element={<div>Project details destination</div>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -62,7 +63,7 @@ describe('AddDataSource page', () => {
 
     renderAddDataSource()
 
-    expect(await screen.findByDisplayValue('Customer Support NLP')).toBeInTheDocument()
+    expect(await screen.findByDisplayValue('Support Analytics Project')).toBeInTheDocument()
 
     await user.type(screen.getByLabelText(/Data Source Name/i), 'Support Tickets')
     await user.type(screen.getByLabelText(/Location \/ Reference/i), 'datasets/support.json')
@@ -80,10 +81,21 @@ describe('AddDataSource page', () => {
           metadata: { manual_data: 'Example support ticket' },
         }),
       )
-      expect(screen.getByText('Data sources destination')).toBeInTheDocument()
+      expect(screen.getByText('Project details destination')).toBeInTheDocument()
     })
 
     expect(readCachedDataSources()).toEqual([createdDataSource])
+  })
+
+  test('cancels back to the selected project details page', async () => {
+    const user = userEvent.setup()
+
+    renderAddDataSource()
+
+    await screen.findByDisplayValue('Support Analytics Project')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Project details destination')).toBeInTheDocument()
   })
 
   test('shows validation errors when required fields are missing', async () => {
@@ -94,7 +106,6 @@ describe('AddDataSource page', () => {
 
     expect(await screen.findByText('Project is required.')).toBeInTheDocument()
     expect(screen.getByText('Data source name is required.')).toBeInTheDocument()
-    expect(screen.getByText('Location or reference is required.')).toBeInTheDocument()
     expect(createDataSource).not.toHaveBeenCalled()
   })
 

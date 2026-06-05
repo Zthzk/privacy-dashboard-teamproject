@@ -9,6 +9,8 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from apps.risk_assessments.services import calculate_project_risk
+
 from .models import Project
 
 
@@ -22,11 +24,22 @@ def serialize_project(project):
     if data_sources_count is None:
         data_sources_count = project.data_sources.count()
 
+    risk_assessment = calculate_project_risk(project)
+    metrics = risk_assessment["metrics"]
+
     return {
         "id": project.id,
         "name": project.name,
         "description": project.description,
         "data_sources_count": data_sources_count,
+        "overall_status": risk_assessment["overall_status"],
+        "overall_status_display": risk_assessment["overall_status_display"],
+        "risk_level": risk_assessment["risk_level"],
+        "risk_level_display": risk_assessment["risk_level_display"],
+        "personal_data_sources": metrics["personal_data_sources"],
+        "high_risk_sources": metrics["high_risk_sources"],
+        "medium_risk_sources": metrics["medium_risk_sources"],
+        "art_9_sources": metrics["art_9_sources"],
         "created_at": project.created_at.isoformat(),
         "updated_at": project.updated_at.isoformat(),
     }
@@ -53,7 +66,7 @@ def projects(request):
     if request.method == "GET":
         project_queryset = Project.objects.annotate(
             data_sources_count=Count("data_sources"),
-        )
+        ).prefetch_related("data_sources")
 
         return JsonResponse(
             {
@@ -121,3 +134,24 @@ def project_detail(request, project_id):
         )
 
     return JsonResponse(serialize_project(project))
+
+
+@require_http_methods(["GET"])
+def project_overview(request, project_id):
+    project = get_object_or_404(
+        Project.objects.prefetch_related("data_sources"),
+        pk=project_id,
+    )
+
+    from apps.data_sources.views import serialize_data_source
+
+    return JsonResponse(
+        {
+            "project": serialize_project(project),
+            "data_sources": [
+                serialize_data_source(data_source)
+                for data_source in project.data_sources.all()
+            ],
+            "risk_assessment": calculate_project_risk(project),
+        }
+    )

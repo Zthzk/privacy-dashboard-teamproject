@@ -71,6 +71,54 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(payload["location"], "manual input")
         self.assertFalse(payload["contains_personal_data"])
         self.assertEqual(payload["metadata"]["manual_data"], "Example customer note")
+        self.assertEqual(payload["risk_level"], "low")
+        self.assertEqual(payload["art_9_data"], "no")
+
+    def test_detects_personal_data_risk_from_manual_data(self):
+        response = self.post_json(
+            self.url,
+            {
+                "name": "Support notes",
+                "source_type": DataSource.SourceType.MANUAL,
+                "data_format": DataSource.DataFormat.TEXT,
+                "location": "manual input",
+                "metadata": {
+                    "manual_data": "Name: Anna Mueller\nEmail: anna@example.com",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertTrue(payload["contains_personal_data"])
+        self.assertEqual(payload["risk_level"], "medium")
+        self.assertEqual(payload["art_9_data"], "no")
+        self.assertIn("email", payload["metadata"]["personal_data_categories"])
+        self.assertIn("name", payload["metadata"]["personal_data_categories"])
+        self.assertIn("contact_data", payload["metadata"]["data_category_keys"])
+        self.assertIn("direct_identifiers", payload["metadata"]["data_category_keys"])
+
+    def test_detects_art_9_risk_from_manual_data(self):
+        response = self.post_json(
+            self.url,
+            {
+                "name": "Patient notes",
+                "source_type": DataSource.SourceType.MANUAL,
+                "data_format": DataSource.DataFormat.TEXT,
+                "location": "manual input",
+                "metadata": {
+                    "manual_data": "Patient diagnosis and medication notes.",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertTrue(payload["contains_personal_data"])
+        self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["art_9_data"], "possible")
+        self.assertIn("health", payload["metadata"]["art_9_categories"])
+        self.assertIn("health_data", payload["metadata"]["data_category_keys"])
 
     def test_can_add_data_source_with_csrf_checks_enabled(self):
         csrf_client = Client(enforce_csrf_checks=True)
@@ -195,6 +243,37 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(data_source.data_format, DataSource.DataFormat.JSON)
         self.assertEqual(data_source.location, "https://example.test/api")
         self.assertTrue(data_source.contains_personal_data)
+        self.assertEqual(data_source.metadata["risk_level"], "medium")
+
+    def test_recalculates_risk_when_data_source_is_updated(self):
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Old Source",
+            metadata={"manual_data": "No personal data here."},
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={
+                "project_id": self.project.id,
+                "data_source_id": data_source.id,
+            },
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({
+                "metadata": {
+                    "manual_data": "Email: anna@example.com. Medical diagnosis included.",
+                },
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["contains_personal_data"])
+        self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["art_9_data"], "possible")
 
     def test_can_move_data_source_to_another_project(self):
         data_source = DataSource.objects.create(

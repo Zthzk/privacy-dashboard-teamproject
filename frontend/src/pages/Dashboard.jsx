@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import Avatar from '@mui/material/Avatar'
+import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
+import Dialog from '@mui/material/Dialog'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
@@ -16,83 +21,82 @@ import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
 import {
   CarOutlined,
+  CloseOutlined,
   DatabaseOutlined,
   EyeOutlined,
-  HeartOutlined,
   MailOutlined,
   MessageOutlined,
   MoreOutlined,
   RightOutlined,
-  ShoppingCartOutlined,
   TeamOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
 
 import MainCard from 'components/MainCard'
+import { getAllDataSources } from 'api/dataSources'
+import { getProjects } from 'api/projects'
+import { getProjectStyle, getVisibleProjects, projectIconMap } from 'utils/project-display'
 
-const projects = [
-  {
-    id: 1,
-    name: 'Customer Support NLP',
-    description: 'NLP pipeline for analyzing customer support tickets.',
-    sources: 3,
-    risk: 'medium',
-    updated: 'May 14, 2024',
-    icon: MessageOutlined,
-    color: 'primary',
-  },
-  {
-    id: 2,
-    name: 'E-commerce Recommender',
-    description: 'Product recommendation model for our e-commerce platform.',
-    sources: 4,
-    risk: 'low',
-    updated: 'May 10, 2024',
-    icon: ShoppingCartOutlined,
-    color: 'success',
-  },
-  {
-    id: 3,
-    name: 'Traffic Monitoring Vision',
-    description: 'Computer vision pipeline for traffic analysis.',
-    sources: 2,
-    risk: 'high',
-    updated: 'May 8, 2024',
-    icon: CarOutlined,
-    color: 'error',
-  },
-  {
-    id: 4,
-    name: 'Health Insights',
-    description: 'Predictive model for patient health outcomes.',
-    sources: 5,
-    risk: 'medium',
-    updated: 'May 5, 2024',
-    icon: HeartOutlined,
-    color: 'secondary',
-  },
-]
+function formatDate(value) {
+  if (!value) return '-'
 
-const dataSources = [
-  { name: 'support_emails.csv', type: 'Email', format: 'CSV', personal: 'Yes', risk: 'Medium' },
-  { name: 'customer_notes.json', type: 'Document', format: 'JSON', personal: 'Yes', risk: 'Medium' },
-  { name: 'traffic_images.zip', type: 'Images', format: 'ZIP', personal: 'Yes', risk: 'High' },
-]
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value))
+}
 
-const riskSummary = [
-  { label: 'Email addresses detected', value: '1,248', icon: MailOutlined, color: 'primary' },
-  { label: 'License plates detected', value: '342', icon: CarOutlined, color: 'secondary' },
-  { label: 'Potential PII fields', value: '12', icon: TeamOutlined, color: 'success' },
-]
+function projectRiskChipProps(project) {
+  const riskValue = project.overall_status ?? project.risk_status ?? project.risk_level
 
-function riskChipProps(risk) {
-  if (risk === 'low') return { color: 'success', label: 'Low Risk' }
-  if (risk === 'high') return { color: 'error', label: 'High Risk' }
-  return { color: 'warning', label: 'Medium Risk' }
+  if (project.art_9_sources > 0 || riskValue === 'red') {
+    return { color: 'error', label: 'High Risk' }
+  }
+
+  if (riskValue === 'yellow' || riskValue === 'medium' || riskValue === 'high') {
+    return { color: 'warning', label: 'Medium Risk' }
+  }
+
+  if ((project.high_risk_sources ?? 0) > 0) {
+    return { color: 'error', label: 'High Risk' }
+  }
+
+  if ((project.medium_risk_sources ?? 0) > 0 || (project.personal_data_sources ?? 0) > 0) {
+    return { color: 'warning', label: 'Medium Risk' }
+  }
+
+  return { color: 'success', label: 'Low Risk' }
+}
+
+function getSourceRisk(source) {
+  const risk = source.risk ?? source.risk_level_display ?? source.risk_level
+  const normalizedRisk = String(risk ?? '').toLowerCase()
+
+  if (normalizedRisk === 'high' || normalizedRisk === 'red') return { label: 'High', color: 'error' }
+  if (normalizedRisk === 'low' || normalizedRisk === 'green') return { label: 'Low', color: 'success' }
+  return { label: risk || 'Medium', color: 'warning' }
+}
+
+function hasArt9Data(source) {
+  return (
+    ['possible', 'yes', true].includes(source.art_9_data) ||
+    ['possible', 'yes', true].includes(source.metadata?.art_9_data) ||
+    source.metadata?.contains_art9_data === true
+  )
+}
+
+function getProjectRisk(project) {
+  return projectRiskChipProps(project)
+}
+
+function countSourcesByCategory(dataSources, categoryKey) {
+  return dataSources.filter((source) => source.metadata?.data_category_keys?.includes(categoryKey)).length
 }
 
 function ProjectIcon({ project }) {
-  const Icon = project.icon
+  const style = getProjectStyle(project)
+  const Icon = project.icon || projectIconMap[style.key] || MessageOutlined
 
   return (
     <Avatar
@@ -100,7 +104,7 @@ function ProjectIcon({ project }) {
       sx={{
         width: 40,
         height: 40,
-        bgcolor: `${project.color}.main`,
+        bgcolor: `${style.color}.main`,
         color: 'common.white',
       }}
     >
@@ -110,8 +114,66 @@ function ProjectIcon({ project }) {
 }
 
 export default function Dashboard() {
-  const [selectedProjectId, setSelectedProjectId] = useState(projects[0].id)
-  const selectedProject = projects.find((project) => project.id === selectedProjectId) || projects[0]
+  const navigate = useNavigate()
+  const [projects, setProjects] = useState(() => getVisibleProjects([]))
+  const [dataSources, setDataSources] = useState([])
+  const [selectedProjectId, setSelectedProjectId] = useState(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let isActive = true
+
+    Promise.all([getProjects(), getAllDataSources()])
+      .then(([projectList, sourceList]) => {
+        if (!isActive) return
+
+        const visibleProjects = getVisibleProjects(projectList)
+        setProjects(visibleProjects)
+        setDataSources(sourceList)
+        setSelectedProjectId((currentProjectId) => currentProjectId ?? visibleProjects[0]?.id ?? null)
+      })
+      .catch(() => {
+        if (isActive) {
+          setError('Could not load dashboard data. Please refresh the page.')
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  const selectedProject = projects.find((project) => String(project.id) === String(selectedProjectId)) || projects[0]
+  const selectedProjectSources = useMemo(
+    () => dataSources.filter((source) => String(source.project) === String(selectedProject?.id)),
+    [dataSources, selectedProject],
+  )
+  const selectedProjectMetrics = useMemo(() => {
+    const personalDataSources = selectedProjectSources.filter((source) => source.contains_personal_data).length
+    const art9Sources = selectedProjectSources.filter(hasArt9Data).length
+
+    return {
+      personalDataSources,
+      art9Sources,
+      personalDataLabel: `${personalDataSources} ${personalDataSources === 1 ? 'source' : 'sources'}`,
+      art9Label: `${art9Sources} ${art9Sources === 1 ? 'source' : 'sources'}`,
+    }
+  }, [selectedProjectSources])
+  const riskSummary = useMemo(
+    () => [
+      { label: 'Contact data sources', value: countSourcesByCategory(dataSources, 'contact_data'), icon: MailOutlined, color: 'primary' },
+      { label: 'Location data sources', value: countSourcesByCategory(dataSources, 'location_data'), icon: CarOutlined, color: 'secondary' },
+      { label: 'Personal data sources', value: dataSources.filter((source) => source.contains_personal_data).length, icon: TeamOutlined, color: 'success' },
+    ],
+    [dataSources],
+  )
 
   return (
     <Stack spacing={2.5}>
@@ -131,9 +193,21 @@ export default function Dashboard() {
 
       </Stack>
 
+      {error && <Alert severity="error">{error}</Alert>}
+
       <MainCard content={false}>
-        <TableContainer>
-          <Table sx={{ minWidth: 860 }} aria-label="Project privacy overview">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 2 }}
+        >
+          <Typography variant="h5">Project Overview</Typography>
+          <Button color="primary" sx={{ px: 0, minWidth: 'auto' }} onClick={() => navigate('/projects')}>
+            &rarr;View All Projects
+          </Button>
+        </Stack>
+        <TableContainer sx={{ maxHeight: 390, overflowY: 'auto' }}>
+          <Table stickyHeader sx={{ minWidth: 860 }} aria-label="Project privacy overview">
             <TableHead>
               <TableRow>
                 <TableCell>Project</TableCell>
@@ -144,16 +218,35 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {projects.map((project) => {
-                const risk = riskChipProps(project.risk)
-                const selected = project.id === selectedProjectId
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">Loading projects...</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!loading && projects.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">No projects available.</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!loading && projects.map((project) => {
+                const risk = getProjectRisk(project)
+                const selected = String(project.id) === String(selectedProjectId)
 
                 return (
                   <TableRow
                     hover
                     key={project.id}
                     selected={selected}
-                    onClick={() => setSelectedProjectId(project.id)}
+                    onClick={() => {
+                      setSelectedProjectId(project.id)
+                      setPreviewOpen(true)
+                    }}
                     sx={{
                       cursor: 'pointer',
                       '&.Mui-selected': {
@@ -177,13 +270,13 @@ export default function Dashboard() {
                     <TableCell>
                       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                         <DatabaseOutlined />
-                        <Typography>{project.sources}</Typography>
+                        <Typography>{project.data_sources_count ?? project.sources ?? 0}</Typography>
                       </Stack>
                     </TableCell>
                     <TableCell>
                       <Chip size="small" variant="outlined" color={risk.color} label={risk.label} />
                     </TableCell>
-                    <TableCell>{project.updated}</TableCell>
+                    <TableCell>{project.updated ?? formatDate(project.updated_at)}</TableCell>
                     <TableCell align="right">
                       <RightOutlined />
                     </TableCell>
@@ -195,13 +288,35 @@ export default function Dashboard() {
         </TableContainer>
       </MainCard>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'minmax(0, 1fr) 420px' }, gap: 2.5 }}>
-        <MainCard>
+      {selectedProject && (
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} fullWidth maxWidth="lg">
+        <DialogTitle sx={{ pr: 7 }}>
+          Data Source Preview
+          <IconButton
+            aria-label="Close data source preview"
+            onClick={() => setPreviewOpen(false)}
+            sx={{ position: 'absolute', right: 12, top: 12 }}
+          >
+            <CloseOutlined />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
           <Stack spacing={2}>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
               <ProjectIcon project={selectedProject} />
               <Typography variant="h4">{selectedProject.name}</Typography>
               <Chip size="small" color="success" label="Active" />
+              <Button
+                size="small"
+                color="primary"
+                endIcon={<RightOutlined aria-hidden="true" />}
+                onClick={() => {
+                  setPreviewOpen(false)
+                  navigate(`/projects/${selectedProject.id}`)
+                }}
+              >
+                to details
+              </Button>
             </Stack>
 
             <Box
@@ -215,10 +330,10 @@ export default function Dashboard() {
               }}
             >
               {[
-                ['Overall Risk', riskChipProps(selectedProject.risk).label],
-                ['Contains Personal Data', 'Yes'],
-                ['Art. 9 GDPR Data', 'Possible'],
-                ['Last Updated', `${selectedProject.updated}\n10:42 AM`],
+                ['Overall Risk', getProjectRisk(selectedProject).label],
+                ['Contains Personal Data', selectedProjectMetrics.personalDataLabel],
+                ['Art. 9 GDPR Data', selectedProjectMetrics.art9Label],
+                ['Last Updated', selectedProject.updated ?? formatDate(selectedProject.updated_at)],
               ].map(([label, value], index) => (
                 <Box
                   key={label}
@@ -234,7 +349,13 @@ export default function Dashboard() {
                   </Typography>
                   <Typography
                     variant="subtitle2"
-                    color={label === 'Contains Personal Data' ? 'error.main' : label === 'Art. 9 GDPR Data' ? 'warning.dark' : 'text.primary'}
+                    color={
+                      label === 'Contains Personal Data' && selectedProjectMetrics.personalDataSources > 0
+                        ? 'error.main'
+                        : label === 'Art. 9 GDPR Data' && selectedProjectMetrics.art9Sources > 0
+                          ? 'warning.dark'
+                          : 'text.primary'
+                    }
                     sx={{ whiteSpace: 'pre-line' }}
                   >
                     {value}
@@ -257,40 +378,58 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {dataSources.map((source) => (
-                    <TableRow key={source.name}>
-                      <TableCell>{source.name}</TableCell>
-                      <TableCell>{source.type}</TableCell>
-                      <TableCell>{source.format}</TableCell>
-                      <TableCell sx={{ color: 'error.main', fontWeight: 600 }}>{source.personal}</TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          variant="outlined"
-                          color={source.risk === 'High' ? 'error' : 'warning'}
-                          label={source.risk}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small" aria-label={`View ${source.name}`}>
-                          <EyeOutlined />
-                        </IconButton>
-                        <IconButton size="small" aria-label={`More actions for ${source.name}`}>
-                          <MoreOutlined />
-                        </IconButton>
+                  {selectedProjectSources.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">No data sources linked to this project.</Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
+
+                  {selectedProjectSources.map((source) => {
+                    const sourceRisk = getSourceRisk(source)
+                    const containsPersonalData = source.personal ?? (source.contains_personal_data ? 'Yes' : 'No')
+
+                    return (
+                      <TableRow key={source.id ?? source.name}>
+                        <TableCell>{source.name}</TableCell>
+                        <TableCell>{source.type ?? source.source_type_display ?? source.source_type}</TableCell>
+                        <TableCell>{source.format ?? source.data_format_display ?? source.data_format}</TableCell>
+                        <TableCell sx={{ color: containsPersonalData === 'Yes' ? 'error.main' : 'text.primary', fontWeight: 600 }}>
+                          {containsPersonalData}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            color={sourceRisk.color}
+                            label={sourceRisk.label}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" aria-label={`View ${source.name}`}>
+                            <EyeOutlined />
+                          </IconButton>
+                          <IconButton size="small" aria-label={`More actions for ${source.name}`}>
+                            <MoreOutlined />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
 
-            <Button color="primary" endIcon={<RightOutlined aria-hidden="true" />} sx={{ alignSelf: 'flex-start' }}>
+            <Button color="primary" endIcon={<RightOutlined aria-hidden="true" />} sx={{ alignSelf: 'flex-start' }} onClick={() => navigate('/data-sources')}>
               View all data sources
             </Button>
           </Stack>
-        </MainCard>
+        </DialogContent>
+      </Dialog>
+      )}
 
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr' }, gap: 2.5 }}>
         <MainCard>
           <Stack spacing={2.25}>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -339,7 +478,7 @@ export default function Dashboard() {
               <Box>
                 <Typography variant="subtitle1">Recommendation</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Consider pseudonymizing email addresses and applying data minimization to customer notes.
+                  Review projects with personal data or Art. 9 categories before using their data sources in model training.
                 </Typography>
                 <Button size="small" endIcon={<RightOutlined aria-hidden="true" />}>
                   View details

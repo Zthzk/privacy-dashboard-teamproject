@@ -4,14 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { deleteProject, getProjects, updateProject } from 'api/projects'
+import { createProject, deleteProject, getProjects, updateProject } from 'api/projects'
 import Projects from '../Projects'
 
 vi.mock('api/projects')
 
 const baseProject = {
   id: 1,
-  name: 'Customer Support NLP',
+  name: 'Support Analytics Project',
   description: 'Project inventory for customer support tickets.',
   data_sources_count: 3,
   created_at: '2026-05-01T10:00:00Z',
@@ -49,7 +49,7 @@ describe('Projects page', () => {
     expect(screen.getByText('Loading projects...')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText('Customer Support NLP')).toBeInTheDocument()
+      expect(screen.getByText('Support Analytics Project')).toBeInTheDocument()
     })
 
     expect(getProjects).toHaveBeenCalledTimes(1)
@@ -73,7 +73,7 @@ describe('Projects page', () => {
     expect(screen.queryByText('Loading projects...')).not.toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText('Customer Support NLP')).toBeInTheDocument()
+      expect(screen.getByText('Support Analytics Project')).toBeInTheDocument()
     })
   })
 
@@ -107,12 +107,59 @@ describe('Projects page', () => {
 
     renderProjects()
 
-    await screen.findByText('Customer Support NLP')
+    await screen.findByText('Support Analytics Project')
 
     await userEvent.type(screen.getByPlaceholderText('Search projects...'), 'road')
 
     expect(screen.getByText('Traffic Vision')).toBeInTheDocument()
-    expect(screen.queryByText('Customer Support NLP')).not.toBeInTheDocument()
+    expect(screen.queryByText('Support Analytics Project')).not.toBeInTheDocument()
+  })
+
+  test('paginates projects with the selected page size', async () => {
+    const pageFixtureProjects = ['Invoices Project', 'Road Analytics Project', 'Patient Trends Project', 'Support Analytics Project'].map((name, index) => ({
+      ...baseProject,
+      id: index + 1,
+      name,
+      updated_at: `2026-05-0${index + 1}T10:00:00Z`,
+    }))
+    const extraProjects = Array.from({ length: 8 }, (_, index) => ({
+      ...baseProject,
+      id: index + 5,
+      name: `Project ${String(index + 5).padStart(2, '0')}`,
+      updated_at: `2026-05-${String(index + 5).padStart(2, '0')}T10:00:00Z`,
+    }))
+
+    getProjects.mockResolvedValue([...pageFixtureProjects, ...extraProjects])
+
+    renderProjects()
+
+    await screen.findByText('Showing 1 to 10 of 12 projects')
+    expect(screen.queryByText('Invoices Project')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByLabelText('Next page'))
+
+    expect(screen.getByText('Showing 11 to 12 of 12 projects')).toBeInTheDocument()
+    expect(screen.getByText('Invoices Project')).toBeInTheDocument()
+  })
+
+  test('moves focus between create project fields with arrow keys', async () => {
+    createProject.mockResolvedValue(baseProject)
+    const user = userEvent.setup()
+
+    renderProjects()
+    await screen.findByText('Support Analytics Project')
+
+    await user.click(screen.getByRole('button', { name: 'New Project' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Create New Project' })
+    const nameInput = within(dialog).getByLabelText(/Project Name/i)
+    const descriptionInput = within(dialog).getByLabelText(/Description/i)
+
+    await user.click(nameInput)
+    await user.keyboard('{ArrowDown}')
+    expect(descriptionInput).toHaveFocus()
+
+    await user.keyboard('{ArrowUp}')
+    expect(nameInput).toHaveFocus()
   })
 
   test('updates a project and writes the updated list back to cache', async () => {
@@ -125,12 +172,12 @@ describe('Projects page', () => {
     updateProject.mockResolvedValue(updatedProject)
 
     renderProjects()
-    await screen.findByText('Customer Support NLP')
+    await screen.findByText('Support Analytics Project')
 
     await openProjectMenu()
     await user.click(within(screen.getByRole('menu')).getByText('Edit'))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Project' })
-    const nameInput = within(dialog).getByDisplayValue('Customer Support NLP')
+    const nameInput = within(dialog).getByDisplayValue('Support Analytics Project')
     const descriptionInput = within(dialog).getByDisplayValue('Project inventory for customer support tickets.')
 
     await user.clear(nameInput)
@@ -155,15 +202,17 @@ describe('Projects page', () => {
 
   test('deletes a project after confirmation and updates the cache', async () => {
     renderProjects()
-    await screen.findByText('Customer Support NLP')
+    await screen.findByText('Support Analytics Project')
 
     await openProjectMenu()
     const menu = screen.getByRole('menu')
     await userEvent.click(within(menu).getByText('Delete'))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Project' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete Project' }))
 
     await waitFor(() => {
       expect(deleteProject).toHaveBeenCalledWith(1)
-      expect(screen.queryByText('Customer Support NLP')).not.toBeInTheDocument()
+      expect(screen.queryByText('Support Analytics Project')).not.toBeInTheDocument()
     })
 
     expect(readCachedProjects()).toEqual([])

@@ -1,0 +1,37 @@
+{
+  "id": "ds_006",
+  "name": "Street Camera Images",
+  "type": "image",
+  "description": "Synthetic image dataset metadata with detected visual privacy elements.",
+  "contains_personal_data": true,
+  "contains_art9_data": false,
+  "risk_level": "yellow",
+  "detected_categories": [
+    "face",
+    "license_plate"
+  ],
+  "sample_records": [
+    {
+      "file_name": "street_001.jpg",
+      "detected_objects": [
+        "face",
+        "license_plate"
+      ],
+      "image_description": "Synthetic street scene with one visible face and one vehicle plate."
+    },
+    {
+      "file_name": "street_002.jpg",
+      "detected_objects": [
+        "license_plate"
+      ],
+      "image_description": "Synthetic street scene with a vehicle plate but no visible face."
+    },
+    {
+      "file_name": "street_003.jpg",
+      "detected_objects": [
+        "face"
+      ],
+      "image_description": "Synthetic pedestrian scene with two visible faces."
+    }
+  ]
+}

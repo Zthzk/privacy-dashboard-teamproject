@@ -7,8 +7,6 @@ import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Link from '@mui/material/Link'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
 import OutlinedInput from '@mui/material/OutlinedInput'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
@@ -24,7 +22,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
-  MoreOutlined,
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
@@ -88,17 +85,14 @@ export default function DataSources() {
   const [loading, setLoading] = useState(() => readCachedDataSources().length === 0)
   const [projectsLoaded, setProjectsLoaded] = useState(false)
   const [error, setError] = useState('')
-  const [menuAnchor, setMenuAnchor] = useState(null)
-  const [menuSource, setMenuSource] = useState(null)
 
   useEffect(() => {
     let isActive = true
 
-    Promise.all([getAllDataSources(), getProjects()])
-      .then(([sourceList, projectList]) => {
+    getAllDataSources()
+      .then((sourceList) => {
         if (isActive) {
           setDataSources(sourceList)
-          setProjects(projectList)
           writeCachedDataSources(sourceList)
         }
       })
@@ -110,6 +104,22 @@ export default function DataSources() {
       .finally(() => {
         if (isActive) {
           setLoading(false)
+        }
+      })
+
+    getProjects()
+      .then((projectList) => {
+        if (isActive) {
+          setProjects(projectList)
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setError('Could not load projects. Please check the backend connection and refresh the page.')
+        }
+      })
+      .finally(() => {
+        if (isActive) {
           setProjectsLoaded(true)
         }
       })
@@ -168,29 +178,13 @@ export default function DataSources() {
     [dataSources, loading],
   )
 
-  function openMenu(event, dataSource) {
-    setMenuAnchor(event.currentTarget)
-    setMenuSource(dataSource)
-  }
-
-  function closeMenu() {
-    setMenuAnchor(null)
-    setMenuSource(null)
-  }
-
-  function handleEditDataSource() {
-    const dataSource = menuSource
-    closeMenu()
-
+  function handleEditDataSource(dataSource) {
     if (dataSource) {
       navigate(`/data-sources/${dataSource.id}/edit?project=${dataSource.project}`)
     }
   }
 
-  async function handleDeleteDataSource() {
-    const dataSource = menuSource
-    closeMenu()
-
+  async function handleDeleteDataSource(dataSource) {
     if (!dataSource || !window.confirm(`Delete "${dataSource.name}"?`)) {
       return
     }
@@ -332,8 +326,11 @@ export default function DataSources() {
                       <TableCell>{formatDate(source.updated_at)}</TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                          <IconButton size="small" aria-label={`More actions for ${source.name}`} onClick={(event) => openMenu(event, source)}>
-                            <MoreOutlined />
+                          <IconButton size="small" aria-label={`Edit ${source.name}`} onClick={() => handleEditDataSource(source)}>
+                            <EditOutlined />
+                          </IconButton>
+                          <IconButton size="small" color="error" aria-label={`Delete ${source.name}`} onClick={() => handleDeleteDataSource(source)}>
+                            <DeleteOutlined />
                           </IconButton>
                         </Stack>
                       </TableCell>
@@ -343,17 +340,6 @@ export default function DataSources() {
           </Table>
         </TableContainer>
       </MainCard>
-
-      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-        <MenuItem onClick={handleEditDataSource}>
-          <EditOutlined style={{ marginRight: 10 }} />
-          Edit
-        </MenuItem>
-        <MenuItem onClick={handleDeleteDataSource} sx={{ color: 'error.main' }}>
-          <DeleteOutlined style={{ marginRight: 10 }} />
-          Delete
-        </MenuItem>
-      </Menu>
 
     </Stack>
   )

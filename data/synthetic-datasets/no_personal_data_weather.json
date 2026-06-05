@@ -1,0 +1,30 @@
+{
+  "id": "ds_001",
+  "name": "Weather Measurements",
+  "type": "tabular",
+  "description": "Synthetic weather data without personal information.",
+  "contains_personal_data": false,
+  "contains_art9_data": false,
+  "risk_level": "green",
+  "detected_categories": [],
+  "sample_records": [
+    {
+      "city": "Tuebingen",
+      "temperature_celsius": 21.4,
+      "humidity_percent": 63,
+      "measurement_time": "2026-05-01T10:00:00Z"
+    },
+    {
+      "city": "Stuttgart",
+      "temperature_celsius": 19.8,
+      "humidity_percent": 70,
+      "measurement_time": "2026-05-01T11:00:00Z"
+    },
+    {
+      "city": "Freiburg",
+      "temperature_celsius": 23.1,
+      "humidity_percent": 58,
+      "measurement_time": "2026-05-01T12:00:00Z"
+    }
+  ]
+}

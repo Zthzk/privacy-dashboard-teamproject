@@ -5,6 +5,7 @@ import AddDataSource from 'pages/AddDataSource'
 import Dashboard from 'pages/Dashboard'
 import DataSources from 'pages/DataSources'
 import EditDataSource from 'pages/EditDataSource'
+import ProjectDetails from 'pages/ProjectDetails'
 import Projects from 'pages/Projects'
 
 const router = createBrowserRouter(
@@ -24,6 +25,10 @@ const router = createBrowserRouter(
         {
           path: 'projects',
           element: <Projects />,
+        },
+        {
+          path: 'projects/:projectId',
+          element: <ProjectDetails />,
         },
         {
           path: 'data-sources',

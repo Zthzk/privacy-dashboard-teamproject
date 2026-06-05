@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -13,14 +13,14 @@ vi.mock('api/projects')
 
 const project = {
   id: 1,
-  name: 'Customer Support NLP',
+  name: 'Support Analytics Project',
   description: 'Project inventory for support tickets.',
 }
 
 const dataSource = {
   id: 11,
   project: 1,
-  project_name: 'Customer Support NLP',
+  project_name: 'Support Analytics Project',
   name: 'Support Tickets',
   location: 'datasets/support.json',
   source_type: 'manual',
@@ -43,6 +43,7 @@ function renderEditDataSource(initialEntry = '/data-sources/11/edit?project=1') 
       <Routes>
         <Route path="/data-sources/:dataSourceId/edit" element={<EditDataSource />} />
         <Route path="/data-sources" element={<div>Data sources destination</div>} />
+        <Route path="/projects/:projectId" element={<div>Project details destination</div>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -55,7 +56,6 @@ function readCachedDataSources() {
 beforeEach(() => {
   vi.clearAllMocks()
   window.sessionStorage.clear()
-  window.confirm = vi.fn(() => true)
   getProjects.mockResolvedValue([project])
   getDataSource.mockResolvedValue(dataSource)
   updateDataSource.mockResolvedValue(updatedDataSource)
@@ -90,7 +90,7 @@ describe('EditDataSource page', () => {
           metadata: expect.objectContaining({ manual_data: 'Example support ticket' }),
         }),
       )
-      expect(screen.getByText('Data sources destination')).toBeInTheDocument()
+      expect(screen.getByText('Project details destination')).toBeInTheDocument()
     })
 
     expect(readCachedDataSources()).toEqual([updatedDataSource])
@@ -104,14 +104,27 @@ describe('EditDataSource page', () => {
 
     await screen.findByDisplayValue('Support Tickets')
     await user.click(screen.getByRole('button', { name: /Delete Data Source/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Data Source' })
+    expect(within(dialog).getByText('Delete "Support Tickets" from this project? The project metrics and risk assessment will update after deletion.')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalledWith('Delete "Support Tickets"?')
       expect(deleteDataSource).toHaveBeenCalledWith(1, 11)
-      expect(screen.getByText('Data sources destination')).toBeInTheDocument()
+      expect(screen.getByText('Project details destination')).toBeInTheDocument()
     })
 
     expect(readCachedDataSources()).toEqual([])
+  })
+
+  test('cancels back to the current project details page', async () => {
+    const user = userEvent.setup()
+
+    renderEditDataSource()
+
+    await screen.findByDisplayValue('Support Tickets')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Project details destination')).toBeInTheDocument()
   })
 
   test('shows an error for an invalid edit route', () => {
