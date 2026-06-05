@@ -4,6 +4,7 @@ import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
+import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { InfoCircleOutlined } from '@ant-design/icons'
@@ -46,9 +47,19 @@ export default function DataFormatHintAlert({ hint }) {
             {/* Optional chaining guards against API responses predating these fields. */}
             {hint.relevant_articles?.length > 0 && (
               <Stack spacing={0.25}>
-                <Typography variant="body2" fontWeight={500}>Relevant GDPR articles:</Typography>
+                <Typography variant="body2" fontWeight={500}>Relevant GDPR / EU AI Act articles:</Typography>
                 {hint.relevant_articles.map((article) => (
-                  <Typography key={article} variant="body2">• {article}</Typography>
+                  <Link
+                    key={article.title}
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="body2"
+                    underline="none"
+                    sx={{ color: 'rgb(113, 128, 150)', '&:hover': { color: 'primary.main' } }}
+                  >
+                    • {article.title}
+                  </Link>
                 ))}
               </Stack>
             )}
