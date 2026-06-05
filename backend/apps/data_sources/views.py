@@ -11,6 +11,7 @@ from django.views.decorators.http import require_http_methods
 from apps.projects.models import Project
 from apps.risk_assessments.services import apply_data_source_risk_assessment
 
+from .format_hints import DATA_FORMAT_HINTS
 from .models import DataSource
 
 
@@ -39,49 +40,8 @@ def normalize_art_9_data(data_source):
     return "unknown"
 
 
-# Privacy hints shown in the frontend form when a user selects a data format.
-# art9_risk marks formats that commonly contain Art. 9 GDPR special category data.
-DATA_FORMAT_HINTS = {
-    "image": {
-        "hint": "Image datasets may contain faces, license plates, or other visual identifiers.",
-        "art9_risk": True,  # Faces and biometric data fall under Art. 9 GDPR
-        "suggested_categories": ["faces", "license_plates", "biometric_data"],
-    },
-    "text": {
-        "hint": "Text datasets often contain names, email addresses, or other identifying information.",
-        "art9_risk": False,
-        "suggested_categories": ["names", "emails", "addresses"],
-    },
-    "csv": {
-        "hint": "CSV datasets may contain structured personal data such as customer or employee records.",
-        "art9_risk": False,
-        "suggested_categories": ["names", "addresses", "IDs"],
-    },
-    "json": {
-        "hint": "JSON datasets may contain nested personal data across multiple fields.",
-        "art9_risk": False,
-        "suggested_categories": ["names", "emails", "IDs"],
-    },
-    "audio": {
-        "hint": "Audio datasets may contain voice recordings that can identify individuals.",
-        "art9_risk": True,  # Voice is a biometric identifier under Art. 9 GDPR
-        "suggested_categories": ["voice_data", "biometric_data"],
-    },
-    "video": {
-        "hint": "Video datasets may contain faces, movements, or behavioral patterns that identify individuals.",
-        "art9_risk": True,  # Facial and movement data are biometric identifiers under Art. 9 GDPR
-        "suggested_categories": ["faces", "biometric_data", "behavioral_data"],
-    },
-    "other": {
-        "hint": "Review this data source manually to identify any personal data it may contain.",
-        "art9_risk": False,
-        "suggested_categories": [],
-    },
-}
 
-
-# Returns the hints config for all data formats.
-# The frontend fetches this once on mount to avoid duplicating the hint texts in two places.
+# Centralised here so the frontend does not need to duplicate hint texts.
 @require_http_methods(["GET"])
 def data_format_hints(request):
     return JsonResponse(DATA_FORMAT_HINTS)

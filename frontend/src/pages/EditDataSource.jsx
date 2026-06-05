@@ -18,8 +18,9 @@ import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { BulbOutlined, DeleteOutlined, FileTextOutlined, InfoCircleOutlined, LinkOutlined, SaveOutlined } from '@ant-design/icons'
+import { BulbOutlined, DeleteOutlined, FileTextOutlined, LinkOutlined, SaveOutlined } from '@ant-design/icons'
 
+import DataFormatHintAlert from 'components/DataFormatHintAlert'
 import MainCard from 'components/MainCard'
 import { deleteDataSource, getDataFormatHints, getDataSource, updateDataSource } from 'api/dataSources'
 import { getProjects } from 'api/projects'
@@ -124,14 +125,13 @@ export default function EditDataSource() {
   const locationInputRef = useRef(null)
   const manualDataInputRef = useRef(null)
 
-  // Load hints once on mount. Errors are silently ignored — hints are informational only.
+  // Errors are silently ignored — a failed hints fetch must not block the form.
   useEffect(() => {
     getDataFormatHints()
       .then(setDataFormatHints)
       .catch(() => {})
   }, [])
 
-  // The hint for the currently selected data format, or null if none is available.
   const activeHint = dataFormatHints[form.data_format] ?? null
 
   useEffect(() => {
@@ -389,28 +389,8 @@ export default function EditDataSource() {
                       />
                     </Box>
 
-                    {activeHint && (
-                      <Alert
-                        severity={activeHint.art9_risk ? 'warning' : 'info'}
-                        icon={<InfoCircleOutlined />}
-                      >
-                        <Stack spacing={0.5}>
-                          <Typography variant="body2">{activeHint.hint}</Typography>
-                          {activeHint.art9_risk && (
-                            <Typography variant="body2" fontWeight={500}>
-                              May contain Art. 9 GDPR data — check "Contains personal data" if applicable.
-                            </Typography>
-                          )}
-                          {activeHint.suggested_categories.length > 0 && (
-                            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                              {activeHint.suggested_categories.map((category) => (
-                                <Chip key={category} label={category} size="small" variant="outlined" />
-                              ))}
-                            </Stack>
-                          )}
-                        </Stack>
-                      </Alert>
-                    )}
+                    {/* key forces a remount on format change so the collapse state resets. */}
+                    <DataFormatHintAlert key={form.data_format} hint={activeHint} />
                   </Stack>
 
                   <Divider />

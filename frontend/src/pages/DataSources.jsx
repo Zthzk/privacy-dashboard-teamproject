@@ -29,7 +29,6 @@ import {
   VideoCameraOutlined,
 } from '@ant-design/icons'
 
-// Maps data_format values to an icon component and a display color.
 const DATA_FORMAT_ICONS = {
   text: { icon: FileTextOutlined, color: '#1677ff' },
   csv: { icon: DatabaseOutlined, color: '#52c41a' },
