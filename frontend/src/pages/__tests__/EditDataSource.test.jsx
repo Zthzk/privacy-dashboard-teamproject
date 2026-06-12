@@ -37,9 +37,12 @@ const updatedDataSource = {
   location: 'datasets/support-updated.json',
 }
 
-function renderEditDataSource(initialEntry = '/data-sources/11/edit?project=1') {
+function renderEditDataSource(initialEntry = '/data-sources/11/edit?project=1', routerOptions = {}) {
+  const initialEntries = routerOptions.initialEntries ?? [initialEntry]
+  const initialIndex = routerOptions.initialIndex ?? initialEntries.length - 1
+
   return render(
-    <MemoryRouter initialEntries={[initialEntry]}>
+    <MemoryRouter initialEntries={initialEntries} initialIndex={initialIndex}>
       <Routes>
         <Route path="/data-sources/:dataSourceId/edit" element={<EditDataSource />} />
         <Route path="/data-sources" element={<div>Data sources destination</div>} />
@@ -116,7 +119,20 @@ describe('EditDataSource page', () => {
     expect(readCachedDataSources()).toEqual([])
   })
 
-  test('cancels back to the current project details page', async () => {
+  test('cancels back to the previous page', async () => {
+    const user = userEvent.setup()
+
+    renderEditDataSource('/data-sources/11/edit?project=1', {
+      initialEntries: ['/data-sources', '/data-sources/11/edit?project=1'],
+    })
+
+    await screen.findByDisplayValue('Support Tickets')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Data sources destination')).toBeInTheDocument()
+  })
+
+  test('falls back to project details when canceling without history', async () => {
     const user = userEvent.setup()
 
     renderEditDataSource()

@@ -195,6 +195,7 @@ export default function Dashboard() {
 
       {error && <Alert severity="error">{error}</Alert>}
 
+      {/* Main overview table: summarizes every visible project and opens a quick preview when a row is selected. */}
       <MainCard content={false}>
         <Stack
           direction="row"
@@ -218,6 +219,7 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
+              {/* Keep the table structure stable while projects and data sources are being fetched. */}
               {loading && (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
@@ -226,6 +228,7 @@ export default function Dashboard() {
                 </TableRow>
               )}
 
+              {/* Empty state for a fresh workspace or when all projects are hidden by display filters. */}
               {!loading && projects.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
@@ -234,11 +237,13 @@ export default function Dashboard() {
                 </TableRow>
               )}
 
+              {/* Render one overview row per project, including risk status and data source count. */}
               {!loading && projects.map((project) => {
                 const risk = getProjectRisk(project)
-                const selected = String(project.id) === String(selectedProjectId)
+                const selected = String(project.id) === String(selectedProjectId) 
 
                 return (
+                  // Selecting a row updates the preview data before opening the dialog.
                   <TableRow
                     hover
                     key={project.id}
@@ -246,9 +251,10 @@ export default function Dashboard() {
                     onClick={() => {
                       setSelectedProjectId(project.id)
                       setPreviewOpen(true)
-                    }}
+                    }} 
                     sx={{
                       cursor: 'pointer',
+                      // Highlight selected row
                       '&.Mui-selected': {
                         bgcolor: 'primary.lighter',
                         outline: '1px solid',
@@ -270,7 +276,8 @@ export default function Dashboard() {
                     <TableCell>
                       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                         <DatabaseOutlined />
-                        <Typography>{project.data_sources_count ?? project.sources ?? 0}</Typography>
+                        {/* Prefer the API count, then fall back to older cached/mock fields. */}
+                        <Typography>{project.data_sources_count ?? project.sources ?? 0}</Typography> 
                       </Stack>
                     </TableCell>
                     <TableCell>
@@ -288,6 +295,7 @@ export default function Dashboard() {
         </TableContainer>
       </MainCard>
 
+      {/* Quick project preview dialog shown from the overview table without leaving the dashboard. */}
       {selectedProject && (
       <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} fullWidth maxWidth="lg">
         <DialogTitle sx={{ pr: 7 }}>
@@ -429,6 +437,7 @@ export default function Dashboard() {
       </Dialog>
       )}
 
+      {/* Aggregated risk indicators across all loaded data sources. */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr' }, gap: 2.5 }}>
         <MainCard>
           <Stack spacing={2.25}>

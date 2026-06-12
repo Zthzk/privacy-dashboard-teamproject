@@ -1,6 +1,6 @@
 import React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link as RouterLink, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -105,6 +105,7 @@ function getProjectDetailsPath(projectId) {
 
 export default function EditDataSource() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { dataSourceId } = useParams()
   const [searchParams] = useSearchParams()
   const projectId = searchParams.get('project')
@@ -253,6 +254,17 @@ export default function EditDataSource() {
       setError('Could not delete data source. Please try again.')
       setSaving(false)
     }
+  }
+
+  function handleCancel() {
+    const hasPreviousRoute = window.history.state?.idx > 0 || location.key !== 'default'
+
+    if (hasPreviousRoute) {
+      navigate(-1)
+      return
+    }
+
+    navigate(getProjectDetailsPath(form.project || dataSource?.project))
   }
 
   return (
@@ -468,7 +480,7 @@ export default function EditDataSource() {
               }}
             >
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
-                <Button variant="outlined" color="secondary" onClick={() => navigate(getProjectDetailsPath(form.project || dataSource.project))}>
+                <Button variant="outlined" color="secondary" onClick={handleCancel}>
                   Cancel
                 </Button>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
