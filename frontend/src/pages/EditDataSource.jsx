@@ -259,12 +259,13 @@ export default function EditDataSource() {
   function handleCancel() {
     const hasPreviousRoute = window.history.state?.idx > 0 || location.key !== 'default'
 
+    
+    /* Back to the previous page when cancel */
     if (hasPreviousRoute) {
       navigate(-1)
       return
     }
 
-    navigate(getProjectDetailsPath(form.project || dataSource?.project))
   }
 
   return (

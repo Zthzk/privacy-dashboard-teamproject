@@ -30,11 +30,6 @@ function readCachedProjects() {
   return JSON.parse(window.sessionStorage.getItem('privacy-dashboard.projects') || '[]')
 }
 
-async function openProjectMenu(projectName = baseProject.name) {
-  const menuButton = await screen.findByLabelText(`More actions for ${projectName}`)
-  await userEvent.click(menuButton)
-}
-
 beforeEach(() => {
   vi.clearAllMocks()
   window.sessionStorage.clear()
@@ -174,8 +169,7 @@ describe('Projects page', () => {
     renderProjects()
     await screen.findByText('Support Analytics Project')
 
-    await openProjectMenu()
-    await user.click(within(screen.getByRole('menu')).getByText('Edit'))
+    await user.click(screen.getByRole('button', { name: 'Edit Support Analytics Project' }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Project' })
     const nameInput = within(dialog).getByDisplayValue('Support Analytics Project')
     const descriptionInput = within(dialog).getByDisplayValue('Project inventory for customer support tickets.')
@@ -204,9 +198,7 @@ describe('Projects page', () => {
     renderProjects()
     await screen.findByText('Support Analytics Project')
 
-    await openProjectMenu()
-    const menu = screen.getByRole('menu')
-    await userEvent.click(within(menu).getByText('Delete'))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Support Analytics Project' }))
     const dialog = await screen.findByRole('dialog', { name: 'Delete Project' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete Project' }))
 

@@ -1,9 +1,15 @@
+import React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
+import Dialog from '@mui/material/Dialog'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Link from '@mui/material/Link'
@@ -15,12 +21,15 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import {
   ApiOutlined,
+  CloseOutlined,
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   FileTextOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -39,6 +48,17 @@ function formatDate(value) {
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(value))
+}
+
+function getRiskChip(riskLevel) {
+  if (riskLevel === 'high' || riskLevel === 'red') return { label: 'High', color: 'error' }
+  if (riskLevel === 'medium' || riskLevel === 'yellow') return { label: 'Medium', color: 'warning' }
+  return { label: 'Low', color: 'success' }
+}
+
+function getDataSourcePreviewText(source) {
+  // Prefer the API preview field, but keep older cached/manual entries previewable.
+  return source?.preview_text || source?.metadata?.preview_text || source?.metadata?.manual_data || ''
 }
 
 function SummaryCard({ title, value, helper, color, icon: Icon }) {
@@ -85,6 +105,7 @@ export default function DataSources() {
   const [loading, setLoading] = useState(() => readCachedDataSources().length === 0)
   const [projectsLoaded, setProjectsLoaded] = useState(false)
   const [error, setError] = useState('')
+  const [dataSourcePendingPreview, setDataSourcePendingPreview] = useState(null)
 
   useEffect(() => {
     let isActive = true
@@ -200,6 +221,9 @@ export default function DataSources() {
     }
   }
 
+  const previewText = getDataSourcePreviewText(dataSourcePendingPreview)
+  const previewRiskChip = getRiskChip(dataSourcePendingPreview?.risk_level)
+
   return (
     <Stack spacing={3}>
       <Stack
@@ -253,17 +277,30 @@ export default function DataSources() {
       </Box>
 
       <MainCard content={false}>
-        <TableContainer>
-          <Table sx={{ minWidth: 860, tableLayout: 'fixed' }} aria-label="Data sources table">
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table
+            sx={{
+              minWidth: 1260,
+              tableLayout: 'fixed',
+              '& .MuiTableCell-head': {
+                whiteSpace: 'nowrap',
+                fontSize: 13,
+              },
+              '& .MuiTableCell-root': {
+                verticalAlign: 'middle',
+              },
+            }}
+            aria-label="Data sources table"
+          >
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: 260 }}>Data Source Name</TableCell>
-                <TableCell sx={{ width: 170 }}>Project</TableCell>
-                <TableCell sx={{ width: 100 }}>Type</TableCell>
-                <TableCell sx={{ width: 100 }}>Format</TableCell>
-                <TableCell sx={{ width: 220 }}>Location / Reference</TableCell>
-                <TableCell sx={{ width: 140 }}>Last Updated</TableCell>
-                <TableCell align="right" sx={{ width: 90 }}>Actions</TableCell>
+                <TableCell sx={{ width: 280 }}>Data Source Name</TableCell>
+                <TableCell sx={{ width: 180 }}>Project</TableCell>
+                <TableCell sx={{ width: 120 }}>Type</TableCell>
+                <TableCell sx={{ width: 120 }}>Format</TableCell>
+                <TableCell sx={{ width: 270 }}>Location / Reference</TableCell>
+                <TableCell sx={{ width: 150 }}>Last Updated</TableCell>
+                <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -292,7 +329,20 @@ export default function DataSources() {
 
               {!loading &&
                 filteredDataSources.map((source) => (
-                    <TableRow key={source.id} hover>
+                    // Rows open the same preview as the eye action
+                    <TableRow
+                      key={source.id}
+                      hover
+                      tabIndex={0}
+                      onClick={() => setDataSourcePendingPreview(source)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          setDataSourcePendingPreview(source)
+                        }
+                      }}
+                      sx={{ cursor: 'pointer' }}
+                    >
                       <TableCell>
                         <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
                           <FileTextOutlined style={{ color: '#1677ff' }} />
@@ -308,12 +358,22 @@ export default function DataSources() {
                         </Stack>
                       </TableCell>
                       <TableCell>
-                        <Link component={RouterLink} to={`/projects/${source.project}`} underline="hover">
+                        <Link
+                          component={RouterLink}
+                          to={`/projects/${source.project}`}
+                          underline="hover"
+                          onClick={(event) => event.stopPropagation()}
+                          sx={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
                           {source.project_name}
                         </Link>
                       </TableCell>
-                      <TableCell>{source.source_type_display}</TableCell>
-                      <TableCell>{source.data_format_display}</TableCell>
+                      <TableCell>
+                        <Chip size="small" variant="outlined" color="primary" label={source.source_type_display} />
+                      </TableCell>
+                      <TableCell>
+                        <Chip size="small" variant="outlined" color="secondary" label={source.data_format_display} />
+                      </TableCell>
                       <TableCell>
                         <Typography
                           variant="body2"
@@ -325,13 +385,50 @@ export default function DataSources() {
                       </TableCell>
                       <TableCell>{formatDate(source.updated_at)}</TableCell>
                       <TableCell align="right">
-                        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                          <IconButton size="small" aria-label={`Edit ${source.name}`} onClick={() => handleEditDataSource(source)}>
-                            <EditOutlined />
-                          </IconButton>
-                          <IconButton size="small" color="error" aria-label={`Delete ${source.name}`} onClick={() => handleDeleteDataSource(source)}>
-                            <DeleteOutlined />
-                          </IconButton>
+                        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+                          <Tooltip title="Preview data source">
+                            <span>
+                              <IconButton
+                                size="small"
+                                aria-label={`Preview ${source.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setDataSourcePendingPreview(source)
+                                }}
+                              >
+                                <EyeOutlined />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Edit data source">
+                            <span>
+                              <IconButton
+                                size="small"
+                                aria-label={`Edit ${source.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleEditDataSource(source)
+                                }}
+                              >
+                                <EditOutlined />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Delete data source">
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                aria-label={`Delete ${source.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleDeleteDataSource(source)
+                                }}
+                              >
+                                <DeleteOutlined />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -340,6 +437,86 @@ export default function DataSources() {
           </Table>
         </TableContainer>
       </MainCard>
+
+      <Dialog
+        open={Boolean(dataSourcePendingPreview)}
+        onClose={() => setDataSourcePendingPreview(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ pr: 7 }}>Dataset Preview</DialogTitle>
+        <IconButton
+          aria-label="Close dataset preview"
+          onClick={() => setDataSourcePendingPreview(null)}
+          sx={{ position: 'absolute', right: 12, top: 12 }}
+        >
+          <CloseOutlined />
+        </IconButton>
+        <DialogContent dividers>
+          <Stack spacing={2.5}>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Dataset Details
+              </Typography>
+              <Stack spacing={0.5}>
+                <Typography variant="h5">{dataSourcePendingPreview?.name}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {dataSourcePendingPreview?.location || 'No source location provided.'}
+                </Typography>
+              </Stack>
+            </Stack>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Risk Metadata
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  label={dataSourcePendingPreview?.source_type_display ?? dataSourcePendingPreview?.source_type ?? '-'}
+                />
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  label={dataSourcePendingPreview?.data_format_display ?? dataSourcePendingPreview?.data_format ?? '-'}
+                />
+                <Chip size="small" variant="outlined" color={previewRiskChip.color} label={`${previewRiskChip.label} Risk`} />
+              </Stack>
+            </Stack>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Sample Preview
+              </Typography>
+              {previewText ? (
+                <Box
+                  component="pre"
+                  sx={{
+                    m: 0,
+                    p: 2,
+                    maxHeight: 360,
+                    overflow: 'auto',
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'grey.50',
+                    color: 'text.primary',
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    whiteSpace: 'pre-wrap',
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {previewText}
+                </Box>
+              ) : (
+                <DialogContentText>No preview available for this data source.</DialogContentText>
+              )}
+            </Stack>
+          </Stack>
+        </DialogContent>
+      </Dialog>
 
     </Stack>
   )

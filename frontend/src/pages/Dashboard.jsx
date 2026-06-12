@@ -195,7 +195,7 @@ export default function Dashboard() {
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      {/* Main overview table: summarizes every visible project and opens a quick preview when a row is selected. */}
+      {/* Main overview table */}
       <MainCard content={false}>
         <Stack
           direction="row"
@@ -228,7 +228,7 @@ export default function Dashboard() {
                 </TableRow>
               )}
 
-              {/* Empty state for a fresh workspace or when all projects are hidden by display filters. */}
+              {/* Empty state for a fresh workspace or when all projects are hidden. */}
               {!loading && projects.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
@@ -237,13 +237,13 @@ export default function Dashboard() {
                 </TableRow>
               )}
 
-              {/* Render one overview row per project, including risk status and data source count. */}
+              {/* Render one overview row per project. */}
               {!loading && projects.map((project) => {
                 const risk = getProjectRisk(project)
                 const selected = String(project.id) === String(selectedProjectId) 
 
                 return (
-                  // Selecting a row updates the preview data before opening the dialog.
+                  /* Selecting a row updates the preview data before opening the dialog. */
                   <TableRow
                     hover
                     key={project.id}
@@ -254,7 +254,7 @@ export default function Dashboard() {
                     }} 
                     sx={{
                       cursor: 'pointer',
-                      // Highlight selected row
+                      /* Highlight selected row */
                       '&.Mui-selected': {
                         bgcolor: 'primary.lighter',
                         outline: '1px solid',

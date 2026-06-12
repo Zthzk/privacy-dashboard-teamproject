@@ -32,6 +32,7 @@ const dataSources = [
     contains_personal_data: true,
     risk_level: 'high',
     art_9_data: 'unknown',
+    preview_text: 'Name: Anna Mueller\nEmail: anna@example.com\nTicket: Needs support.',
     metadata: { data_category_keys: ['contact_data', 'direct_identifiers'] },
     updated_at: '2026-05-18T10:00:00Z',
   },
@@ -160,5 +161,31 @@ describe('ProjectDetails page', () => {
       expect(deleteDataSource).toHaveBeenCalledWith(1, 11)
       expect(getProjectOverview).toHaveBeenCalledTimes(2)
     })
+  })
+
+  test('previews a data source sample from project details', async () => {
+    const user = userEvent.setup()
+
+    renderProjectDetails()
+
+    await screen.findByText('Support Analytics Project')
+    await user.click(screen.getByRole('button', { name: 'Preview Support Tickets' }))
+
+    expect(screen.getByRole('dialog', { name: 'Dataset Preview' })).toBeInTheDocument()
+    expect(screen.getAllByText('Support Tickets').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Name: Anna Mueller/)).toBeInTheDocument()
+    expect(screen.getByText(/Email: anna@example.com/)).toBeInTheDocument()
+  })
+
+  test('opens dataset preview when clicking a data source row', async () => {
+    const user = userEvent.setup()
+
+    renderProjectDetails()
+
+    await screen.findByText('Support Analytics Project')
+    await user.click(screen.getByRole('row', { name: /Support Tickets/ }))
+
+    expect(screen.getByRole('dialog', { name: 'Dataset Preview' })).toBeInTheDocument()
+    expect(screen.getByText(/Ticket: Needs support/)).toBeInTheDocument()
   })
 })

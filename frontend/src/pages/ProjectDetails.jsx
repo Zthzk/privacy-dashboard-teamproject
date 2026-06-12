@@ -35,6 +35,7 @@ import {
   EditOutlined,
   EnvironmentOutlined,
   ExperimentFilled,
+  EyeOutlined,
   FileFilled,
   FileTextOutlined,
   FolderFilled,
@@ -381,6 +382,11 @@ function normalizeSampleDataSource(source) {
   }
 }
 
+function getDataSourcePreviewText(source) {
+  // Prefer the API preview field, but keep older cached/manual entries previewable.
+  return source?.preview_text || source?.metadata?.preview_text || source?.metadata?.manual_data || ''
+}
+
 function buildLocalProjectOverview(projectId) {
   const projects = applyProjectStyleOverrides(readCachedProjects(), readProjectStyleOverrides())
   const project = projects.find((item) => String(item.id) === String(projectId))
@@ -657,6 +663,7 @@ export default function ProjectDetails() {
   const [notFound, setNotFound] = useState(false)
   const [deletingDataSourceId, setDeletingDataSourceId] = useState(null)
   const [dataSourcePendingDelete, setDataSourcePendingDelete] = useState(null)
+  const [dataSourcePendingPreview, setDataSourcePendingPreview] = useState(null)
   const [editingProject, setEditingProject] = useState(false)
   const [editForm, setEditForm] = useState(initialEditForm)
   const [savingProject, setSavingProject] = useState(false)
@@ -837,6 +844,8 @@ export default function ProjectDetails() {
     () => filteredDataSources.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
     [filteredDataSources, page, rowsPerPage],
   )
+  const previewText = getDataSourcePreviewText(dataSourcePendingPreview)
+  const previewRiskChip = getRiskChip(dataSourcePendingPreview?.risk_level)
 
   const summaryCards = [
     {
@@ -1043,27 +1052,31 @@ export default function ProjectDetails() {
                   sx={{ width: { xs: '100%', md: 300 }, bgcolor: 'background.paper' }}
                 />
               </Stack>
-              <TableContainer>
+              <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table
                   size="small"
                   sx={{
-                    minWidth: 920,
+                    minWidth: 1180,
                     tableLayout: 'fixed',
                     '& .MuiTableCell-root': { py: 1.05 },
-                    '& .MuiTableHead-root .MuiTableCell-root': { py: 1.15 },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      py: 1.15,
+                      whiteSpace: 'nowrap',
+                      fontSize: 13,
+                    },
                   }}
                   aria-label="Project data sources table"
                 >
                   <TableHead>
                     <TableRow>
-                      <TableCell>Source Name</TableCell>
-                      <TableCell sx={{ width: 115 }}>Type</TableCell>
-                      <TableCell sx={{ width: 115 }}>Format</TableCell>
+                      <TableCell sx={{ width: 280 }}>Source Name</TableCell>
+                      <TableCell sx={{ width: 130 }}>Type</TableCell>
+                      <TableCell sx={{ width: 130 }}>Format</TableCell>
                       <TableCell sx={{ width: 115 }}>Risk</TableCell>
                       <TableCell sx={{ width: 135 }}>Personal Data</TableCell>
                       <TableCell sx={{ width: 115 }}>Art. 9</TableCell>
                       <TableCell sx={{ width: 150 }}>Last Updated</TableCell>
-                      <TableCell align="right" sx={{ width: 100 }}>Actions</TableCell>
+                      <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1099,9 +1112,21 @@ export default function ProjectDetails() {
                       const art9Chip = getArt9Chip(source)
 
                       return (
-                        <TableRow key={source.id} hover>
+                        <TableRow
+                          key={source.id}
+                          hover
+                          tabIndex={0}
+                          onClick={() => setDataSourcePendingPreview(source)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              setDataSourcePendingPreview(source)
+                            }
+                          }}
+                          sx={{ cursor: 'pointer' }}
+                        >
                           <TableCell>
-                            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+                            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
                               <Box
                                 sx={{
                                   width: 34,
@@ -1116,16 +1141,32 @@ export default function ProjectDetails() {
                               >
                                 <SourceIcon />
                               </Box>
-                              <Typography variant="subtitle2" title={source.name} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <Typography
+                                variant="subtitle2"
+                                title={source.name}
+                                sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              >
                                 {source.name}
                               </Typography>
                             </Stack>
                           </TableCell>
                           <TableCell>
-                            <Chip label={source.source_type_display} color="primary" size="small" variant="outlined" />
+                            <Chip
+                              label={source.source_type_display}
+                              color="primary"
+                              size="small"
+                              variant="outlined"
+                              sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                            />
                           </TableCell>
                           <TableCell>
-                            <Chip label={source.data_format_display} color="secondary" size="small" variant="outlined" />
+                            <Chip
+                              label={source.data_format_display}
+                              color="secondary"
+                              size="small"
+                              variant="outlined"
+                              sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                            />
                           </TableCell>
                           <TableCell>
                             <Chip label={riskChip.label} color={riskChip.color} size="small" variant="outlined" />
@@ -1139,12 +1180,29 @@ export default function ProjectDetails() {
                           <TableCell>{formatDate(source.updated_at)}</TableCell>
                           <TableCell align="right">
                             <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                              <Tooltip title="Preview data source">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    aria-label={`Preview ${source.name}`}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      setDataSourcePendingPreview(source)
+                                    }}
+                                  >
+                                    <EyeOutlined />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
                               <Tooltip title="Edit data source">
                                 <span>
                                   <IconButton
                                     size="small"
                                     aria-label={`Edit ${source.name}`}
-                                    onClick={() => navigate(`/data-sources/${source.id}/edit?project=${source.project}`)}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      navigate(`/data-sources/${source.id}/edit?project=${source.project}`)
+                                    }}
                                   >
                                     <EditOutlined />
                                   </IconButton>
@@ -1157,7 +1215,10 @@ export default function ProjectDetails() {
                                     color="error"
                                     aria-label={`Delete ${source.name}`}
                                     disabled={deletingDataSourceId === source.id}
-                                    onClick={() => setDataSourcePendingDelete(source)}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      setDataSourcePendingDelete(source)
+                                    }}
                                   >
                                     <DeleteOutlined />
                                   </IconButton>
@@ -1186,6 +1247,88 @@ export default function ProjectDetails() {
               <DataCategoryCard categories={detectedDataCategories} />
             </Stack>
           </Box>
+
+          <Dialog
+            open={Boolean(dataSourcePendingPreview)}
+            onClose={() => setDataSourcePendingPreview(null)}
+            maxWidth="md"
+            fullWidth
+          >
+            <DialogTitle sx={{ pr: 7 }}>Dataset Preview</DialogTitle>
+            <IconButton
+              aria-label="Close dataset preview"
+              onClick={() => setDataSourcePendingPreview(null)}
+              sx={{ position: 'absolute', right: 12, top: 12 }}
+            >
+              <CloseOutlined />
+            </IconButton>
+            <DialogContent dividers>
+              <Stack spacing={2.5}>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Dataset Details
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    <Typography variant="h5">{dataSourcePendingPreview?.name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {dataSourcePendingPreview?.location || 'No source location provided.'}
+                    </Typography>
+                  </Stack>
+                </Stack>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Risk Metadata
+                  </Typography>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                      label={dataSourcePendingPreview?.source_type_display ?? dataSourcePendingPreview?.source_type ?? '-'}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      color="secondary"
+                      label={dataSourcePendingPreview?.data_format_display ?? dataSourcePendingPreview?.data_format ?? '-'}
+                    />
+                    <Chip size="small" variant="outlined" color={previewRiskChip.color} label={`${previewRiskChip.label} Risk`} />
+                  </Stack>
+                </Stack>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Sample Preview
+                  </Typography>
+                  {previewText ? (
+                    <Box
+                      component="pre"
+                      sx={{
+                        m: 0,
+                        p: 2,
+                        maxHeight: 360,
+                        overflow: 'auto',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'grey.50',
+                        color: 'text.primary',
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        whiteSpace: 'pre-wrap',
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
+                      {previewText}
+                    </Box>
+                  ) : (
+                    <DialogContentText>
+                      No preview available for this data source.
+                    </DialogContentText>
+                  )}
+                </Stack>
+              </Stack>
+            </DialogContent>
+          </Dialog>
 
           <Dialog
             open={Boolean(dataSourcePendingDelete)}

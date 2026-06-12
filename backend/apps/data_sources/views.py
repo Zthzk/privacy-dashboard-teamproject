@@ -19,6 +19,7 @@ RISK_LABELS = {
     "medium": "Medium",
     "high": "High",
 }
+PREVIEW_TEXT_LIMIT = 1000
 
 
 def normalize_risk_level(data_source):
@@ -37,6 +38,15 @@ def normalize_art_9_data(data_source):
     if art_9_data in {"possible", "yes", "no", "unknown"}:
         return art_9_data
     return "unknown"
+
+
+def build_preview_text(data_source):
+    preview_text = data_source.metadata.get("preview_text")
+    if not preview_text:
+        preview_text = data_source.metadata.get("manual_data", "")
+    if not isinstance(preview_text, str):
+        return ""
+    return preview_text.strip()[:PREVIEW_TEXT_LIMIT]
 
 
 def serialize_data_source(data_source, include_project=False):
@@ -58,6 +68,7 @@ def serialize_data_source(data_source, include_project=False):
         "risk_level_display": RISK_LABELS[risk_level],
         "art_9_data": art_9_data,
         "art_9_data_display": art_9_data.replace("_", " ").title(),
+        "preview_text": build_preview_text(data_source),
         "metadata": data_source.metadata,
         "last_scanned_at": (
             data_source.last_scanned_at.isoformat()

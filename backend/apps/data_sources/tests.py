@@ -71,8 +71,24 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(payload["location"], "manual input")
         self.assertFalse(payload["contains_personal_data"])
         self.assertEqual(payload["metadata"]["manual_data"], "Example customer note")
+        self.assertEqual(payload["preview_text"], "Example customer note")
         self.assertEqual(payload["risk_level"], "low")
         self.assertEqual(payload["art_9_data"], "no")
+
+    def test_preview_text_is_limited_for_large_manual_data(self):
+        response = self.post_json(
+            self.url,
+            {
+                "name": "Long manual sample",
+                "source_type": DataSource.SourceType.MANUAL,
+                "data_format": DataSource.DataFormat.TEXT,
+                "location": "manual input",
+                "metadata": {"manual_data": "A" * 1200},
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["preview_text"], "A" * 1000)
 
     def test_detects_personal_data_risk_from_manual_data(self):
         response = self.post_json(
