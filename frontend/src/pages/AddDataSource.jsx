@@ -16,13 +16,14 @@ import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { InfoCircleOutlined, SaveOutlined } from '@ant-design/icons'
+import { InfoCircleOutlined, SaveOutlined, UploadOutlined } from '@ant-design/icons'
 
 import DataFormatHintAlert from 'components/DataFormatHintAlert'
 import MainCard from 'components/MainCard'
 import { createDataSource, getDataFormatHints } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { upsertCachedDataSource } from 'utils/data-source-cache'
+import ImportDataSourcesDialog from './ImportDataSourcesDialog'
 
 const sourceTypeOptions = [
   { value: 'file', label: 'File' },
@@ -43,6 +44,7 @@ const dataFormatOptions = [
   { value: 'other', label: 'Other' },
 ]
 
+// Initial form state with default values
 const initialForm = {
   project: '',
   name: '',
@@ -68,6 +70,8 @@ export default function AddDataSource() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const presetProject = searchParams.get('project') ?? ''
+  
+  // Core state management for form data, validation, and UI feedback
   const [projects, setProjects] = useState([])
   const [form, setForm] = useState({ ...initialForm, project: presetProject })
   const [errors, setErrors] = useState({})
@@ -77,6 +81,9 @@ export default function AddDataSource() {
   const [dataFormatHints, setDataFormatHints] = useState({})
   const [isNotCompliant, setIsNotCompliant] = useState(false)
   const [violations, setViolations] = useState([])
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+
+  // Refs for keyboard navigation between form fields
   const nameInputRef = useRef(null)
   const locationInputRef = useRef(null)
   const manualDataInputRef = useRef(null)
@@ -90,6 +97,7 @@ export default function AddDataSource() {
 
   const activeHint = dataFormatHints[form.data_format] ?? null
 
+  // Load available projects on component mount
   useEffect(() => {
     let isActive = true
 
@@ -121,12 +129,14 @@ export default function AddDataSource() {
   )
   const submitDisabled = saving || projects.length === 0 || !form.name.trim()
 
+  // Auto-focus name input after projects are loaded
   useEffect(() => {
     if (!loading) {
       nameInputRef.current?.focus()
     }
   }, [loading])
 
+  // Update form field and clear associated error
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: '' }))
@@ -136,6 +146,7 @@ export default function AddDataSource() {
     }
   }
 
+  // Handle source type changes with auto-fill logic for manual entries
   function updateSourceType(value) {
     setForm((current) => ({
       ...current,
@@ -144,6 +155,7 @@ export default function AddDataSource() {
     }))
   }
 
+  // Enable arrow key navigation between form inputs
   function moveFocusOnArrow(event, nextRef, previousRef) {
     if (event.key === 'ArrowDown' && nextRef?.current) {
       event.preventDefault()
@@ -156,6 +168,7 @@ export default function AddDataSource() {
     }
   }
 
+  // Validate form before submission - checks required fields
   function validateForm() {
     const nextErrors = {}
     if (!form.project) nextErrors.project = 'Project is required.'
@@ -166,6 +179,7 @@ export default function AddDataSource() {
     return Object.keys(nextErrors).length === 0
   }
 
+  // Submit form: validate, create data source, cache it, and navigate
   async function handleSubmit(event) {
     event.preventDefault()
 
@@ -187,16 +201,23 @@ export default function AddDataSource() {
         compliance_violations: isNotCompliant ? violations : [],
       })
 
+      // Cache the newly created data source for quick access
       upsertCachedDataSource({
         ...createdDataSource,
         project_name: createdDataSource.project_name ?? selectedProject?.name ?? '',
       })
 
+      // Navigate to project details or data sources list
       navigate(getProjectDetailsPath(createdDataSource.project ?? form.project))
     } catch (saveError) {
       setError(saveError?.error ?? 'Could not save data source. Please check the form and try again.')
       setSaving(false)
     }
+  }
+
+  // After successful bulk import, navigate to project
+  function handleImported() {
+    navigate(getProjectDetailsPath(form.project))
   }
 
   return (
@@ -451,12 +472,30 @@ export default function AddDataSource() {
             <Button variant="outlined" color="secondary" onClick={() => navigate(getProjectDetailsPath(form.project))}>
               Cancel
             </Button>
-            <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={submitDisabled}>
-              {saving ? 'Adding...' : 'Add Data Source'}
-            </Button>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <Button
+                variant="outlined"
+                startIcon={<UploadOutlined />}
+                onClick={() => setImportDialogOpen(true)}
+                disabled={saving}
+              >
+                Import JSON
+              </Button>
+              <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={submitDisabled}>
+                {saving ? 'Adding...' : 'Add Data Source'}
+              </Button>
+            </Stack>
           </Stack>
         </Box>
       </Stack>
+
+      <ImportDataSourcesDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        projectId={form.project || presetProject}
+        projectName={selectedProject?.name}
+        onImported={handleImported}
+      />
     </Box>
   )
 }
