@@ -6,7 +6,11 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import Collapse from '@mui/material/Collapse'
 import Divider from '@mui/material/Divider'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import FormGroup from '@mui/material/FormGroup'
 import Link from '@mui/material/Link'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
@@ -14,8 +18,9 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { InfoCircleOutlined, SaveOutlined } from '@ant-design/icons'
 
+import DataFormatHintAlert from 'components/DataFormatHintAlert'
 import MainCard from 'components/MainCard'
-import { createDataSource } from 'api/dataSources'
+import { createDataSource, getDataFormatHints } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { upsertCachedDataSource } from 'utils/data-source-cache'
 
@@ -33,6 +38,8 @@ const dataFormatOptions = [
   { value: 'csv', label: 'CSV' },
   { value: 'json', label: 'JSON' },
   { value: 'image', label: 'Image' },
+  { value: 'audio', label: 'Audio' },
+  { value: 'video', label: 'Video' },
   { value: 'other', label: 'Other' },
 ]
 
@@ -67,9 +74,21 @@ export default function AddDataSource() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [dataFormatHints, setDataFormatHints] = useState({})
+  const [isNotCompliant, setIsNotCompliant] = useState(false)
+  const [violations, setViolations] = useState([])
   const nameInputRef = useRef(null)
   const locationInputRef = useRef(null)
   const manualDataInputRef = useRef(null)
+
+  // Errors are silently ignored — a failed hints fetch must not block the form.
+  useEffect(() => {
+    getDataFormatHints()
+      .then(setDataFormatHints)
+      .catch(() => {})
+  }, [])
+
+  const activeHint = dataFormatHints[form.data_format] ?? null
 
   useEffect(() => {
     let isActive = true
@@ -111,6 +130,10 @@ export default function AddDataSource() {
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: '' }))
+    if (field === 'data_format') {
+      setIsNotCompliant(false)
+      setViolations([])
+    }
   }
 
   function updateSourceType(value) {
@@ -161,6 +184,7 @@ export default function AddDataSource() {
         metadata: {
           manual_data: form.manual_data.trim(),
         },
+        compliance_violations: isNotCompliant ? violations : [],
       })
 
       upsertCachedDataSource({
@@ -305,6 +329,58 @@ export default function AddDataSource() {
                     onKeyDown={(event) => moveFocusOnArrow(event, manualDataInputRef, nameInputRef)}
                   />
                 </Box>
+
+                {/* key forces a remount on format change so the collapse state resets. */}
+                <DataFormatHintAlert key={form.data_format} hint={activeHint} />
+
+                {activeHint && (
+                  <Stack spacing={1}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={isNotCompliant}
+                          onChange={(e) => {
+                            setIsNotCompliant(e.target.checked)
+                            if (!e.target.checked) setViolations([])
+                          }}
+                          sx={{
+                            color: 'error.main',
+                            '&:hover': { color: 'error.dark' },
+                            '&.Mui-checked': { color: 'error.dark' },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography variant="body2" sx={{ color: isNotCompliant ? 'error.dark' : 'error.main' }}>
+                          Data is not compliant
+                        </Typography>
+                      }
+                    />
+                    <Collapse in={isNotCompliant}>
+                      <Stack spacing={0.5} sx={{ pl: 1 }}>
+                        <Typography variant="body2" fontWeight={500}>Select all that apply:</Typography>
+                        <FormGroup>
+                          {activeHint.checklist?.map((item) => (
+                            <FormControlLabel
+                              key={item}
+                              control={
+                                <Checkbox
+                                  size="small"
+                                  checked={violations.includes(item)}
+                                  onChange={(e) => setViolations((prev) =>
+                                    e.target.checked ? [...prev, item] : prev.filter((v) => v !== item)
+                                  )}
+                                />
+                              }
+                              label={<Typography variant="body2">{item}</Typography>}
+                            />
+                          ))}
+                        </FormGroup>
+                      </Stack>
+                    </Collapse>
+                  </Stack>
+                )}
               </Stack>
 
               <Divider />

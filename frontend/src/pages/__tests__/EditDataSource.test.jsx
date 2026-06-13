@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { deleteDataSource, getDataSource, updateDataSource } from 'api/dataSources'
+import { deleteDataSource, getDataFormatHints, getDataSource, updateDataSource } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import EditDataSource from '../EditDataSource'
 
@@ -60,6 +60,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   window.sessionStorage.clear()
   getProjects.mockResolvedValue([project])
+  getDataFormatHints.mockResolvedValue({})
   getDataSource.mockResolvedValue(dataSource)
   updateDataSource.mockResolvedValue(updatedDataSource)
   deleteDataSource.mockResolvedValue()

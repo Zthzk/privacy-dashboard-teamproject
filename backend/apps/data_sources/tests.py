@@ -392,3 +392,70 @@ class ProjectDataSourcesApiTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_can_create_data_source_with_compliance_violations(self):
+        response = self.post_json(
+            self.url,
+            {
+                "name": "Face Image Set",
+                "source_type": DataSource.SourceType.FILE,
+                "data_format": DataSource.DataFormat.IMAGE,
+                "compliance_violations": ["Faces or facial features (biometric data identification risks)"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(
+            payload["compliance_violations"],
+            ["Faces or facial features (biometric data identification risks)"],
+        )
+
+    def test_can_update_compliance_violations(self):
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Audio Clips",
+            data_format=DataSource.DataFormat.AUDIO,
+            compliance_violations=["Voice recordings capable of identifying specific natural persons"],
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={"project_id": self.project.id, "data_source_id": data_source.id},
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({"compliance_violations": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["compliance_violations"], [])
+
+
+class DataFormatHintsApiTests(TestCase):
+    def test_returns_hints_for_all_known_formats(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+
+        for data_format in ["image", "text", "csv", "json", "other"]:
+            self.assertIn(data_format, payload)
+            self.assertIn("hint", payload[data_format])
+            self.assertIn("art9_risk", payload[data_format])
+            self.assertIn("relevant_articles", payload[data_format])
+            self.assertIn("checklist", payload[data_format])
+
+    def test_image_format_has_art9_risk(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        self.assertTrue(payload["image"]["art9_risk"])
+
+    def test_non_image_formats_have_no_art9_risk(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        for data_format in ["text", "csv", "json", "other"]:
+            self.assertFalse(payload[data_format]["art9_risk"])
+

@@ -107,6 +107,20 @@ export async function updateDataSource(projectId, dataSourceId, dataSourceData) 
   }
 }
 /**
+ * Returns privacy hints per data format.
+ * Each entry contains a hint text, an art9_risk flag, relevant legal articles, and a checklist.
+ * Used by the data source form to guide users when selecting a data format.
+ */
+export async function getDataFormatHints() {
+  try {
+    const response = await apiClient.get("/datasource-format-hints/");
+    return response.data;
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
+
+/**
  * Delete a datasource
  */
 export async function deleteDataSource(projectId, dataSourceId) {

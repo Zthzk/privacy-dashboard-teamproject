@@ -13,6 +13,8 @@ class DataSource(models.Model):
     class DataFormat(models.TextChoices):
         TEXT = "text", "Text"
         IMAGE = "image", "Image"
+        AUDIO = "audio", "Audio"
+        VIDEO = "video", "Video"
         CSV = "csv", "CSV"
         JSON = "json", "JSON"
         OTHER = "other", "Other"
@@ -38,6 +40,9 @@ class DataSource(models.Model):
     location = models.CharField(max_length=255, blank=True)
     contains_personal_data = models.BooleanField(default=False)
     metadata = models.JSONField(default=dict, blank=True)
+    # Separate from metadata so violations can be queried and consumed independently
+    # by a future risk escalation step without parsing the unstructured metadata blob.
+    compliance_violations = models.JSONField(default=list, blank=True)
     last_scanned_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

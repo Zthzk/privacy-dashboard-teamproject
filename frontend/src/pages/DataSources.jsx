@@ -26,19 +26,32 @@ import Typography from '@mui/material/Typography'
 import {
   ApiOutlined,
   CloseOutlined,
+  AudioOutlined,
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
   FileTextOutlined,
+  PictureOutlined,
   PlusOutlined,
   SearchOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons'
 
 import MainCard from 'components/MainCard'
 import { deleteDataSource, getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { readCachedDataSources, removeCachedDataSource, writeCachedDataSources } from 'utils/data-source-cache'
+
+const DATA_FORMAT_ICONS = {
+  text: { icon: FileTextOutlined, color: '#1677ff' },
+  csv: { icon: DatabaseOutlined, color: '#52c41a' },
+  json: { icon: ApiOutlined, color: '#fa8c16' },
+  image: { icon: PictureOutlined, color: '#722ed1' },
+  audio: { icon: AudioOutlined, color: '#eb2f96' },
+  video: { icon: VideoCameraOutlined, color: '#13c2c2' },
+  other: { icon: FileTextOutlined, color: '#8c8c8c' },
+}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -345,7 +358,10 @@ export default function DataSources() {
                     >
                       <TableCell>
                         <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
-                          <FileTextOutlined style={{ color: '#1677ff' }} />
+                          {(() => {
+                            const fmt = DATA_FORMAT_ICONS[source.data_format] ?? DATA_FORMAT_ICONS.other
+                            return <fmt.icon style={{ color: fmt.color }} />
+                          })()}
                           <Box sx={{ minWidth: 0 }}>
                             <Typography
                               variant="subtitle2"
