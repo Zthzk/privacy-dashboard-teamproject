@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
@@ -18,6 +19,7 @@ import UserOutlined from '@ant-design/icons/UserOutlined';
 export default function Profile() {
   const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <Box sx={{ flexShrink: 0, ml: 1 }}>
@@ -66,7 +68,13 @@ export default function Profile() {
                 <UserOutlined style={{ marginRight: 12 }} />
                 <ListItemText primary="Profile" />
               </ListItemButton>
-              <ListItemButton>
+              <ListItemButton
+                  onClick={() => {
+                      localStorage.removeItem('accessToken');
+                      localStorage.removeItem('refreshToken');
+                      navigate('/login');
+                  }}
+              >
                 <LogoutOutlined style={{ marginRight: 12 }} />
                 <ListItemText primary="Logout" />
               </ListItemButton>
