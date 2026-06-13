@@ -67,6 +67,7 @@ def serialize_data_source(data_source, include_project=False):
         "art_9_data": art_9_data,
         "art_9_data_display": art_9_data.replace("_", " ").title(),
         "metadata": data_source.metadata,
+        "compliance_violations": data_source.compliance_violations,
         "last_scanned_at": (
             data_source.last_scanned_at.isoformat()
             if data_source.last_scanned_at
@@ -156,6 +157,10 @@ def project_data_sources(request, project_id):
     if error:
         return error
 
+    compliance_violations = payload.get("compliance_violations", [])
+    if not isinstance(compliance_violations, list):
+        return json_error("compliance_violations must be a JSON array.")
+
     data_source = DataSource(
         project=project,
         name=payload.get("name", ""),
@@ -165,6 +170,7 @@ def project_data_sources(request, project_id):
         location=payload.get("location", ""),
         contains_personal_data=normalized_payload["contains_personal_data"],
         metadata=normalized_payload["metadata"],
+        compliance_violations=compliance_violations,
     )
 
     try:
@@ -232,6 +238,11 @@ def project_data_source_detail(request, project_id, data_source_id):
         if not isinstance(contains_personal_data, bool):
             return json_error("contains_personal_data must be a boolean.")
         data_source.contains_personal_data = contains_personal_data
+    if "compliance_violations" in payload:
+        compliance_violations = payload.get("compliance_violations")
+        if not isinstance(compliance_violations, list):
+            return json_error("compliance_violations must be a JSON array.")
+        data_source.compliance_violations = compliance_violations
 
     try:
         apply_data_source_risk_assessment(data_source)

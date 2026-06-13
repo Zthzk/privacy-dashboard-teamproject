@@ -184,6 +184,7 @@ export default function AddDataSource() {
         metadata: {
           manual_data: form.manual_data.trim(),
         },
+        compliance_violations: isNotCompliant ? violations : [],
       })
 
       upsertCachedDataSource({

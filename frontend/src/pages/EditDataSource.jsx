@@ -159,6 +159,10 @@ export default function EditDataSource() {
           data_format: source.data_format ?? 'text',
           manual_data: source.metadata?.manual_data ?? '',
         })
+        // Restore the user's previous compliance assessment so they don't lose it on re-open.
+        const savedViolations = source.compliance_violations ?? []
+        setViolations(savedViolations)
+        setIsNotCompliant(savedViolations.length > 0)
       })
       .catch(() => {
         if (isActive) {
@@ -247,6 +251,7 @@ export default function EditDataSource() {
           ...(dataSource.metadata ?? {}),
           manual_data: form.manual_data.trim(),
         },
+        compliance_violations: isNotCompliant ? violations : [],
       }
       const updatedSource = await updateDataSource(dataSource.project, dataSource.id, updateData)
 

@@ -376,6 +376,45 @@ class ProjectDataSourcesApiTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_can_create_data_source_with_compliance_violations(self):
+        response = self.post_json(
+            self.url,
+            {
+                "name": "Face Image Set",
+                "source_type": DataSource.SourceType.FILE,
+                "data_format": DataSource.DataFormat.IMAGE,
+                "compliance_violations": ["Faces or facial features (biometric data identification risks)"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(
+            payload["compliance_violations"],
+            ["Faces or facial features (biometric data identification risks)"],
+        )
+
+    def test_can_update_compliance_violations(self):
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Audio Clips",
+            data_format=DataSource.DataFormat.AUDIO,
+            compliance_violations=["Voice recordings capable of identifying specific natural persons"],
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={"project_id": self.project.id, "data_source_id": data_source.id},
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({"compliance_violations": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["compliance_violations"], [])
+
 
 class DataFormatHintsApiTests(TestCase):
     def test_returns_hints_for_all_known_formats(self):
