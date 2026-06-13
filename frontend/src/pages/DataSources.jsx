@@ -6,10 +6,6 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
-import Dialog from '@mui/material/Dialog'
-import DialogContent from '@mui/material/DialogContent'
-import DialogContentText from '@mui/material/DialogContentText'
-import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Link from '@mui/material/Link'
@@ -25,7 +21,6 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import {
   ApiOutlined,
-  CloseOutlined,
   AudioOutlined,
   DatabaseOutlined,
   DeleteOutlined,
@@ -38,6 +33,7 @@ import {
   VideoCameraOutlined,
 } from '@ant-design/icons'
 
+import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import MainCard from 'components/MainCard'
 import { deleteDataSource, getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
@@ -61,17 +57,6 @@ function formatDate(value) {
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(value))
-}
-
-function getRiskChip(riskLevel) {
-  if (riskLevel === 'high' || riskLevel === 'red') return { label: 'High', color: 'error' }
-  if (riskLevel === 'medium' || riskLevel === 'yellow') return { label: 'Medium', color: 'warning' }
-  return { label: 'Low', color: 'success' }
-}
-
-function getDataSourcePreviewText(source) {
-  // Prefer the API preview field, but keep older cached/manual entries previewable.
-  return source?.preview_text || source?.metadata?.preview_text || source?.metadata?.manual_data || ''
 }
 
 function SummaryCard({ title, value, helper, color, icon: Icon }) {
@@ -112,6 +97,7 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
 
 export default function DataSources() {
   const navigate = useNavigate()
+  // Seed from session cache so newly added or edited sources appear before the API refresh returns.
   const [dataSources, setDataSources] = useState(() => readCachedDataSources())
   const [projects, setProjects] = useState([])
   const [search, setSearch] = useState('')
@@ -214,7 +200,8 @@ export default function DataSources() {
 
   function handleEditDataSource(dataSource) {
     if (dataSource) {
-      navigate(`/data-sources/${dataSource.id}/edit?project=${dataSource.project}`)
+      // Preserve the global-list context so saving or canceling returns here instead of project details.
+      navigate(`/data-sources/${dataSource.id}/edit?project=${dataSource.project}&returnTo=data-sources`)
     }
   }
 
@@ -234,8 +221,14 @@ export default function DataSources() {
     }
   }
 
-  const previewText = getDataSourcePreviewText(dataSourcePendingPreview)
-  const previewRiskChip = getRiskChip(dataSourcePendingPreview?.risk_level)
+  function openDataSourcePreview(source) {
+    // Store the full row object so the preview dialog can render without another request.
+    setDataSourcePendingPreview(source)
+  }
+
+  function closeDataSourcePreview() {
+    setDataSourcePendingPreview(null)
+  }
 
   return (
     <Stack spacing={3}>
@@ -347,11 +340,11 @@ export default function DataSources() {
                       key={source.id}
                       hover
                       tabIndex={0}
-                      onClick={() => setDataSourcePendingPreview(source)}
+                      onClick={() => openDataSourcePreview(source)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault()
-                          setDataSourcePendingPreview(source)
+                          openDataSourcePreview(source)
                         }
                       }}
                       sx={{ cursor: 'pointer' }}
@@ -409,7 +402,7 @@ export default function DataSources() {
                                 aria-label={`Preview ${source.name}`}
                                 onClick={(event) => {
                                   event.stopPropagation()
-                                  setDataSourcePendingPreview(source)
+                                  openDataSourcePreview(source)
                                 }}
                               >
                                 <EyeOutlined />
@@ -454,85 +447,22 @@ export default function DataSources() {
         </TableContainer>
       </MainCard>
 
-      <Dialog
-        open={Boolean(dataSourcePendingPreview)}
-        onClose={() => setDataSourcePendingPreview(null)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle sx={{ pr: 7 }}>Dataset Preview</DialogTitle>
-        <IconButton
-          aria-label="Close dataset preview"
-          onClick={() => setDataSourcePendingPreview(null)}
-          sx={{ position: 'absolute', right: 12, top: 12 }}
-        >
-          <CloseOutlined />
-        </IconButton>
-        <DialogContent dividers>
-          <Stack spacing={2.5}>
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Dataset Details
-              </Typography>
-              <Stack spacing={0.5}>
-                <Typography variant="h5">{dataSourcePendingPreview?.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {dataSourcePendingPreview?.location || 'No source location provided.'}
-                </Typography>
-              </Stack>
-            </Stack>
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Risk Metadata
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                  label={dataSourcePendingPreview?.source_type_display ?? dataSourcePendingPreview?.source_type ?? '-'}
-                />
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  color="secondary"
-                  label={dataSourcePendingPreview?.data_format_display ?? dataSourcePendingPreview?.data_format ?? '-'}
-                />
-                <Chip size="small" variant="outlined" color={previewRiskChip.color} label={`${previewRiskChip.label} Risk`} />
-              </Stack>
-            </Stack>
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Sample Preview
-              </Typography>
-              {previewText ? (
-                <Box
-                  component="pre"
-                  sx={{
-                    m: 0,
-                    p: 2,
-                    maxHeight: 360,
-                    overflow: 'auto',
-                    borderRadius: 1,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'grey.50',
-                    color: 'text.primary',
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    whiteSpace: 'pre-wrap',
-                    overflowWrap: 'anywhere',
-                  }}
-                >
-                  {previewText}
-                </Box>
-              ) : (
-                <DialogContentText>No preview available for this data source.</DialogContentText>
-              )}
-            </Stack>
-          </Stack>
-        </DialogContent>
-      </Dialog>
+      <DatasetPreviewDialog
+        source={dataSourcePendingPreview}
+        onClose={closeDataSourcePreview}
+        onOpenProject={() => {
+          // Close first so the project page does not inherit an open modal during navigation.
+          const projectId = dataSourcePendingPreview?.project
+          closeDataSourcePreview()
+          navigate(`/projects/${projectId}`)
+        }}
+        onEdit={() => {
+          // Reuse the table edit handler so row actions and preview actions stay in sync.
+          const dataSource = dataSourcePendingPreview
+          closeDataSourcePreview()
+          handleEditDataSource(dataSource)
+        }}
+      />
 
     </Stack>
   )

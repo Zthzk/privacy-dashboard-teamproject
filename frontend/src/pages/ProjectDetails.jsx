@@ -51,6 +51,7 @@ import {
   WarningFilled,
 } from '@ant-design/icons'
 
+import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import MainCard from 'components/MainCard'
 import { deleteDataSource } from 'api/dataSources'
 import { getProjectOverview, updateProject } from 'api/projects'
@@ -86,8 +87,11 @@ function getRiskChip(riskLevel) {
   return { label: 'Low', color: 'success' }
 }
 
-function getBooleanChip(value) {
-  return value ? { label: 'Yes', color: 'success' } : { label: 'No', color: 'default' }
+function getPersonalDataChip(source) {
+  // This column replaced the older compliant flag and mirrors the backend classification.
+  return source?.contains_personal_data
+    ? { label: 'Yes', color: 'success' }
+    : { label: 'No', color: 'default' }
 }
 
 function getArt9Chip(source) {
@@ -337,6 +341,7 @@ function sortDetectedDataCategories(categories) {
 }
 
 function buildRiskAssessmentFallback(dataSources) {
+  // Local fallback keeps the overview usable while the backend risk endpoint is unavailable.
   const metrics = {
     total_data_sources: dataSources.length,
     personal_data_sources: dataSources.filter((source) => source.contains_personal_data === true).length,
@@ -371,6 +376,7 @@ function buildRiskAssessmentFallback(dataSources) {
 function normalizeSampleDataSource(source) {
   const riskLevel = String(source.risk ?? '').toLowerCase()
 
+  // Demo/cached project sources use older field names; normalize them before rendering tables and previews.
   return {
     contains_personal_data: source.personal_data === 'Yes' || source.personal === 'Yes',
     data_format_display: source.data_format_display ?? source.format ?? '-',
@@ -382,12 +388,8 @@ function normalizeSampleDataSource(source) {
   }
 }
 
-function getDataSourcePreviewText(source) {
-  // Prefer the API preview field, but keep older cached/manual entries previewable.
-  return source?.preview_text || source?.metadata?.preview_text || source?.metadata?.manual_data || ''
-}
-
 function buildLocalProjectOverview(projectId) {
+  // Build the same shape as the API response from session cache for instant project-detail recovery.
   const projects = applyProjectStyleOverrides(readCachedProjects(), readProjectStyleOverrides())
   const project = projects.find((item) => String(item.id) === String(projectId))
   if (!project) return null
@@ -844,9 +846,6 @@ export default function ProjectDetails() {
     () => filteredDataSources.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
     [filteredDataSources, page, rowsPerPage],
   )
-  const previewText = getDataSourcePreviewText(dataSourcePendingPreview)
-  const previewRiskChip = getRiskChip(dataSourcePendingPreview?.risk_level)
-
   const summaryCards = [
     {
       title: 'Total Sources',
@@ -950,7 +949,7 @@ export default function ProjectDetails() {
               <Button
                 variant="contained"
                 startIcon={<PlusCircleFilled />}
-                onClick={() => navigate(`/data-sources/new?project=${project.id}`)}
+                onClick={() => navigate(`/data-sources/new?project=${project.id}&returnTo=project`)}
                 sx={{ minWidth: 180 }}
               >
                 Add Data Source
@@ -1091,7 +1090,8 @@ export default function ProjectDetails() {
                               <Button
                                 variant="contained"
                                 startIcon={<PlusCircleFilled />}
-                                onClick={() => navigate(`/data-sources/new?project=${project.id}`)}
+                                // Project context keeps the add flow from bouncing back to the global list.
+                                onClick={() => navigate(`/data-sources/new?project=${project.id}&returnTo=project`)}
                               >
                                 Add Data Source
                               </Button>
@@ -1108,7 +1108,8 @@ export default function ProjectDetails() {
                     {visibleDataSources.map((source) => {
                       const SourceIcon = getSourceIcon(source.source_type)
                       const riskChip = getRiskChip(source.risk_level)
-                      const personalDataChip = getBooleanChip(source.contains_personal_data)
+                      // Personal Data is intentionally shown beside risk so users can inspect the risk basis.
+                      const personalDataChip = getPersonalDataChip(source)
                       const art9Chip = getArt9Chip(source)
 
                       return (
@@ -1116,6 +1117,7 @@ export default function ProjectDetails() {
                           key={source.id}
                           hover
                           tabIndex={0}
+                          // Row activation and the preview icon share the same dataset preview dialog.
                           onClick={() => setDataSourcePendingPreview(source)}
                           onKeyDown={(event) => {
                             if (event.key === 'Enter' || event.key === ' ') {
@@ -1201,7 +1203,8 @@ export default function ProjectDetails() {
                                     aria-label={`Edit ${source.name}`}
                                     onClick={(event) => {
                                       event.stopPropagation()
-                                      navigate(`/data-sources/${source.id}/edit?project=${source.project}`)
+                                      // Keep edits scoped to this project detail page on save/cancel.
+                                      navigate(`/data-sources/${source.id}/edit?project=${source.project}&returnTo=project`)
                                     }}
                                   >
                                     <EditOutlined />
@@ -1248,87 +1251,17 @@ export default function ProjectDetails() {
             </Stack>
           </Box>
 
-          <Dialog
-            open={Boolean(dataSourcePendingPreview)}
+          <DatasetPreviewDialog
+            source={dataSourcePendingPreview}
             onClose={() => setDataSourcePendingPreview(null)}
-            maxWidth="md"
-            fullWidth
-          >
-            <DialogTitle sx={{ pr: 7 }}>Dataset Preview</DialogTitle>
-            <IconButton
-              aria-label="Close dataset preview"
-              onClick={() => setDataSourcePendingPreview(null)}
-              sx={{ position: 'absolute', right: 12, top: 12 }}
-            >
-              <CloseOutlined />
-            </IconButton>
-            <DialogContent dividers>
-              <Stack spacing={2.5}>
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Dataset Details
-                  </Typography>
-                  <Stack spacing={0.5}>
-                    <Typography variant="h5">{dataSourcePendingPreview?.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {dataSourcePendingPreview?.location || 'No source location provided.'}
-                    </Typography>
-                  </Stack>
-                </Stack>
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Risk Metadata
-                  </Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                      label={dataSourcePendingPreview?.source_type_display ?? dataSourcePendingPreview?.source_type ?? '-'}
-                    />
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      color="secondary"
-                      label={dataSourcePendingPreview?.data_format_display ?? dataSourcePendingPreview?.data_format ?? '-'}
-                    />
-                    <Chip size="small" variant="outlined" color={previewRiskChip.color} label={`${previewRiskChip.label} Risk`} />
-                  </Stack>
-                </Stack>
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Sample Preview
-                  </Typography>
-                  {previewText ? (
-                    <Box
-                      component="pre"
-                      sx={{
-                        m: 0,
-                        p: 2,
-                        maxHeight: 360,
-                        overflow: 'auto',
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'grey.50',
-                        color: 'text.primary',
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        whiteSpace: 'pre-wrap',
-                        overflowWrap: 'anywhere',
-                      }}
-                    >
-                      {previewText}
-                    </Box>
-                  ) : (
-                    <DialogContentText>
-                      No preview available for this data source.
-                    </DialogContentText>
-                  )}
-                </Stack>
-              </Stack>
-            </DialogContent>
-          </Dialog>
+            onOpenProject={() => setDataSourcePendingPreview(null)}
+            onEdit={() => {
+              // Capture the source before closing because close clears the preview state.
+              const source = dataSourcePendingPreview
+              setDataSourcePendingPreview(null)
+              navigate(`/data-sources/${source.id}/edit?project=${source.project}&returnTo=project`)
+            }}
+          />
 
           <Dialog
             open={Boolean(dataSourcePendingDelete)}

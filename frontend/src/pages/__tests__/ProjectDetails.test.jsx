@@ -1,7 +1,7 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { deleteDataSource } from 'api/dataSources'
@@ -33,7 +33,16 @@ const dataSources = [
     risk_level: 'high',
     art_9_data: 'unknown',
     preview_text: 'Name: Anna Mueller\nEmail: anna@example.com\nTicket: Needs support.',
-    metadata: { data_category_keys: ['contact_data', 'direct_identifiers'] },
+    // Extra findings verify that project detail preview uses the shared three-item cap.
+    compliance_violations: [
+      'Names, surnames, and pseudonyms',
+      'National identification numbers or tax identifiers',
+      'Check for toxic language, hate speech, or historical biases within the text',
+      'Verify presence of copyrighted text or content extracted in violation of opt-out mechanisms',
+      'Emotional state indicators',
+      'Synthetic speech / voice clone disclosure issue',
+    ],
+    metadata: { data_category_keys: ['contact_data', 'direct_identifiers'], format_art9_risk: true },
     updated_at: '2026-05-18T10:00:00Z',
   },
   {
@@ -86,11 +95,20 @@ const riskAssessment = {
   ],
 }
 
+function LocationDestination({ label }) {
+  const location = useLocation()
+
+  // Render the destination URL so route-context tests can assert the exact navigation target.
+  return <div>{`${label}: ${location.pathname}${location.search}`}</div>
+}
+
 function renderProjectDetails() {
   return render(
     <MemoryRouter initialEntries={['/projects/1']}>
       <Routes>
         <Route path="/projects/:projectId" element={<ProjectDetails />} />
+        <Route path="/data-sources/new" element={<LocationDestination label="Add data source destination" />} />
+        <Route path="/data-sources/:dataSourceId/edit" element={<LocationDestination label="Edit data source destination" />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -171,10 +189,24 @@ describe('ProjectDetails page', () => {
     await screen.findByText('Support Analytics Project')
     await user.click(screen.getByRole('button', { name: 'Preview Support Tickets' }))
 
-    expect(screen.getByRole('dialog', { name: 'Dataset Preview' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Dataset Preview' })
+    expect(dialog).toBeInTheDocument()
     expect(screen.getAllByText('Support Tickets').length).toBeGreaterThan(0)
     expect(screen.getByText(/Name: Anna Mueller/)).toBeInTheDocument()
     expect(screen.getByText(/Email: anna@example.com/)).toBeInTheDocument()
+    expect(within(dialog).getByText('Risk Assessment')).toBeInTheDocument()
+    expect(within(dialog).getByText('Personal Data')).toBeInTheDocument()
+    expect(within(dialog).queryByText('Compliant')).not.toBeInTheDocument()
+    expect(within(dialog).queryByText('Format review risk')).not.toBeInTheDocument()
+    expect(within(dialog).getAllByText('Yes').length).toBeGreaterThan(0)
+    expect(within(dialog).getByText('Selected compliance findings')).toBeInTheDocument()
+    expect(within(dialog).getByText('Names, surnames, and pseudonyms')).toBeInTheDocument()
+    // The shared preview should keep long findings lists collapsed in project details too.
+    expect(within(dialog).queryByText('Verify presence of copyrighted text or content extracted in violation of opt-out mechanisms')).not.toBeInTheDocument()
+    expect(within(dialog).queryByText('Emotional state indicators')).not.toBeInTheDocument()
+    expect(within(dialog).queryByText('Synthetic speech / voice clone disclosure issue')).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'View all findings' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Close' })).toBeInTheDocument()
   })
 
   test('opens dataset preview when clicking a data source row', async () => {
@@ -187,5 +219,38 @@ describe('ProjectDetails page', () => {
 
     expect(screen.getByRole('dialog', { name: 'Dataset Preview' })).toBeInTheDocument()
     expect(screen.getByText(/Ticket: Needs support/)).toBeInTheDocument()
+  })
+
+  test('opens add data source flow with project return context', async () => {
+    const user = userEvent.setup()
+
+    renderProjectDetails()
+
+    await screen.findByText('Support Analytics Project')
+    await user.click(screen.getByRole('button', { name: /Add Data Source/ }))
+    // The query string tells AddDataSource to return to this project after save or cancel.
+    expect(screen.getByText('Add data source destination: /data-sources/new?project=1&returnTo=project')).toBeInTheDocument()
+  })
+
+  test('opens edit data source flow with project return context', async () => {
+    const user = userEvent.setup()
+
+    renderProjectDetails()
+
+    await screen.findByText('Support Analytics Project')
+    await user.click(screen.getByRole('button', { name: 'Edit Support Tickets' }))
+    // The query string tells EditDataSource to preserve project-detail context.
+    expect(screen.getByText('Edit data source destination: /data-sources/11/edit?project=1&returnTo=project')).toBeInTheDocument()
+  })
+
+  test('uses personal data status in the project data source table', async () => {
+    renderProjectDetails()
+
+    await screen.findByText('Support Analytics Project')
+
+    // Personal Data replaced the older compliant status in project data-source rows.
+    expect(screen.getByRole('columnheader', { name: 'Personal Data' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Compliant' })).not.toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /Support Tickets/ })).toHaveTextContent('Yes')
   })
 })
