@@ -25,7 +25,8 @@ import { upsertCachedDataSource } from 'utils/data-source-cache'
 // Define validation constraints for bulk import
 const REQUIRED_FIELDS = ['name', 'source_type', 'data_format']
 const ALLOWED_SOURCE_TYPES = ['file', 'database', 'api', 'url', 'manual', 'other']
-const ALLOWED_DATA_FORMATS = ['text', 'csv', 'json', 'image', 'other']
+// audio and video added in US-07 — kept in sync so imports don't reject formats the backend accepts
+const ALLOWED_DATA_FORMATS = ['text', 'csv', 'json', 'image', 'audio', 'video', 'other']
 
 // Validate individual entry against required fields and allowed values
 function validateEntry(entry, index) {
