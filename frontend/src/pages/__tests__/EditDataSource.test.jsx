@@ -53,6 +53,7 @@ function renderEditDataSource(initialEntry = '/data-sources/11/edit?project=1', 
       <Routes>
         <Route path="/data-sources/:dataSourceId/edit" element={<EditDataSource />} />
         <Route path="/data-sources" element={<LocationDestination label="Data sources destination" />} />
+        <Route path="/dashboard" element={<LocationDestination label="Dashboard destination" />} />
         <Route path="/projects/:projectId" element={<LocationDestination label="Project details destination" />} />
       </Routes>
     </MemoryRouter>,
@@ -121,6 +122,22 @@ describe('EditDataSource page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Project details destination: /projects/1')).toBeInTheDocument()
+    })
+  })
+
+  test('returns to dashboard after saving from dashboard context', async () => {
+    const user = userEvent.setup()
+
+    renderEditDataSource('/data-sources/11/edit?project=1&returnTo=dashboard')
+
+    const nameInput = await screen.findByDisplayValue('Support Tickets')
+
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Updated Support Tickets')
+    await user.click(screen.getByRole('button', { name: /Save Changes/ }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard destination: /dashboard')).toBeInTheDocument()
     })
   })
 

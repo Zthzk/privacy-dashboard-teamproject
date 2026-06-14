@@ -18,6 +18,7 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import {
   CarOutlined,
@@ -33,6 +34,7 @@ import {
 } from '@ant-design/icons'
 
 import MainCard from 'components/MainCard'
+import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import { getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { getProjectStyle, getVisibleProjects, projectIconMap } from 'utils/project-display'
@@ -119,6 +121,7 @@ export default function Dashboard() {
   const [dataSources, setDataSources] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [dataSourcePendingPreview, setDataSourcePendingPreview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -299,9 +302,9 @@ export default function Dashboard() {
       {selectedProject && (
       <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} fullWidth maxWidth="lg">
         <DialogTitle sx={{ pr: 7 }}>
-          Data Source Preview
+          Project Preview
           <IconButton
-            aria-label="Close data source preview"
+            aria-label="Close project preview"
             onClick={() => setPreviewOpen(false)}
             sx={{ position: 'absolute', right: 12, top: 12 }}
           >
@@ -399,7 +402,19 @@ export default function Dashboard() {
                     const containsPersonalData = source.personal ?? (source.contains_personal_data ? 'Yes' : 'No')
 
                     return (
-                      <TableRow key={source.id ?? source.name}>
+                      <TableRow
+                        key={source.id ?? source.name}
+                        hover
+                        tabIndex={0}
+                        onClick={() => setDataSourcePendingPreview(source)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            setDataSourcePendingPreview(source)
+                          }
+                        }}
+                        sx={{ cursor: 'pointer' }}
+                      >
                         <TableCell>{source.name}</TableCell>
                         <TableCell>{source.type ?? source.source_type_display ?? source.source_type}</TableCell>
                         <TableCell>{source.format ?? source.data_format_display ?? source.data_format}</TableCell>
@@ -415,12 +430,29 @@ export default function Dashboard() {
                           />
                         </TableCell>
                         <TableCell align="right">
-                          <IconButton size="small" aria-label={`View ${source.name}`}>
-                            <EyeOutlined />
-                          </IconButton>
-                          <IconButton size="small" aria-label={`More actions for ${source.name}`}>
-                            <MoreOutlined />
-                          </IconButton>
+                          <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+                            <Tooltip title="Preview data source">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Preview ${source.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setDataSourcePendingPreview(source)
+                                  }}
+                                >
+                                  <EyeOutlined />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <IconButton
+                              size="small"
+                              aria-label={`More actions for ${source.name}`}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <MoreOutlined />
+                            </IconButton>
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     )
@@ -436,6 +468,27 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
       )}
+
+      <DatasetPreviewDialog
+        source={dataSourcePendingPreview}
+        onClose={() => setDataSourcePendingPreview(null)}
+        onOpenProject={() => {
+          const projectId = dataSourcePendingPreview?.project ?? selectedProject?.id
+          setDataSourcePendingPreview(null)
+          if (projectId) {
+            setPreviewOpen(false)
+            navigate(`/projects/${projectId}`)
+          }
+        }}
+        onEdit={() => {
+          const source = dataSourcePendingPreview
+          setDataSourcePendingPreview(null)
+          if (source?.id) {
+            setPreviewOpen(false)
+            navigate(`/data-sources/${source.id}/edit?project=${source.project ?? selectedProject?.id}&returnTo=dashboard`)
+          }
+        }}
+      />
 
       {/* Aggregated risk indicators across all loaded data sources. */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr' }, gap: 2.5 }}>

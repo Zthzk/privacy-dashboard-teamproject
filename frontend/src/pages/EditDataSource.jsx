@@ -112,6 +112,7 @@ function getProjectDetailsPath(projectId) {
 
 function getReturnPath(returnTo, projectId) {
   // Keep edit completion deterministic instead of relying on browser history state.
+  if (returnTo === 'dashboard') return '/dashboard'
   return returnTo === 'project' ? getProjectDetailsPath(projectId) : '/data-sources'
 }
 

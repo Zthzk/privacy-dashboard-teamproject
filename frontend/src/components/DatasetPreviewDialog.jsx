@@ -273,25 +273,26 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
             alignItems: 'stretch',
           }}
         >
-          <PreviewPanel icon={FileSearchOutlined} title="Sample Preview" sx={{ minHeight: 340 }}>
+          <PreviewPanel icon={FileSearchOutlined} title="Source Data Snapshot" sx={{ minHeight: 190 }}>
             {previewText ? (
               <Box
                 sx={{
                   position: 'relative',
-                  minHeight: 270,
+                  height: { xs: 120, sm: 140 },
                   borderRadius: 1,
                   border: '1px solid',
                   borderColor: 'divider',
                   bgcolor: 'common.white',
+                  overflow: 'hidden',
                 }}
               >
+                {/* Keep long source samples inside this compact pane so the dialog remains scannable. */}
                 <Box
                   component="pre"
                   sx={{
                     m: 0,
                     p: { xs: 2, sm: 2.5 },
-                    minHeight: 270,
-                    maxHeight: 330,
+                    height: '100%',
                     overflow: 'auto',
                     color: 'text.primary',
                     fontFamily: 'monospace',
@@ -307,7 +308,7 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
             ) : (
               <Box
                 sx={{
-                  minHeight: 270,
+                  height: { xs: 120, sm: 140 },
                   display: 'grid',
                   placeItems: 'center',
                   border: '1px dashed',
