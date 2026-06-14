@@ -1,5 +1,7 @@
 import re
 
+from .violation_weights import VIOLATION_WEIGHTS
+
 
 RISK_LEVELS = {
     "low": "Low",
@@ -206,7 +208,14 @@ RISK_LEVEL_DISPLAY = {
     "high": "High",
 }
 
+# A single Art. 9 violation has weight 3, so this threshold escalates immediately to HIGH.
+# Three weight-1 violations (standard personal data) also reach this threshold,
+# reflecting that multiple simultaneous personal data categories carry compounded risk.
+VIOLATION_HIGH_THRESHOLD = 3
+VIOLATION_MEDIUM_THRESHOLD = 1
 
+
+# Recursively converts nested dicts and lists in metadata to a single space-separated string.
 def _flatten_metadata_value(value):
     if isinstance(value, dict):
         return " ".join(_flatten_metadata_value(item) for item in value.values())
@@ -217,6 +226,7 @@ def _flatten_metadata_value(value):
     return str(value)
 
 
+# Combines all text-bearing fields of a data source into one lowercase string for keyword scanning.
 def _build_assessment_text(data_source):
     return " ".join(
         [
@@ -230,6 +240,7 @@ def _build_assessment_text(data_source):
     ).lower()
 
 
+# Returns all categories whose keyword list has at least one match in the given text.
 def _matched_keyword_categories(text, category_keywords):
     categories = []
     for category, keywords in category_keywords.items():
@@ -238,6 +249,7 @@ def _matched_keyword_categories(text, category_keywords):
     return categories
 
 
+# Returns all categories whose regex pattern matches something in the given text.
 def _matched_pattern_categories(text):
     return [
         category
@@ -246,6 +258,7 @@ def _matched_pattern_categories(text):
     ]
 
 
+# Converts a category key into the dict structure returned in API responses.
 def _serialize_data_category(key):
     definition = DATA_CATEGORY_DEFINITIONS[key]
     return {
@@ -256,6 +269,8 @@ def _serialize_data_category(key):
     }
 
 
+# Maps raw detected keyword categories to their unified DATA_CATEGORY_DEFINITIONS entries,
+# preserving the canonical display order defined in DATA_CATEGORY_ORDER.
 def _map_detected_categories(personal_categories, art_9_categories):
     category_keys = set()
 
@@ -271,6 +286,8 @@ def _map_detected_categories(personal_categories, art_9_categories):
     ]
 
 
+# Reads data category keys from a data source's metadata, falling back through
+# multiple storage formats that accumulated across different frontend versions.
 def _data_category_keys_for_source(data_source):
     metadata = data_source.metadata or {}
     keys = metadata.get("data_category_keys")
@@ -299,6 +316,7 @@ def _data_category_keys_for_source(data_source):
     ]
 
 
+# Sorts data categories by source count (descending), then by priority score, then by canonical order.
 def _sort_detected_data_categories(categories):
     return sorted(
         categories,
@@ -310,7 +328,20 @@ def _sort_detected_data_categories(categories):
     )
 
 
-def assess_data_source_risk(data_source):
+# Sums the GDPR risk weights of all recognized violation labels.
+# Labels not found in VIOLATION_WEIGHTS are silently ignored to stay robust
+# against checklist label changes between versions.
+def score_compliance_violations(violations):
+    return sum(
+        VIOLATION_WEIGHTS[v]["weight"]
+        for v in violations
+        if v in VIOLATION_WEIGHTS
+    )
+
+
+# Analyses a data source and returns a risk assessment dict with risk_level, detected
+# data categories, and violation score. Does not mutate the data source object.
+def assess_data_source_risk(data_source, user_flagged_personal_data=False):
     text = _build_assessment_text(data_source)
     personal_categories = sorted(
         set(
@@ -320,20 +351,35 @@ def assess_data_source_risk(data_source):
     )
     art_9_categories = sorted(set(_matched_keyword_categories(text, ART_9_KEYWORDS)))
 
-    contains_art_9_data = bool(art_9_categories)
+    violations = data_source.compliance_violations or []
+    violation_score = score_compliance_violations(violations)
+
+    # Violations take priority over keyword detection: an Art. 9 violation (weight 3)
+    # elevates to HIGH regardless of what keywords appear in the metadata text.
+    # user_flagged_personal_data comes from the current request payload only —
+    # reading the stored DB value here would create a ratchet where the field
+    # can never return to False after a violation is cleared.
+    contains_art_9_data = bool(art_9_categories) or violation_score >= VIOLATION_HIGH_THRESHOLD
     contains_personal_data = (
         bool(personal_categories)
         or contains_art_9_data
-        or data_source.contains_personal_data
+        or user_flagged_personal_data
+        or violation_score >= VIOLATION_MEDIUM_THRESHOLD
     )
     data_categories = _map_detected_categories(personal_categories, art_9_categories)
 
     if contains_art_9_data:
         risk_level = "high"
-        reason = "This data source may contain GDPR Art. 9 special category data."
+        if violation_score >= VIOLATION_HIGH_THRESHOLD and not bool(art_9_categories):
+            reason = "Compliance violations indicate the presence of GDPR Art. 9 special category data."
+        else:
+            reason = "This data source may contain GDPR Art. 9 special category data."
     elif contains_personal_data:
         risk_level = "medium"
-        reason = "This data source may contain personal data."
+        if violation_score >= VIOLATION_MEDIUM_THRESHOLD and not bool(personal_categories):
+            reason = "Compliance violations indicate the presence of personal data."
+        else:
+            reason = "This data source may contain personal data."
     else:
         risk_level = "low"
         reason = "No obvious personal data indicators were detected."
@@ -348,11 +394,14 @@ def assess_data_source_risk(data_source):
         "data_category_keys": [category["key"] for category in data_categories],
         "risk_level": risk_level,
         "risk_reason": reason,
+        "violation_score": violation_score,
     }
 
 
-def apply_data_source_risk_assessment(data_source):
-    assessment = assess_data_source_risk(data_source)
+# Runs the risk assessment and writes the results back into the data source's
+# metadata and contains_personal_data field. Mutates the object in place.
+def apply_data_source_risk_assessment(data_source, user_flagged_personal_data=False):
+    assessment = assess_data_source_risk(data_source, user_flagged_personal_data=user_flagged_personal_data)
     data_source.contains_personal_data = assessment["contains_personal_data"]
     data_source.metadata = {
         **(data_source.metadata or {}),
@@ -364,10 +413,13 @@ def apply_data_source_risk_assessment(data_source):
         "data_category_keys": assessment["data_category_keys"],
         "risk_level": assessment["risk_level"],
         "risk_reason": assessment["risk_reason"],
+        "violation_score": assessment["violation_score"],
     }
     return data_source
 
 
+# Resolves the stored risk level to one of the three canonical strings (low/medium/high),
+# handling legacy colour-coded values and the missing-metadata fallback.
 def normalize_risk_level(data_source):
     risk_level = (data_source.metadata or {}).get("risk_level")
 
@@ -382,6 +434,8 @@ def normalize_risk_level(data_source):
     return "low"
 
 
+# Returns True if the data source's metadata indicates Art. 9 special category data,
+# checking both the boolean and string representations stored by older assessments.
 def contains_art_9_data(data_source):
     metadata = data_source.metadata or {}
     art_9_data = metadata.get("art_9_data")
@@ -394,6 +448,8 @@ def contains_art_9_data(data_source):
     return False
 
 
+# Aggregates risk across all data sources in a project and returns the overall
+# traffic-light status, metrics counts, top detected data categories, and recommendations.
 def calculate_project_risk(project):
     data_sources = list(project.data_sources.all())
     risk_levels = [normalize_risk_level(data_source) for data_source in data_sources]
