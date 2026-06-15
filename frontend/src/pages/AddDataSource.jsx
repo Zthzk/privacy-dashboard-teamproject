@@ -64,10 +64,17 @@ function getProjectDetailsPath(projectId) {
   return projectId ? `/projects/${projectId}` : '/data-sources'
 }
 
+function getReturnPath(returnTo, projectId) {
+  // Project-origin flows should land back on the overview; global flows should use the full data-source list.
+  return returnTo === 'project' ? getProjectDetailsPath(projectId) : '/data-sources'
+}
+
 export default function AddDataSource() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  // The project detail page passes these params so creation can return to the same project.
   const presetProject = searchParams.get('project') ?? ''
+  const returnTo = searchParams.get('returnTo') ?? 'data-sources'
   const [projects, setProjects] = useState([])
   const [form, setForm] = useState({ ...initialForm, project: presetProject })
   const [errors, setErrors] = useState({})
@@ -131,6 +138,7 @@ export default function AddDataSource() {
     setForm((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: '' }))
     if (field === 'data_format') {
+      // Compliance checklists are format-specific, so clear stale selections when the format changes.
       setIsNotCompliant(false)
       setViolations([])
     }
@@ -184,6 +192,7 @@ export default function AddDataSource() {
         metadata: {
           manual_data: form.manual_data.trim(),
         },
+        // Risk assessment is driven by selected checklist items, not by free-text analysis.
         compliance_violations: isNotCompliant ? violations : [],
       })
 
@@ -192,7 +201,7 @@ export default function AddDataSource() {
         project_name: createdDataSource.project_name ?? selectedProject?.name ?? '',
       })
 
-      navigate(getProjectDetailsPath(createdDataSource.project ?? form.project))
+      navigate(getReturnPath(returnTo, createdDataSource.project ?? form.project))
     } catch (saveError) {
       setError(saveError?.error ?? 'Could not save data source. Please check the form and try again.')
       setSaving(false)
@@ -335,6 +344,7 @@ export default function AddDataSource() {
 
                 {activeHint && (
                   <Stack spacing={1}>
+                    {/* The top-level checkbox keeps compliant sources from sending empty checklist noise. */}
                     <FormControlLabel
                       control={
                         <Checkbox
@@ -448,7 +458,7 @@ export default function AddDataSource() {
           }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
-            <Button variant="outlined" color="secondary" onClick={() => navigate(getProjectDetailsPath(form.project))}>
+            <Button variant="outlined" color="secondary" onClick={() => navigate(getReturnPath(returnTo, form.project))}>
               Cancel
             </Button>
             <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={submitDisabled}>

@@ -35,6 +35,7 @@ import {
   EditOutlined,
   EnvironmentOutlined,
   ExperimentFilled,
+  EyeOutlined,
   FileFilled,
   FileTextOutlined,
   FolderFilled,
@@ -50,6 +51,7 @@ import {
   WarningFilled,
 } from '@ant-design/icons'
 
+import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import MainCard from 'components/MainCard'
 import { deleteDataSource } from 'api/dataSources'
 import { getProjectOverview, updateProject } from 'api/projects'
@@ -85,8 +87,11 @@ function getRiskChip(riskLevel) {
   return { label: 'Low', color: 'success' }
 }
 
-function getBooleanChip(value) {
-  return value ? { label: 'Yes', color: 'success' } : { label: 'No', color: 'default' }
+function getPersonalDataChip(source) {
+  // This column replaced the older compliant flag and mirrors the backend classification.
+  return source?.contains_personal_data
+    ? { label: 'Yes', color: 'success' }
+    : { label: 'No', color: 'default' }
 }
 
 function getArt9Chip(source) {
@@ -336,6 +341,7 @@ function sortDetectedDataCategories(categories) {
 }
 
 function buildRiskAssessmentFallback(dataSources) {
+  // Local fallback keeps the overview usable while the backend risk endpoint is unavailable.
   const metrics = {
     total_data_sources: dataSources.length,
     personal_data_sources: dataSources.filter((source) => source.contains_personal_data === true).length,
@@ -370,6 +376,7 @@ function buildRiskAssessmentFallback(dataSources) {
 function normalizeSampleDataSource(source) {
   const riskLevel = String(source.risk ?? '').toLowerCase()
 
+  // Demo/cached project sources use older field names; normalize them before rendering tables and previews.
   return {
     contains_personal_data: source.personal_data === 'Yes' || source.personal === 'Yes',
     data_format_display: source.data_format_display ?? source.format ?? '-',
@@ -382,6 +389,7 @@ function normalizeSampleDataSource(source) {
 }
 
 function buildLocalProjectOverview(projectId) {
+  // Build the same shape as the API response from session cache for instant project-detail recovery.
   const projects = applyProjectStyleOverrides(readCachedProjects(), readProjectStyleOverrides())
   const project = projects.find((item) => String(item.id) === String(projectId))
   if (!project) return null
@@ -657,6 +665,7 @@ export default function ProjectDetails() {
   const [notFound, setNotFound] = useState(false)
   const [deletingDataSourceId, setDeletingDataSourceId] = useState(null)
   const [dataSourcePendingDelete, setDataSourcePendingDelete] = useState(null)
+  const [dataSourcePendingPreview, setDataSourcePendingPreview] = useState(null)
   const [editingProject, setEditingProject] = useState(false)
   const [editForm, setEditForm] = useState(initialEditForm)
   const [savingProject, setSavingProject] = useState(false)
@@ -837,7 +846,6 @@ export default function ProjectDetails() {
     () => filteredDataSources.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
     [filteredDataSources, page, rowsPerPage],
   )
-
   const summaryCards = [
     {
       title: 'Total Sources',
@@ -941,7 +949,7 @@ export default function ProjectDetails() {
               <Button
                 variant="contained"
                 startIcon={<PlusCircleFilled />}
-                onClick={() => navigate(`/data-sources/new?project=${project.id}`)}
+                onClick={() => navigate(`/data-sources/new?project=${project.id}&returnTo=project`)}
                 sx={{ minWidth: 180 }}
               >
                 Add Data Source
@@ -1043,27 +1051,31 @@ export default function ProjectDetails() {
                   sx={{ width: { xs: '100%', md: 300 }, bgcolor: 'background.paper' }}
                 />
               </Stack>
-              <TableContainer>
+              <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table
                   size="small"
                   sx={{
-                    minWidth: 920,
+                    minWidth: 1180,
                     tableLayout: 'fixed',
                     '& .MuiTableCell-root': { py: 1.05 },
-                    '& .MuiTableHead-root .MuiTableCell-root': { py: 1.15 },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      py: 1.15,
+                      whiteSpace: 'nowrap',
+                      fontSize: 13,
+                    },
                   }}
                   aria-label="Project data sources table"
                 >
                   <TableHead>
                     <TableRow>
-                      <TableCell>Source Name</TableCell>
-                      <TableCell sx={{ width: 115 }}>Type</TableCell>
-                      <TableCell sx={{ width: 115 }}>Format</TableCell>
+                      <TableCell sx={{ width: 280 }}>Source Name</TableCell>
+                      <TableCell sx={{ width: 130 }}>Type</TableCell>
+                      <TableCell sx={{ width: 130 }}>Format</TableCell>
                       <TableCell sx={{ width: 115 }}>Risk</TableCell>
                       <TableCell sx={{ width: 135 }}>Personal Data</TableCell>
                       <TableCell sx={{ width: 115 }}>Art. 9</TableCell>
                       <TableCell sx={{ width: 150 }}>Last Updated</TableCell>
-                      <TableCell align="right" sx={{ width: 100 }}>Actions</TableCell>
+                      <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1078,7 +1090,8 @@ export default function ProjectDetails() {
                               <Button
                                 variant="contained"
                                 startIcon={<PlusCircleFilled />}
-                                onClick={() => navigate(`/data-sources/new?project=${project.id}`)}
+                                // Project context keeps the add flow from bouncing back to the global list.
+                                onClick={() => navigate(`/data-sources/new?project=${project.id}&returnTo=project`)}
                               >
                                 Add Data Source
                               </Button>
@@ -1095,13 +1108,27 @@ export default function ProjectDetails() {
                     {visibleDataSources.map((source) => {
                       const SourceIcon = getSourceIcon(source.source_type)
                       const riskChip = getRiskChip(source.risk_level)
-                      const personalDataChip = getBooleanChip(source.contains_personal_data)
+                      // Personal Data is intentionally shown beside risk so users can inspect the risk basis.
+                      const personalDataChip = getPersonalDataChip(source)
                       const art9Chip = getArt9Chip(source)
 
                       return (
-                        <TableRow key={source.id} hover>
+                        <TableRow
+                          key={source.id}
+                          hover
+                          tabIndex={0}
+                          // Row activation and the preview icon share the same dataset preview dialog.
+                          onClick={() => setDataSourcePendingPreview(source)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              setDataSourcePendingPreview(source)
+                            }
+                          }}
+                          sx={{ cursor: 'pointer' }}
+                        >
                           <TableCell>
-                            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+                            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
                               <Box
                                 sx={{
                                   width: 34,
@@ -1116,16 +1143,32 @@ export default function ProjectDetails() {
                               >
                                 <SourceIcon />
                               </Box>
-                              <Typography variant="subtitle2" title={source.name} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <Typography
+                                variant="subtitle2"
+                                title={source.name}
+                                sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              >
                                 {source.name}
                               </Typography>
                             </Stack>
                           </TableCell>
                           <TableCell>
-                            <Chip label={source.source_type_display} color="primary" size="small" variant="outlined" />
+                            <Chip
+                              label={source.source_type_display}
+                              color="primary"
+                              size="small"
+                              variant="outlined"
+                              sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                            />
                           </TableCell>
                           <TableCell>
-                            <Chip label={source.data_format_display} color="secondary" size="small" variant="outlined" />
+                            <Chip
+                              label={source.data_format_display}
+                              color="secondary"
+                              size="small"
+                              variant="outlined"
+                              sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                            />
                           </TableCell>
                           <TableCell>
                             <Chip label={riskChip.label} color={riskChip.color} size="small" variant="outlined" />
@@ -1139,12 +1182,30 @@ export default function ProjectDetails() {
                           <TableCell>{formatDate(source.updated_at)}</TableCell>
                           <TableCell align="right">
                             <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                              <Tooltip title="Preview data source">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    aria-label={`Preview ${source.name}`}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      setDataSourcePendingPreview(source)
+                                    }}
+                                  >
+                                    <EyeOutlined />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
                               <Tooltip title="Edit data source">
                                 <span>
                                   <IconButton
                                     size="small"
                                     aria-label={`Edit ${source.name}`}
-                                    onClick={() => navigate(`/data-sources/${source.id}/edit?project=${source.project}`)}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      // Keep edits scoped to this project detail page on save/cancel.
+                                      navigate(`/data-sources/${source.id}/edit?project=${source.project}&returnTo=project`)
+                                    }}
                                   >
                                     <EditOutlined />
                                   </IconButton>
@@ -1157,7 +1218,10 @@ export default function ProjectDetails() {
                                     color="error"
                                     aria-label={`Delete ${source.name}`}
                                     disabled={deletingDataSourceId === source.id}
-                                    onClick={() => setDataSourcePendingDelete(source)}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      setDataSourcePendingDelete(source)
+                                    }}
                                   >
                                     <DeleteOutlined />
                                   </IconButton>
@@ -1186,6 +1250,18 @@ export default function ProjectDetails() {
               <DataCategoryCard categories={detectedDataCategories} />
             </Stack>
           </Box>
+
+          <DatasetPreviewDialog
+            source={dataSourcePendingPreview}
+            onClose={() => setDataSourcePendingPreview(null)}
+            onOpenProject={() => setDataSourcePendingPreview(null)}
+            onEdit={() => {
+              // Capture the source before closing because close clears the preview state.
+              const source = dataSourcePendingPreview
+              setDataSourcePendingPreview(null)
+              navigate(`/data-sources/${source.id}/edit?project=${source.project}&returnTo=project`)
+            }}
+          />
 
           <Dialog
             open={Boolean(dataSourcePendingDelete)}

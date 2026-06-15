@@ -20,6 +20,7 @@ def health_check(request):
 
 
 def serialize_project(project):
+    # List views annotate this count; detail views fall back to the related manager.
     data_sources_count = getattr(project, "data_sources_count", None)
     if data_sources_count is None:
         data_sources_count = project.data_sources.count()
@@ -143,6 +144,7 @@ def project_overview(request, project_id):
         pk=project_id,
     )
 
+    # Import locally to avoid coupling project views to data source views at module load time.
     from apps.data_sources.views import serialize_data_source
 
     return JsonResponse(
