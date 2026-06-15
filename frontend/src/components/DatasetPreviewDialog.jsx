@@ -28,9 +28,9 @@ import { getComplianceFindings, getDataSourcePreviewText } from 'utils/data-sour
 const PREVIEW_FINDINGS_LIMIT = 3
 
 function getRiskChip(riskLevel) {
-  if (riskLevel === 'high' || riskLevel === 'red') return { label: 'High Risk', color: 'error', severity: 96 }
-  if (riskLevel === 'medium' || riskLevel === 'yellow') return { label: 'Medium Risk', color: 'warning', severity: 62 }
-  return { label: 'Low Risk', color: 'success', severity: 28 }
+  if (riskLevel === 'high' || riskLevel === 'red') return { label: 'High Risk', color: 'error', severity: 83.3 }
+  if (riskLevel === 'medium' || riskLevel === 'yellow') return { label: 'Medium Risk', color: 'warning', severity: 50 }
+  return { label: 'Low Risk', color: 'success', severity: 16.7 }
 }
 
 function titleCase(value) {
@@ -110,6 +110,8 @@ function RiskSeverityBar({ riskChip }) {
           }}
         />
         <Box
+          data-testid="risk-severity-marker"
+          data-severity-position={String(riskChip.severity)}
           sx={{
             position: 'absolute',
             left: `${riskChip.severity}%`,
@@ -149,7 +151,7 @@ function RiskRow({ label, children }) {
   )
 }
 
-function ComplianceFindingsList({ findings, riskChip }) {
+function ComplianceFindingsList({ findings }) {
   // Use one list renderer for the card and popup so bullet alignment cannot drift.
   return (
     <Stack component="ul" spacing={1.25} sx={{ m: 0, p: 0, listStyle: 'none' }}>
@@ -166,12 +168,14 @@ function ComplianceFindingsList({ findings, riskChip }) {
         >
           <Box
             aria-hidden="true"
+            data-testid="compliance-finding-marker"
+            data-marker-tone="neutral"
             sx={{
               width: 7,
               height: 7,
               mt: '0.55em',
               borderRadius: '50%',
-              bgcolor: `${riskChip.color}.main`,
+              bgcolor: 'grey.400',
               justifySelf: 'center',
             }}
           />
@@ -355,7 +359,7 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
               {/* Limit the initial findings list so long checklists do not dominate the preview dialog. */}
               {complianceFindings.length > 0 ? (
                 <Stack spacing={1.25}>
-                  <ComplianceFindingsList findings={visibleFindings} riskChip={riskChip} />
+                  <ComplianceFindingsList findings={visibleFindings} />
                   {hiddenFindingsCount > 0 && (
                     <Button
                       size="small"
@@ -451,7 +455,7 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
           <CloseOutlined />
         </IconButton>
         <DialogContent dividers sx={{ px: 3, py: 2.25, maxHeight: 420 }}>
-          <ComplianceFindingsList findings={complianceFindings} riskChip={riskChip} />
+          <ComplianceFindingsList findings={complianceFindings} />
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button variant="outlined" color="secondary" onClick={() => setFindingsPopupOpen(false)}>

@@ -32,7 +32,6 @@ const dataSources = [
     contains_personal_data: true,
     risk_level: 'high',
     art_9_data: 'unknown',
-    preview_text: 'Name: Anna Mueller\nEmail: anna@example.com\nTicket: Needs support.',
     // Extra findings verify that project detail preview uses the shared three-item cap.
     compliance_violations: [
       'Names, surnames, and pseudonyms',
@@ -42,7 +41,11 @@ const dataSources = [
       'Emotional state indicators',
       'Synthetic speech / voice clone disclosure issue',
     ],
-    metadata: { data_category_keys: ['contact_data', 'direct_identifiers'], format_art9_risk: true },
+    metadata: {
+      data_category_keys: ['contact_data', 'direct_identifiers'],
+      format_art9_risk: true,
+      manual_data: 'Name: Anna Mueller\nEmail: anna@example.com\nTicket: Needs support.',
+    },
     updated_at: '2026-05-18T10:00:00Z',
   },
   {

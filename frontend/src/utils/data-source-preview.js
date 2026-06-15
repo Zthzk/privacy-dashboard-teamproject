@@ -1,6 +1,5 @@
 export function getDataSourcePreviewText(source) {
-  // Prefer the API preview field, but keep older cached/manual entries previewable.
-  return source?.preview_text || source?.metadata?.preview_text || source?.metadata?.manual_data || ''
+  return source?.metadata?.manual_data || ''
 }
 
 export function getComplianceFindings(source) {

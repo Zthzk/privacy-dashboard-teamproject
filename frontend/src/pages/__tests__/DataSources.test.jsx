@@ -30,7 +30,6 @@ const dataSources = [
     contains_personal_data: true,
     risk_level: 'medium',
     art_9_data: 'possible',
-    preview_text: 'Name: Anna Mueller\nEmail: anna@example.com\nTicket: Needs support.',
     // More than three findings verifies the compact card limit and the all-findings popup.
     compliance_violations: [
       'Voice recordings capable of identifying specific natural persons',
@@ -42,6 +41,7 @@ const dataSources = [
     ],
     metadata: {
       format_art9_risk: true,
+      manual_data: 'Name: Anna Mueller\nEmail: anna@example.com\nTicket: Needs support.',
       risk_source: 'compliance_violations',
     },
     updated_at: '2026-05-18T10:00:00Z',
@@ -88,6 +88,12 @@ describe('DataSources page', () => {
     expect(within(dialog).queryByText('Format review risk')).not.toBeInTheDocument()
     expect(within(dialog).getAllByText('Yes').length).toBeGreaterThan(0)
     expect(screen.getByText('Selected compliance findings')).toBeInTheDocument()
+    expect(within(dialog).getByTestId('risk-severity-marker')).toHaveAttribute('data-severity-position', '50')
+    within(dialog)
+      .getAllByTestId('compliance-finding-marker')
+      .forEach((marker) => {
+        expect(marker).toHaveAttribute('data-marker-tone', 'neutral')
+      })
     expect(screen.getByText('Voice recordings capable of identifying specific natural persons')).toBeInTheDocument()
     expect(screen.getByText('Health-related speech patterns or medical vocal biomarkers')).toBeInTheDocument()
     expect(screen.getByText('Names, surnames, and pseudonyms')).toBeInTheDocument()
