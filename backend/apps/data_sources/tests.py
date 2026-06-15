@@ -462,9 +462,9 @@ class ComplianceViolationRiskTests(TestCase):
         self.assertEqual(payload["risk_level"], "medium")
         self.assertTrue(payload["contains_personal_data"])
 
-    def test_three_weight_1_violations_escalate_to_high(self):
+    def test_three_weight_1_violations_escalate_to_high_without_art9(self):
         # Three simultaneous personal data categories carry compounded risk equal
-        # to a single Art. 9 violation under the weighted-sum model.
+        # to a high-risk source, but they are still not Art. 9 data.
         response = self.post_json({
             "name": "Customer Text Export",
             "source_type": DataSource.SourceType.FILE,
@@ -479,6 +479,9 @@ class ComplianceViolationRiskTests(TestCase):
         self.assertEqual(response.status_code, 201)
         payload = response.json()
         self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["art_9_data"], "no")
+        self.assertFalse(payload["metadata"]["contains_art9_data"])
+        self.assertTrue(payload["contains_personal_data"])
 
     def test_two_weight_1_violations_stay_at_medium(self):
         response = self.post_json({
@@ -620,4 +623,3 @@ class DataFormatHintsApiTests(TestCase):
         payload = response.json()
         for data_format in ["text", "csv", "json", "other"]:
             self.assertFalse(payload[data_format]["art9_risk"])
-

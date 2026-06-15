@@ -354,12 +354,19 @@ def assess_data_source_risk(data_source, user_flagged_personal_data=False):
     violations = data_source.compliance_violations or []
     violation_score = score_compliance_violations(violations)
 
-    # Violations take priority over keyword detection: an Art. 9 violation (weight 3)
-    # elevates to HIGH regardless of what keywords appear in the metadata text.
+    has_art_9_violation = any(
+        VIOLATION_WEIGHTS[violation]["weight"] >= VIOLATION_HIGH_THRESHOLD
+        for violation in violations
+        if violation in VIOLATION_WEIGHTS
+    )
+
+    # Violations take priority over keyword detection: an Art. 9 violation elevates
+    # to HIGH regardless of what keywords appear in the metadata text. A high
+    # cumulative score also elevates risk, but does not by itself imply Art. 9 data.
     # user_flagged_personal_data comes from the current request payload only —
     # reading the stored DB value here would create a ratchet where the field
     # can never return to False after a violation is cleared.
-    contains_art_9_data = bool(art_9_categories) or violation_score >= VIOLATION_HIGH_THRESHOLD
+    contains_art_9_data = bool(art_9_categories) or has_art_9_violation
     contains_personal_data = (
         bool(personal_categories)
         or contains_art_9_data
@@ -370,10 +377,13 @@ def assess_data_source_risk(data_source, user_flagged_personal_data=False):
 
     if contains_art_9_data:
         risk_level = "high"
-        if violation_score >= VIOLATION_HIGH_THRESHOLD and not bool(art_9_categories):
+        if has_art_9_violation and not bool(art_9_categories):
             reason = "Compliance violations indicate the presence of GDPR Art. 9 special category data."
         else:
             reason = "This data source may contain GDPR Art. 9 special category data."
+    elif violation_score >= VIOLATION_HIGH_THRESHOLD:
+        risk_level = "high"
+        reason = "Multiple compliance violations indicate elevated personal data risk."
     elif contains_personal_data:
         risk_level = "medium"
         if violation_score >= VIOLATION_MEDIUM_THRESHOLD and not bool(personal_categories):
