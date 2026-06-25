@@ -68,3 +68,49 @@ class DataSource(models.Model):
 
     def __str__(self):
         return f"{self.project.name} / {self.name}"
+
+
+class DataSourceVersion(models.Model):
+    """
+    Stores an append-only snapshot of a DataSource and its risk assessment.
+
+    Each version preserves the data source fields and calculated privacy status
+    at a specific point in time, allowing changes to be tracked historically.
+    """
+    data_source = models.ForeignKey(
+        DataSource,
+        on_delete=models.CASCADE,
+        related_name="versions",
+    )
+    version_number = models.PositiveIntegerField()
+    name = models.CharField(max_length=100)
+    source_type = models.CharField(max_length=20, choices=DataSource.SourceType.choices)
+    data_format = models.CharField(max_length=20, choices=DataSource.DataFormat.choices)
+    description = models.TextField(blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    contains_personal_data = models.BooleanField(default=False)
+    metadata = models.JSONField(default=dict, blank=True)
+    compliance_violations = models.JSONField(default=list, blank=True)
+    last_scanned_at = models.DateTimeField(null=True, blank=True)
+    risk_level = models.CharField(max_length=20, blank=True)
+    art_9_data = models.CharField(max_length=20, blank=True)
+    contains_art9_data = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-version_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["data_source", "version_number"],
+                name="uniq_ds_version_number",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["data_source", "-version_number"],
+                name="ds_version_latest_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.data_source} v{self.version_number}"
