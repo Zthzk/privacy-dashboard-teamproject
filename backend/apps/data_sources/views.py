@@ -55,7 +55,15 @@ def data_format_hints(request):
             "checklist": [
                 {
                     "label": label,
-                    **VIOLATION_WEIGHTS.get(label, {"weight": 1, "article": "Art. 6 GDPR"}),
+                    **VIOLATION_WEIGHTS.get(
+                        label,
+                        {
+                            "weight": 1,
+                            "article": "Art. 6 GDPR",
+                            "is_personal_data": False,
+                            "is_art_9": False,
+                        },
+                    ),
                 }
                 for label in hints["checklist"]
             ],
@@ -137,13 +145,8 @@ def validate_data_source_payload(payload):
     if not isinstance(metadata, dict):
         return None, json_error("metadata must be a JSON object.")
 
-    contains_personal_data = payload.get("contains_personal_data", False)
-    if not isinstance(contains_personal_data, bool):
-        return None, json_error("contains_personal_data must be a boolean.")
-
     return {
         "metadata": metadata,
-        "contains_personal_data": contains_personal_data,
     }, None
 
 
@@ -188,16 +191,12 @@ def project_data_sources(request, project_id):
         data_format=payload.get("data_format", DataSource.DataFormat.TEXT),
         description=payload.get("description", ""),
         location=payload.get("location", ""),
-        contains_personal_data=normalized_payload["contains_personal_data"],
         metadata=normalized_payload["metadata"],
         compliance_violations=compliance_violations,
     )
 
     try:
-        apply_data_source_risk_assessment(
-            data_source,
-            user_flagged_personal_data=normalized_payload["contains_personal_data"],
-        )
+        apply_data_source_risk_assessment(data_source)
         data_source.last_scanned_at = timezone.now()
         data_source.full_clean()
         data_source.save()
@@ -256,11 +255,6 @@ def project_data_source_detail(request, project_id, data_source_id):
         if not isinstance(metadata, dict):
             return json_error("metadata must be a JSON object.")
         data_source.metadata = metadata
-    if "contains_personal_data" in payload:
-        contains_personal_data = payload.get("contains_personal_data")
-        if not isinstance(contains_personal_data, bool):
-            return json_error("contains_personal_data must be a boolean.")
-        data_source.contains_personal_data = contains_personal_data
     if "compliance_violations" in payload:
         compliance_violations = payload.get("compliance_violations")
         if not isinstance(compliance_violations, list):
@@ -268,10 +262,7 @@ def project_data_source_detail(request, project_id, data_source_id):
         data_source.compliance_violations = compliance_violations
 
     try:
-        apply_data_source_risk_assessment(
-            data_source,
-            user_flagged_personal_data=payload.get("contains_personal_data", False),
-        )
+        apply_data_source_risk_assessment(data_source)
         data_source.last_scanned_at = timezone.now()
         data_source.full_clean()
         data_source.save()
