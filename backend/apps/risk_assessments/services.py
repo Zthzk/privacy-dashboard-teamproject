@@ -1,6 +1,5 @@
 import re
 
-
 RISK_LEVELS = {
     "low": "Low",
     "medium": "Medium",
@@ -322,18 +321,21 @@ def assess_data_source_risk(data_source):
 
     contains_art_9_data = bool(art_9_categories)
     contains_personal_data = (
-        bool(personal_categories)
-        or contains_art_9_data
-        or data_source.contains_personal_data
+            bool(personal_categories)
+            or contains_art_9_data
+            or data_source.contains_personal_data
     )
     data_categories = _map_detected_categories(personal_categories, art_9_categories)
 
     if contains_art_9_data:
         risk_level = "high"
+        reason = "This data source may contain GDPR Art. 9 special category data."
     elif contains_personal_data:
         risk_level = "medium"
+        reason = "This data source may contain personal data."
     else:
         risk_level = "low"
+        reason = "No obvious personal data indicators were detected."
 
     return {
         "contains_personal_data": contains_personal_data,
@@ -344,6 +346,7 @@ def assess_data_source_risk(data_source):
         "data_categories": data_categories,
         "data_category_keys": [category["key"] for category in data_categories],
         "risk_level": risk_level,
+        "risk_reason": reason,
     }
 
 
@@ -359,6 +362,7 @@ def apply_data_source_risk_assessment(data_source):
         "data_categories": assessment["data_categories"],
         "data_category_keys": assessment["data_category_keys"],
         "risk_level": assessment["risk_level"],
+        "risk_reason": assessment["risk_reason"],
     }
     return data_source
 

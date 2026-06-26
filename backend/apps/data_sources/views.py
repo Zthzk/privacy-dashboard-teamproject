@@ -1,7 +1,10 @@
-﻿import json
+"""HTTP views and serialization helpers for data sources and version history."""
+
+import json
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Max
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -14,14 +17,16 @@ from apps.risk_assessments.services import apply_data_source_risk_assessment
 from .format_hints import DATA_FORMAT_HINTS
 from .models import DataSource, DataSourceVersion
 
-
+# Canonical API labels used for normalized data-source risk levels.
 RISK_LABELS = {
     "low": "Low",
     "medium": "Medium",
     "high": "High",
 }
 
+
 def normalize_risk_level(data_source):
+    """Return a supported risk level for the current data source."""
     risk_level = (data_source.metadata or {}).get("risk_level")
     if risk_level in RISK_LABELS:
         return risk_level
@@ -29,7 +34,9 @@ def normalize_risk_level(data_source):
         return "medium"
     return "low"
 
+
 def normalize_art_9_data(data_source):
+    """Normalize the current Art. 9 assessment to a supported string value."""
     art_9_data = (data_source.metadata or {}).get("art_9_data")
     if isinstance(art_9_data, bool):
         return "possible" if art_9_data else "no"
@@ -37,16 +44,26 @@ def normalize_art_9_data(data_source):
         return art_9_data
     return "unknown"
 
+
 @require_http_methods(["GET"])
 def data_format_hints(request):
     """Centralised here so the frontend does not need to duplicate hint texts."""
     return JsonResponse(DATA_FORMAT_HINTS)
+
 
 def latest_version_number(data_source):
     """
     Return the highest version number associated with the given data source.
     Returns None if the data source has no version history.
     """
+    annotated_latest_version_number = getattr(
+        data_source,
+        "current_version_number",
+        None,
+    )
+    if annotated_latest_version_number is not None:
+        return annotated_latest_version_number
+
     latest_version = data_source.versions.order_by("-version_number").first()
     if latest_version is None:
         return None
@@ -54,6 +71,7 @@ def latest_version_number(data_source):
 
 
 def serialize_data_source(data_source, include_project=False):
+    """Convert a DataSource instance into an API response dictionary."""
     risk_level = normalize_risk_level(data_source)
     art_9_data = normalize_art_9_data(data_source)
 
@@ -164,6 +182,8 @@ def data_source_snapshot_values(data_source):
 def version_matches_data_source(version, data_source):
     """Return whether a version snapshot matches the current data source state."""
     snapshot = data_source_snapshot_values(data_source)
+    # last_scanned_at is intentionally excluded so scan timestamps alone do not
+    # create a new historical version.
     comparable_fields = [
         "name",
         "source_type",
@@ -189,6 +209,8 @@ def create_data_source_version_snapshot(data_source, force=False):
     from assigning the same version number.
     """
 
+    # Lock the parent row so concurrent requests cannot allocate the same
+    # next version number.
     locked_data_source = DataSource.objects.select_for_update().get(pk=data_source.pk)
     latest_version = locked_data_source.versions.order_by("-version_number").first()
 
@@ -209,17 +231,21 @@ def create_data_source_version_snapshot(data_source, force=False):
 
 @require_http_methods(["GET"])
 def data_sources(request):
+    """Return all data sources together with their project information."""
     return JsonResponse(
         {
             "data_sources": [
                 serialize_data_source(data_source, include_project=True)
-                for data_source in DataSource.objects.select_related("project").all()
+                for data_source in DataSource.objects.select_related("project")
+                .annotate(current_version_number=Max("versions__version_number"))
+                .all()
             ],
         }
     )
 
 
 def json_error(message, status=400, errors=None):
+    """Build a consistent JSON error response for API validation failures."""
     payload = {"error": message}
     if errors:
         payload["errors"] = errors
@@ -228,6 +254,7 @@ def json_error(message, status=400, errors=None):
 
 
 def parse_json_body(request):
+    """Parse the request body as JSON, returning None for invalid JSON."""
     try:
         return json.loads(request.body or "{}")
     except json.JSONDecodeError:
@@ -235,6 +262,7 @@ def parse_json_body(request):
 
 
 def validate_data_source_payload(payload):
+    """Validate and normalize shared fields used when creating a data source."""
     metadata = payload.get("metadata", {})
     if metadata is None:
         metadata = {}
@@ -254,10 +282,13 @@ def validate_data_source_payload(payload):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def project_data_sources(request, project_id):
+    """List a project\'s data sources or create a new assessed data source."""
     project = get_object_or_404(Project, pk=project_id)
 
     if request.method == "GET":
-        data_sources = project.data_sources.all()
+        data_sources = project.data_sources.annotate(
+            current_version_number=Max("versions__version_number"),
+        )
         return JsonResponse(
             {
                 "project": {
@@ -321,6 +352,7 @@ def project_data_sources(request, project_id):
 @csrf_exempt
 @require_http_methods(["GET", "PATCH", "DELETE"])
 def project_data_source_detail(request, project_id, data_source_id):
+    """Retrieve, partially update, or delete one project data source."""
     data_source = get_object_or_404(
         DataSource,
         pk=data_source_id,
@@ -379,10 +411,11 @@ def project_data_source_detail(request, project_id, data_source_id):
                 data_source.compliance_violations = compliance_violations
 
             apply_data_source_risk_assessment(data_source)
+            # Refresh the scan timestamp only when the versioned state changed.
             latest_version = data_source.versions.order_by("-version_number").first()
             if latest_version is None or not version_matches_data_source(
-                latest_version,
-                data_source,
+                    latest_version,
+                    data_source,
             ):
                 data_source.last_scanned_at = timezone.now()
             data_source.full_clean()
@@ -404,6 +437,7 @@ def project_data_source_detail(request, project_id, data_source_id):
 
 @require_http_methods(["GET"])
 def project_data_source_versions(request, project_id, data_source_id):
+    """Return the complete version history for a project data source."""
     data_source = get_object_or_404(
         DataSource.objects.prefetch_related("versions"),
         pk=data_source_id,
@@ -424,11 +458,12 @@ def project_data_source_versions(request, project_id, data_source_id):
 
 @require_http_methods(["GET"])
 def project_data_source_version_detail(
-    request,
-    project_id,
-    data_source_id,
-    version_number,
+        request,
+        project_id,
+        data_source_id,
+        version_number,
 ):
+    """Return one historical data-source version identified by its number."""
     data_source = get_object_or_404(
         DataSource,
         pk=data_source_id,
