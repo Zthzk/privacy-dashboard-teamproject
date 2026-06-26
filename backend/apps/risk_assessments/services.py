@@ -206,6 +206,22 @@ RISK_LEVEL_DISPLAY = {
     "high": "High",
 }
 
+RECOMMENDATIONS_BY_STATUS = {
+    "yellow": [
+        "Review and document the legal basis for processing personal data.",
+        "Remove or pseudonymize direct identifiers that are not required.",
+        "Limit access to the personal data sources to necessary team members only.",
+    ],
+    "red": [
+        "Stop using the high-risk data for training until it has been reviewed.",
+        "Check whether a Data Protection Impact Assessment is required.",
+        "Document safeguards such as access control, encryption, and pseudonymization.",
+    ],
+    "green": [
+        "Keep the data source metadata up to date and review it when sources change.",
+    ],
+}
+
 
 def _flatten_metadata_value(value):
     if isinstance(value, dict):
@@ -393,6 +409,51 @@ def contains_art_9_data(data_source):
         return True
     return False
 
+def build_project_recommendations(overall_status, metrics, top_detected_data_categories):
+    # Start with the general recommendations for the traffic-light status.
+    # This keeps the output easy to understand for the data protection officer.
+    recommendations = list(RECOMMENDATIONS_BY_STATUS[overall_status])
+
+    # Yellow and red risks should include more concrete actions based on the
+    if overall_status in {"yellow", "red"}:
+        category_keys = {
+            category["key"]
+            for category in top_detected_data_categories
+        }
+
+        if "health_data" in category_keys:
+            recommendations.append(
+                "Review the handling of health data and confirm the GDPR Art. 9 exception."
+            )
+
+        if "biometric_genetic_data" in category_keys:
+            recommendations.append(
+                "Check whether biometric or genetic data is strictly necessary for the project."
+            )
+
+        if "financial_data" in category_keys:
+            recommendations.append(
+                "Mask or remove financial identifiers unless they are required."
+            )
+
+        if "direct_identifiers" in category_keys:
+            recommendations.append(
+                "Replace names and direct identifiers with project-specific IDs where possible."
+            )
+
+        if "contact_data" in category_keys:
+            recommendations.append(
+                "Remove email addresses, phone numbers, and addresses if they are not needed."
+            )
+
+    # Red risks need one extra Art. 9 action when special category data exists.
+    if overall_status == "red" and metrics["art_9_sources"] > 0:
+        recommendations.append(
+            "Confirm and document the legal exception for processing GDPR Art. 9 data."
+        )
+
+    return recommendations
+
 
 def calculate_project_risk(project):
     data_sources = list(project.data_sources.all())
@@ -427,32 +488,24 @@ def calculate_project_risk(project):
     if metrics["total_data_sources"] == 0:
         overall_status = "green"
         reason = "No data sources have been added yet."
-        recommendations = [
-            "Add data sources to start the privacy risk assessment.",
-        ]
+
     elif metrics["high_risk_sources"] > 0 or metrics["art_9_sources"] > 0:
         overall_status = "red"
         reason = "At least one data source is high risk or contains GDPR Art. 9 special category data."
-        recommendations = [
-            "Review high-risk and Art. 9 data sources before model training.",
-            "Check whether a DPIA is required for this processing activity.",
-            "Document safeguards and access restrictions for sensitive data.",
-        ]
+
     elif metrics["personal_data_sources"] > 0 or metrics["medium_risk_sources"] > 0:
         overall_status = "yellow"
         reason = "At least one data source contains personal data or has medium risk level."
-        recommendations = [
-            "Review legal basis for processing and ensure documentation is up to date.",
-            "Minimize directly identifying attributes where possible.",
-            "Document the processing purpose for each personal data source.",
-        ]
+
     else:
         overall_status = "green"
         reason = "No personal data or high-risk categories are currently detected."
-        recommendations = [
-            "Keep data source metadata documented and review it when sources change.",
-        ]
 
+    recommendations = build_project_recommendations(
+        overall_status,
+        metrics,
+        top_detected_data_categories,)
+    
     return {
         "project_id": project.id,
         "overall_status": overall_status,

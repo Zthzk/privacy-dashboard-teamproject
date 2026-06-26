@@ -643,6 +643,43 @@ function DataCategoryCard({ categories }) {
     </MainCard>
   )
 }
+function RiskRecommendationsCard({ status, recommendations }) {
+  // Show recommendations only when the project risk is yellow or red.
+  // Green means low risk, so the user does not need extra action guidance.
+  const shouldShowRecommendations = status === 'yellow' || status === 'red'
+
+  // If there are no recommendations from the backend, do not show an empty card.
+  if (!shouldShowRecommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
+    return null
+  }
+
+  // Red risks should look more serious than yellow risks.
+  const severity = status === 'red' ? 'error' : 'warning'
+  const title = status === 'red' ? 'High Risk Recommendations' : 'Medium Risk Recommendations'
+
+  return (
+      <MainCard>
+        <Stack spacing={1.5}>
+          <Alert severity={severity} variant="outlined">
+            <Typography variant="h5" sx={{ mb: 0.75 }}>
+              {title}
+            </Typography>
+            <Typography variant="body2">
+              Follow these actions to reduce the project risk before continuing.
+            </Typography>
+          </Alert>
+
+          <Stack component="ul" spacing={1} sx={{ pl: 2.5, mb: 0 }}>
+            {recommendations.map((recommendation) => (
+                <Typography component="li" variant="body2" key={recommendation}>
+                  {recommendation}
+                </Typography>
+            ))}
+          </Stack>
+        </Stack>
+      </MainCard>
+  )
+}
 
 export default function ProjectDetails() {
   const { projectId } = useParams()
@@ -1182,6 +1219,10 @@ export default function ProjectDetails() {
               />
             </MainCard>
             <Stack spacing={2}>
+              <RiskRecommendationsCard
+                  status={effectiveRiskAssessment.overall_status}
+                  recommendations={effectiveRiskAssessment.recommendations}
+              />
               <RiskDistributionCard metrics={metrics} />
               <DataCategoryCard categories={detectedDataCategories} />
             </Stack>
