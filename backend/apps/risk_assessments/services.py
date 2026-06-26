@@ -1,6 +1,5 @@
 import re
 
-
 RISK_LEVELS = {
     "low": "Low",
     "medium": "Medium",
@@ -322,9 +321,9 @@ def assess_data_source_risk(data_source):
 
     contains_art_9_data = bool(art_9_categories)
     contains_personal_data = (
-        bool(personal_categories)
-        or contains_art_9_data
-        or data_source.contains_personal_data
+            bool(personal_categories)
+            or contains_art_9_data
+            or data_source.contains_personal_data
     )
     data_categories = _map_detected_categories(personal_categories, art_9_categories)
 
