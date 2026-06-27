@@ -416,6 +416,153 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(response.json()["compliance_violations"], [])
 
 
+class ComplianceViolationRiskTests(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name="Risk Test Project")
+        self.url = reverse(
+            "project-data-sources",
+            kwargs={"project_id": self.project.id},
+        )
+
+    def post_json(self, payload):
+        return self.client.post(
+            self.url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_face_violation_raises_risk_to_high(self):
+        response = self.post_json({
+            "name": "Face Dataset",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.IMAGE,
+            "compliance_violations": [
+                "Faces or facial features (biometric data identification risks)",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["art_9_data"], "possible")
+        self.assertTrue(payload["contains_personal_data"])
+
+    def test_license_plate_violation_raises_risk_to_medium(self):
+        response = self.post_json({
+            "name": "Traffic Camera Feed",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.IMAGE,
+            "compliance_violations": [
+                "License plates or vehicle identifiers",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "medium")
+        self.assertTrue(payload["contains_personal_data"])
+
+    def test_three_weight_1_violations_escalate_to_high(self):
+        # Three simultaneous personal data categories carry compounded risk equal
+        # to a single Art. 9 violation under the weighted-sum model.
+        response = self.post_json({
+            "name": "Customer Text Export",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.TEXT,
+            "compliance_violations": [
+                "Names, surnames, and pseudonyms",
+                "Email addresses and domain information",
+                "Phone numbers and digital messaging handles",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "high")
+
+    def test_two_weight_1_violations_stay_at_medium(self):
+        response = self.post_json({
+            "name": "Newsletter List",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.TEXT,
+            "compliance_violations": [
+                "Names, surnames, and pseudonyms",
+                "Email addresses and domain information",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "medium")
+
+    def test_no_violations_falls_back_to_keyword_detection(self):
+        response = self.post_json({
+            "name": "Patient Notes",
+            "source_type": DataSource.SourceType.MANUAL,
+            "data_format": DataSource.DataFormat.TEXT,
+            "metadata": {"manual_data": "Patient health diagnosis."},
+            "compliance_violations": [],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["art_9_data"], "possible")
+
+    def test_unknown_violation_labels_are_ignored(self):
+        response = self.post_json({
+            "name": "Unknown Violation Source",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.OTHER,
+            "compliance_violations": ["This label does not exist in the weights registry"],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "low")
+
+    def test_clearing_all_violations_returns_risk_to_low(self):
+        # Regression: previously the old contains_personal_data=True on the model
+        # was used as assessment input, so clearing violations kept risk at medium.
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Image Set",
+            data_format=DataSource.DataFormat.IMAGE,
+            compliance_violations=["Faces or facial features (biometric data identification risks)"],
+            contains_personal_data=True,
+            metadata={"risk_level": "high"},
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={"project_id": self.project.id, "data_source_id": data_source.id},
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({"compliance_violations": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "low")
+        self.assertFalse(payload["contains_personal_data"])
+
+    def test_violation_score_is_stored_in_metadata(self):
+        response = self.post_json({
+            "name": "Voice Dataset",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.AUDIO,
+            "compliance_violations": [
+                "Voice recordings capable of identifying specific natural persons",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["metadata"]["violation_score"], 3)
+
+
 class DataFormatHintsApiTests(TestCase):
     def test_returns_hints_for_all_known_formats(self):
         response = self.client.get(reverse("data-format-hints"))
@@ -429,6 +576,37 @@ class DataFormatHintsApiTests(TestCase):
             self.assertIn("art9_risk", payload[data_format])
             self.assertIn("relevant_articles", payload[data_format])
             self.assertIn("checklist", payload[data_format])
+
+    def test_checklist_items_include_weight_and_article(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        for item in payload["image"]["checklist"]:
+            self.assertIn("label", item)
+            self.assertIn("weight", item)
+            self.assertIn("article", item)
+            self.assertIsInstance(item["weight"], int)
+
+    def test_face_checklist_item_has_art9_weight(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        face_item = next(
+            item for item in payload["image"]["checklist"]
+            if item["label"] == "Faces or facial features (biometric data identification risks)"
+        )
+        self.assertEqual(face_item["weight"], 3)
+        self.assertIn("Art. 9", face_item["article"])
+
+    def test_license_plate_has_lower_weight_than_face(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        checklist = {item["label"]: item for item in payload["image"]["checklist"]}
+        self.assertLess(
+            checklist["License plates or vehicle identifiers"]["weight"],
+            checklist["Faces or facial features (biometric data identification risks)"]["weight"],
+        )
 
     def test_image_format_has_art9_risk(self):
         response = self.client.get(reverse("data-format-hints"))
