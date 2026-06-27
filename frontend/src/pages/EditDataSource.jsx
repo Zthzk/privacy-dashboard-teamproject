@@ -110,11 +110,19 @@ function getProjectDetailsPath(projectId) {
   return projectId ? `/projects/${projectId}` : '/data-sources'
 }
 
+function getReturnPath(returnTo, projectId) {
+  // Keep edit completion deterministic instead of relying on browser history state.
+  if (returnTo === 'dashboard') return '/dashboard'
+  return returnTo === 'project' ? getProjectDetailsPath(projectId) : '/data-sources'
+}
+
 export default function EditDataSource() {
   const navigate = useNavigate()
   const { dataSourceId } = useParams()
   const [searchParams] = useSearchParams()
+  // Project-origin edits pass context so save, delete, and cancel return to the project overview.
   const projectId = searchParams.get('project')
+  const returnTo = searchParams.get('returnTo') ?? 'data-sources'
   const invalidRoute = !projectId || !dataSourceId
   const [projects, setProjects] = useState([])
   const [dataSource, setDataSource] = useState(null)
@@ -133,10 +141,12 @@ export default function EditDataSource() {
 
   // Errors are silently ignored — a failed hints fetch must not block the form.
   useEffect(() => {
+    if (invalidRoute) return
+
     getDataFormatHints()
       .then(setDataFormatHints)
       .catch(() => {})
-  }, [])
+  }, [invalidRoute])
 
   const activeHint = dataFormatHints[form.data_format] ?? null
 
@@ -196,6 +206,7 @@ export default function EditDataSource() {
     setForm((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: '' }))
     if (field === 'data_format') {
+      // A changed format means the old checklist no longer matches the active format hints.
       setIsNotCompliant(false)
       setViolations([])
     }
@@ -251,12 +262,13 @@ export default function EditDataSource() {
           ...(dataSource.metadata ?? {}),
           manual_data: form.manual_data.trim(),
         },
+        // Keep risk inputs explicit: only checked compliance findings are persisted.
         compliance_violations: isNotCompliant ? violations : [],
       }
       const updatedSource = await updateDataSource(dataSource.project, dataSource.id, updateData)
 
       upsertCachedDataSource(updatedSource)
-      navigate(getProjectDetailsPath(updatedSource.project ?? form.project))
+      navigate(getReturnPath(returnTo, updatedSource.project ?? form.project))
     } catch (saveError) {
       if (saveError?.name?.[0]) {
         setErrors({ name: saveError.name[0] })
@@ -276,11 +288,15 @@ export default function EditDataSource() {
     try {
       await deleteDataSource(dataSource.project, dataSource.id)
       removeCachedDataSource(dataSource.id)
-      navigate(getProjectDetailsPath(dataSource.project))
+      navigate(getReturnPath(returnTo, dataSource.project))
     } catch {
       setError('Could not delete data source. Please try again.')
       setSaving(false)
     }
+  }
+
+  function handleCancel() {
+    navigate(getReturnPath(returnTo, form.project || dataSource?.project))
   }
 
   return (
@@ -409,6 +425,7 @@ export default function EditDataSource() {
 
                     {activeHint && (
                       <Stack spacing={1}>
+                        {/* The parent checkbox controls whether selected findings are sent to the backend. */}
                         <FormControlLabel
                           control={
                             <Checkbox
@@ -548,7 +565,7 @@ export default function EditDataSource() {
               }}
             >
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
-                <Button variant="outlined" color="secondary" onClick={() => navigate(getProjectDetailsPath(form.project || dataSource.project))}>
+                <Button variant="outlined" color="secondary" onClick={handleCancel}>
                   Cancel
                 </Button>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
