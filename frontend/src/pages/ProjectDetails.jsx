@@ -84,6 +84,7 @@ function formatDate(value) {
 function getRiskChip(riskLevel) {
   if (riskLevel === 'high' || riskLevel === 'red') return { label: 'High', color: 'error' }
   if (riskLevel === 'medium' || riskLevel === 'yellow') return { label: 'Medium', color: 'warning' }
+  // unknown or low risk will be treated as 'low level'
   return { label: 'Low', color: 'success' }
 }
 
@@ -97,6 +98,7 @@ function getPersonalDataChip(source) {
 function getArt9Chip(source) {
   if (hasArt9Data(source)) return { label: 'Yes', color: 'secondary' }
   if (source.art_9_data === 'no' || source.metadata?.art_9_data === 'no') return { label: 'No', color: 'default' }
+  // unknown data will be labelled as default
   return { label: 'No', color: 'default' }
 }
 
@@ -182,6 +184,7 @@ function isMediumRisk(source) {
   return ['medium', 'yellow'].includes(source.risk_level)
 }
 
+// icon design for detected data categories 
 const dataCategoryDisplay = {
   contact_data: {
     label: 'Contact Data',
@@ -274,12 +277,20 @@ function normalizeDataCategory(category) {
   }
 }
 
+// Reads data category keys from multiple metadata generations.
+// New sources should provide data_category_keys;
+// the fallbacks keep older or raw metadata records visible in 
+// project-level category summaries.
 function getSourceDataCategoryKeys(source) {
   const keys = source.metadata?.data_category_keys
+  // the most common generation of matadata
   if (Array.isArray(keys)) {
     return keys.filter((key) => dataCategoryDisplay[key])
   }
 
+  // QUESTION: Do we still need these 2 shapes from older versions below? 
+  // Backward-compatible shape: some metadata may store full category objects
+  // instead of just keys, e.g. { key, label, group, is_art_9 }.
   const categories = source.metadata?.data_categories
   if (Array.isArray(categories)) {
     return categories
@@ -287,6 +298,9 @@ function getSourceDataCategoryKeys(source) {
       .filter((key) => dataCategoryDisplay[key])
   }
 
+
+  // Legacy/raw detection shape: infer display categories from the lower-level
+  // detector outputs when normalized category fields are missing.
   const inferredKeys = new Set()
   const personalCategories = source.metadata?.personal_data_categories ?? []
   const art9Categories = source.metadata?.art_9_categories ?? []
