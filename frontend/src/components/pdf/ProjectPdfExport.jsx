@@ -4,7 +4,7 @@
 // ProjectReportDocument defines the PDF layout: project header, risk overview,
 // recommendations, data sources table, and compliance violations per source.
 // styles defines all colors, fonts, and spacing for that layout.
-import { useState } from 'react'
+import React, { useState } from 'react'
 
 import Button from '@mui/material/Button'
 import { FileTextOutlined } from '@ant-design/icons'

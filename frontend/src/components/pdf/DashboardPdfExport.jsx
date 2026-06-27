@@ -4,7 +4,7 @@
 // a new browser tab.
 // DashboardReportDocument defines the PDF layout (sections, tables, text).
 // styles defines all colors, fonts, and spacing for that layout.
-import { useState } from 'react'
+import React, { useState } from 'react'
 
 import Button from '@mui/material/Button'
 import { FileTextOutlined } from '@ant-design/icons'
