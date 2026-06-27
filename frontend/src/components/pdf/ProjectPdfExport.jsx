@@ -1,3 +1,9 @@
+// PDF export for the project detail page.
+// Exports ProjectPdfExportButton — a button that generates a per-project privacy
+// report PDF and opens it in a new browser tab.
+// ProjectReportDocument defines the PDF layout: project header, risk overview,
+// recommendations, data sources table, and compliance violations per source.
+// styles defines all colors, fonts, and spacing for that layout.
 import { useState } from 'react'
 
 import Button from '@mui/material/Button'
@@ -5,8 +11,7 @@ import { FileTextOutlined } from '@ant-design/icons'
 import { Document, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer'
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
-// All visual design is defined here so the colleague can adjust colors, fonts,
-// and spacing without touching the data or document structure below.
+// All visual design for the report is defined here — colors, fonts, and spacing.
 const styles = StyleSheet.create({
   page: {
     padding: 40,
