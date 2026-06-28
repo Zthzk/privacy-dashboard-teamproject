@@ -7,96 +7,250 @@
 import React, { useState } from 'react'
 
 import Button from '@mui/material/Button'
+import logo from './favicon1.png'
 import { FileTextOutlined } from '@ant-design/icons'
 import { Document, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer'
 
+// ─── Design Tokens ─────────────────────────────────────────────────────────────
+const COLOR = {
+  navy:        '#1a3a5c',   // header background, section titles
+  navyLight:   '#e8eef5',   // table header background
+  blue:        '#2563eb',   // accent, links, metric values
+  blueMid:     '#dbeafe',   // alternating row tint
+  red:         '#c0392b',   // high risk
+  redBg:       '#fef2f2',   // high risk row tint
+  orange:      '#c2621b',   // medium risk
+  green:       '#15803d',   // low risk
+  black:       '#0f172a',   // primary text
+  gray:        '#475569',   // secondary text
+  grayLight:   '#e2e8f0',   // dividers
+  grayRow:     '#f8fafc',   // alternating row
+  white:       '#ffffff',
+  accent:      '#c0392b',   // red accent line under header
+}
+
 // ─── Styles ────────────────────────────────────────────────────────────────────
-// All visual design for the report is defined here — colors, fonts, and spacing. 
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
+    backgroundColor: COLOR.white,
     fontFamily: 'Helvetica',
-    fontSize: 10,
-    color: '#1a1a1a',
+    fontSize: 9,
+    color: COLOR.black,
   },
-  title: {
+
+  // ── Header band ──────────────────────────────────────────────────────────────
+  header: {
+    backgroundColor: COLOR.navy,
+    paddingTop: 28,
+    paddingHorizontal: 36,
+    paddingBottom: 0,
+  },
+  headerAccentLine: {
+    height: 3,
+    backgroundColor: COLOR.accent,
+    marginTop: 16,
+  },
+  headerLabel: {
+    fontSize: 8,
+    color: COLOR.blueMid,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  headerTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
+    color: COLOR.white,
+    letterSpacing: 0.3,
     marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 10,
-    color: '#666666',
-    marginBottom: 28,
+  headerMeta: {
+    fontSize: 8,
+    color: '#93c5fd',
+    marginBottom: 0,
+  },
+
+  // ── Body ─────────────────────────────────────────────────────────────────────
+  body: {
+    paddingHorizontal: 36,
+    paddingTop: 20,
+    paddingBottom: 36,
+  },
+
+  // ── Section ──────────────────────────────────────────────────────────────────
+  section: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
+  sectionAccent: {
+    width: 3,
+    height: 13,
+    backgroundColor: COLOR.blue,
+    borderRadius: 1,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 8,
+    fontSize: 11,
+    fontFamily: 'Helvetica-Bold',
+    color: COLOR.navy,
+    letterSpacing: 0.2,
   },
-  metricRow: {
+
+  // ── Summary grid (4 KPI boxes) ────────────────────────────────────────────
+  kpiGrid: {
     flexDirection: 'row',
-    marginBottom: 5,
+    gap: 8,
   },
-  metricLabel: {
-    flex: 3,
-    color: '#555555',
-  },
-  metricValue: {
+  kpiBox: {
     flex: 1,
-    fontWeight: 'bold',
+    borderWidth: 1,
+    borderColor: COLOR.grayLight,
+    borderRadius: 4,
+    padding: 10,
+    backgroundColor: COLOR.grayRow,
+  },
+  kpiBoxRed: {
+    borderColor: '#fca5a5',
+    backgroundColor: COLOR.redBg,
+  },
+  kpiLabel: {
+    fontSize: 7.5,
+    color: COLOR.gray,
+    marginBottom: 5,
+    letterSpacing: 0.3,
+  },
+  kpiValue: {
+    fontSize: 18,
+    fontFamily: 'Helvetica-Bold',
+    color: COLOR.navy,
+  },
+  kpiValueRed: {
+    color: COLOR.red,
+  },
+  kpiValueBlue: {
+    color: COLOR.blue,
+  },
+
+  // ── Data category rows ────────────────────────────────────────────────────
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderBottom: `0.5pt solid ${COLOR.grayLight}`,
+  },
+  categoryRowAlt: {
+    backgroundColor: COLOR.grayRow,
+  },
+  categoryLabel: {
+    flex: 4,
+    fontSize: 9,
+    color: COLOR.black,
+  },
+  categoryValue: {
+    flex: 1,
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: COLOR.blue,
     textAlign: 'right',
   },
-  tableHeaderRow: {
+
+  // ── Projects table ────────────────────────────────────────────────────────
+  tableHead: {
     flexDirection: 'row',
-    paddingBottom: 5,
-    borderBottom: '1.5pt solid #cccccc',
-    marginBottom: 2,
-    fontWeight: 'bold',
+    backgroundColor: COLOR.navyLight,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottom: `1.5pt solid ${COLOR.grayLight}`,
+  },
+  tableHeadCell: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: COLOR.navy,
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 5,
-    borderBottom: '0.5pt solid #eeeeee',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottom: `0.5pt solid ${COLOR.grayLight}`,
   },
-  // Column widths for the projects table
-  colProject: { flex: 3 },
-  colSources: { flex: 1, textAlign: 'center' },
-  colRisk: { flex: 1.5 },
-  colDate: { flex: 2 },
-  // Risk level text colors
-  riskHigh: { color: '#d32f2f' },
-  riskMedium: { color: '#ed6c02' },
-  riskLow: { color: '#2e7d32' },
+  tableRowAlt: {
+    backgroundColor: COLOR.grayRow,
+  },
+  tableRowHighRisk: {
+    backgroundColor: COLOR.redBg,
+  },
+  tableCell: {
+    fontSize: 9,
+    color: COLOR.black,
+  },
+
+  // Column widths
+  colProject: { flex: 3.5 },
+  colSources: { flex: 1,   textAlign: 'center' },
+  colRisk:    { flex: 1.5 },
+  colDate:    { flex: 2 },
+
+  // Risk badges
+  riskHigh:   { color: COLOR.red,    fontFamily: 'Helvetica-Bold' },
+  riskMedium: { color: COLOR.orange, fontFamily: 'Helvetica-Bold' },
+  riskLow:    { color: COLOR.green,  fontFamily: 'Helvetica-Bold' },
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  footer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 36,
+    right: 36,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTop: `0.5pt solid ${COLOR.grayLight}`,
+    paddingTop: 6,
+  },
+  footerText: {
+    fontSize: 7.5,
+    color: COLOR.gray,
+  },
+  footerBlue: {
+    fontSize: 7.5,
+    color: COLOR.blue,
+    fontFamily: 'Helvetica-Bold',
+  },
 })
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-// Formats an ISO date string to a short readable form (e.g. "Jun 27, 2026").
 function formatDate(value) {
   if (!value) return '—'
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value))
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value))
 }
 
-// Derives the risk label and corresponding PDF style for a project.
-// Mirrors the resolution logic in Dashboard.jsx so the PDF matches the UI.
 function resolveProjectRisk(project) {
   const riskValue = project.overall_status ?? project.risk_status ?? project.risk_level
-
-  if (project.art_9_sources > 0 || riskValue === 'red') return { label: 'High', style: styles.riskHigh }
-  if (riskValue === 'yellow' || riskValue === 'medium' || riskValue === 'high') return { label: 'Medium', style: styles.riskMedium }
-  if ((project.high_risk_sources ?? 0) > 0) return { label: 'High', style: styles.riskHigh }
-  if ((project.medium_risk_sources ?? 0) > 0 || (project.personal_data_sources ?? 0) > 0) return { label: 'Medium', style: styles.riskMedium }
+  if (project.art_9_sources > 0 || riskValue === 'red')
+    return { label: 'High', style: styles.riskHigh, isHigh: true }
+  if (riskValue === 'yellow' || riskValue === 'medium' || riskValue === 'high')
+    return { label: 'Medium', style: styles.riskMedium }
+  if ((project.high_risk_sources ?? 0) > 0)
+    return { label: 'High', style: styles.riskHigh, isHigh: true }
+  if ((project.medium_risk_sources ?? 0) > 0 || (project.personal_data_sources ?? 0) > 0)
+    return { label: 'Medium', style: styles.riskMedium }
   return { label: 'Low', style: styles.riskLow }
 }
 
 // ─── PDF Document ──────────────────────────────────────────────────────────────
 
-// The PDF document for the full dashboard overview.
-// Receives already-loaded data so it renders synchronously without any fetching.
 function DashboardReportDocument({ projects, riskSummary, generatedAt }) {
-  const highRiskCount = projects.filter((p) => resolveProjectRisk(p).label === 'High').length
+  const highRiskCount   = projects.filter((p) => resolveProjectRisk(p).label === 'High').length
   const mediumRiskCount = projects.filter((p) => resolveProjectRisk(p).label === 'Medium').length
   const totalDataSources = projects.reduce((sum, p) => sum + (p.data_sources_count ?? 0), 0)
 
@@ -104,57 +258,114 @@ function DashboardReportDocument({ projects, riskSummary, generatedAt }) {
     <Document title={`Privacy Dashboard Report — ${generatedAt}`}>
       <Page size="A4" style={styles.page}>
 
-        {/* Report header */}
-        <Text style={styles.title}>Privacy Dashboard Report</Text>
-        <Text style={styles.subtitle}>Generated: {generatedAt}</Text>
+        {/* ── Header band ─────────────────────────────────────────────────── */}
+        <View style={styles.header}>
+          <Text style={styles.headerLabel}>Privacy Report</Text>
+          <Text style={styles.headerTitle}>Privacy Dashboard Report</Text>
+          <Text style={styles.headerMeta}>Generated {generatedAt}</Text>
+          <View style={styles.headerAccentLine} />
+        </View>
+        <View style={styles.body}>
 
-        {/* Aggregate risk summary */}
-        <Text style={styles.sectionTitle}>Summary</Text>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>Total projects</Text>
-          <Text style={styles.metricValue}>{projects.length}</Text>
-        </View>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>Total data sources</Text>
-          <Text style={styles.metricValue}>{totalDataSources}</Text>
-        </View>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>High risk projects</Text>
-          <Text style={[styles.metricValue, styles.riskHigh]}>{highRiskCount}</Text>
-        </View>
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>Medium risk projects</Text>
-          <Text style={[styles.metricValue, styles.riskMedium]}>{mediumRiskCount}</Text>
-        </View>
-
-        {/* Data category breakdown from the dashboard Risk Summary card */}
-        <Text style={styles.sectionTitle}>Data Category Overview</Text>
-        {riskSummary.map((item) => (
-          <View key={item.label} style={styles.metricRow}>
-            <Text style={styles.metricLabel}>{item.label}</Text>
-            <Text style={styles.metricValue}>{item.value}</Text>
-          </View>
-        ))}
-
-        {/* Per-project table */}
-        <Text style={styles.sectionTitle}>Projects</Text>
-        <View style={styles.tableHeaderRow}>
-          <Text style={styles.colProject}>Project</Text>
-          <Text style={styles.colSources}>Sources</Text>
-          <Text style={styles.colRisk}>Risk</Text>
-          <Text style={styles.colDate}>Last Updated</Text>
-        </View>
-        {projects.map((project) => {
-          const risk = resolveProjectRisk(project)
-          return (
-            <View key={project.id} style={styles.tableRow}>
-              <Text style={styles.colProject}>{project.name}</Text>
-              <Text style={styles.colSources}>{project.data_sources_count ?? 0}</Text>
-              <Text style={[styles.colRisk, risk.style]}>{risk.label}</Text>
-              <Text style={styles.colDate}>{formatDate(project.updated_at)}</Text>
+          {/* ── KPI Summary ───────────────────────────────────────────────── */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionAccent} />
+              <Text style={styles.sectionTitle}>Summary</Text>
             </View>
-          )
-        })}
+            <View style={styles.kpiGrid}>
+              <View style={styles.kpiBox}>
+                <Text style={styles.kpiLabel}>TOTAL PROJECTS</Text>
+                <Text style={[styles.kpiValue, styles.kpiValueBlue]}>{projects.length}</Text>
+              </View>
+              <View style={styles.kpiBox}>
+                <Text style={styles.kpiLabel}>DATA SOURCES</Text>
+                <Text style={[styles.kpiValue, styles.kpiValueBlue]}>{totalDataSources}</Text>
+              </View>
+              <View style={[styles.kpiBox, highRiskCount > 0 && styles.kpiBoxRed]}>
+                <Text style={styles.kpiLabel}>HIGH RISK</Text>
+                <Text style={[styles.kpiValue, highRiskCount > 0 ? styles.kpiValueRed : styles.kpiValueBlue]}>
+                  {highRiskCount}
+                </Text>
+              </View>
+              <View style={styles.kpiBox}>
+                <Text style={styles.kpiLabel}>MEDIUM RISK</Text>
+                <Text style={styles.kpiValue}>{mediumRiskCount}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* ── Data Category Overview ────────────────────────────────────── */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionAccent} />
+              <Text style={styles.sectionTitle}>Data Category Overview</Text>
+            </View>
+            <View>
+              {riskSummary.map((item, index) => (
+                <View
+                  key={item.label}
+                  style={[styles.categoryRow, index % 2 !== 0 && styles.categoryRowAlt]}
+                >
+                  <Text style={styles.categoryLabel}>{item.label}</Text>
+                  <Text style={styles.categoryValue}>{item.value}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* ── Projects Table ────────────────────────────────────────────── */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionAccent} />
+              <Text style={styles.sectionTitle}>Projects</Text>
+            </View>
+
+            {/* Table header */}
+            <View style={styles.tableHead}>
+              <Text style={[styles.tableHeadCell, styles.colProject]}>PROJECT</Text>
+              <Text style={[styles.tableHeadCell, styles.colSources]}>SOURCES</Text>
+              <Text style={[styles.tableHeadCell, styles.colRisk]}>RISK</Text>
+              <Text style={[styles.tableHeadCell, styles.colDate]}>LAST UPDATED</Text>
+            </View>
+
+            {/* Table rows */}
+            {projects.map((project, index) => {
+              const risk = resolveProjectRisk(project)
+              return (
+                <View
+                  key={project.id}
+                  style={[
+                    styles.tableRow,
+                    risk.isHigh
+                      ? styles.tableRowHighRisk
+                      : index % 2 !== 0
+                        ? styles.tableRowAlt
+                        : null,
+                  ]}
+                >
+                  <Text style={[styles.tableCell, styles.colProject]}>{project.name}</Text>
+                  <Text style={[styles.tableCell, styles.colSources]}>
+                    {project.data_sources_count ?? 0}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.colRisk, risk.style]}>{risk.label}</Text>
+                  <Text style={[styles.tableCell, styles.colDate]}>
+                    {formatDate(project.updated_at)}
+                  </Text>
+                </View>
+              )
+            })}
+          </View>
+
+        </View>
+
+        {/* ── Footer ──────────────────────────────────────────────────────── */}
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>Privacy Dashboard</Text>
+          <Text style={styles.footerBlue}>
+            {projects.length} projects · {totalDataSources} data sources
+          </Text>
+        </View>
 
       </Page>
     </Document>
@@ -163,10 +374,6 @@ function DashboardReportDocument({ projects, riskSummary, generatedAt }) {
 
 // ─── Export Button ─────────────────────────────────────────────────────────────
 
-// Renders the "Export PDF" button for the dashboard page.
-// Builds the PDF on click and opens it in a new tab using the browser's native
-// PDF viewer. Generation is deferred to click time — PDF rendering is
-// CPU-intensive and many users never export, so building on mount wastes resources.
 export default function DashboardPdfExportButton({ projects, riskSummary }) {
   const [generating, setGenerating] = useState(false)
 
@@ -176,7 +383,6 @@ export default function DashboardPdfExportButton({ projects, riskSummary }) {
     year: 'numeric',
   }).format(new Date())
 
-  // Generate the PDF blob, create a temporary object URL, and open it in a new tab.
   async function handleExport() {
     setGenerating(true)
     try {
@@ -188,7 +394,11 @@ export default function DashboardPdfExportButton({ projects, riskSummary }) {
         />
       ).toBlob()
       const url = URL.createObjectURL(blob)
-      window.open(url, '_blank', 'noopener,noreferrer')
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `dashboard-privacy-report.pdf`
+      link.click()
+      URL.revokeObjectURL(url)
     } finally {
       setGenerating(false)
     }
@@ -205,3 +415,4 @@ export default function DashboardPdfExportButton({ projects, riskSummary }) {
     </Button>
   )
 }
+
