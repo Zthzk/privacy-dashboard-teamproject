@@ -75,6 +75,36 @@ export async function getDataSource(projectId, dataSourceId) {
 }
 
 /**
+ * Sends GET request to the backend
+ * RETURN immutable version snapshots for one datasource, newest first
+ */
+export async function getDataSourceVersions(projectId, dataSourceId) {
+  try {
+    const response = await apiClient.get(
+      `/projects/${projectId}/datasources/${dataSourceId}/versions/`,
+    );
+    return response.data.versions;
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
+
+/**
+ * Sends GET request to the backend
+ * RETURN one immutable datasource version snapshot
+ */
+export async function getDataSourceVersion(projectId, dataSourceId, versionNumber) {
+  try {
+    const response = await apiClient.get(
+      `/projects/${projectId}/datasources/${dataSourceId}/versions/${versionNumber}/`,
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
+
+/**
  * Creates datasource object
  * Sends object to the backend
  * RETURN datasource object

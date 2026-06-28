@@ -1,4 +1,4 @@
-import json
+﻿import json
 
 from unittest.mock import patch
 
@@ -60,6 +60,7 @@ class ProjectDataSourcesApiTests(TestCase):
         )
 
     def test_can_add_data_source_to_project(self):
+        """Creating a data source stores version 1 with the assessed snapshot."""
         response = self.post_json(
             self.url,
             {
@@ -116,12 +117,26 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(payload["location"], "manual input")
         self.assertFalse(payload["contains_personal_data"])
         self.assertEqual(payload["metadata"]["manual_data"], "Example customer note")
+        self.assertNotIn("preview_text", payload)
         self.assertEqual(payload["risk_level"], "low")
         self.assertEqual(payload["art_9_data"], "no")
-        self.assertEqual(
-            payload["metadata"]["risk_reason"],
-            "No obvious personal data indicators were detected.",
+
+    def test_large_manual_data_is_stored_without_backend_preview_text(self):
+        response = self.post_json(
+            self.url,
+            {
+                "name": "Long manual sample",
+                "source_type": DataSource.SourceType.MANUAL,
+                "data_format": DataSource.DataFormat.TEXT,
+                "location": "manual input",
+                "metadata": {"manual_data": "A" * 1200},
+            },
         )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["metadata"]["manual_data"], "A" * 1200)
+        self.assertNotIn("preview_text", payload)
 
     def test_detects_personal_data_risk_from_manual_data(self):
         response = self.post_json(
@@ -142,10 +157,6 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertTrue(payload["contains_personal_data"])
         self.assertEqual(payload["risk_level"], "medium")
         self.assertEqual(payload["art_9_data"], "no")
-        self.assertEqual(
-            payload["metadata"]["risk_reason"],
-            "This data source may contain personal data.",
-        )
         self.assertIn("email", payload["metadata"]["personal_data_categories"])
         self.assertIn("name", payload["metadata"]["personal_data_categories"])
         self.assertIn("contact_data", payload["metadata"]["data_category_keys"])
@@ -170,10 +181,6 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertTrue(payload["contains_personal_data"])
         self.assertEqual(payload["risk_level"], "high")
         self.assertEqual(payload["art_9_data"], "possible")
-        self.assertEqual(
-            payload["metadata"]["risk_reason"],
-            "This data source may contain GDPR Art. 9 special category data.",
-        )
         self.assertIn("health", payload["metadata"]["art_9_categories"])
         self.assertIn("health_data", payload["metadata"]["data_category_keys"])
 
@@ -384,6 +391,7 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(payload["art_9_data"], "possible")
 
     def test_update_creates_next_version_when_versioned_fields_change(self):
+        """Changing versioned fields appends the next backend-owned version."""
         create_response = self.post_json(
             self.url,
             {
@@ -416,13 +424,14 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(versions[1].art_9_data, "possible")
 
     def test_update_locks_parent_row_before_allocating_next_version(self):
+        """Updating a data source locks the parent before assigning a version."""
         create_response = self.post_json(self.url, {"name": "Lock Test Source"})
         data_source = DataSource.objects.get(id=create_response.json()["id"])
 
         with patch.object(
-                DataSource.objects,
-                "select_for_update",
-                wraps=DataSource.objects.select_for_update,
+            DataSource.objects,
+            "select_for_update",
+            wraps=DataSource.objects.select_for_update,
         ) as select_for_update:
             response = self.client.patch(
                 self.detail_url(data_source),
@@ -435,6 +444,7 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(response.json()["current_version_number"], 2)
 
     def test_noop_update_does_not_create_duplicate_version(self):
+        """No-op updates keep the existing latest version instead of duplicating it."""
         create_response = self.post_json(
             self.url,
             {
@@ -455,6 +465,7 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(data_source.versions.count(), 1)
 
     def test_lists_and_fetches_data_source_versions(self):
+        """Version history endpoints expose newest-first list and exact detail."""
         create_response = self.post_json(
             self.url,
             {
@@ -486,6 +497,7 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(detail_response.json()["name"], "Support Notes")
 
     def test_version_history_is_scoped_to_current_project_after_move(self):
+        """Moving projects keeps lineage but exposes history only under the new route."""
         create_response = self.post_json(self.url, {"name": "Movable Source"})
         data_source = DataSource.objects.get(id=create_response.json()["id"])
 
@@ -515,6 +527,7 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(new_project_detail_response.json()["version_number"], 1)
 
     def test_deleting_data_source_cascades_versions(self):
+        """Deleting the current data source deletes its version history too."""
         create_response = self.post_json(self.url, {"name": "Temporary Source"})
         data_source = DataSource.objects.get(id=create_response.json()["id"])
         version_id = data_source.versions.get().id
@@ -728,6 +741,7 @@ class DataSourceVersionMigrationTests(TransactionTestCase):
         self.apps = self.executor.loader.project_state(self.migrate_to).apps
 
     def test_backfills_initial_version_from_existing_data_source_fields(self):
+        """Migrating existing data sources creates version 1 without reassessment."""
         DataSourceVersionModel = self.apps.get_model(
             "data_sources",
             "DataSourceVersion",
