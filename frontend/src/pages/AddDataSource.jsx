@@ -7,6 +7,7 @@ import Box from '@mui/material/Box'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
 import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
+import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
 import Divider from '@mui/material/Divider'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -361,21 +362,39 @@ export default function AddDataSource() {
                       <Stack spacing={0.5} sx={{ pl: 1 }}>
                         <Typography variant="body2" fontWeight={500}>Select all that apply:</Typography>
                         <FormGroup>
-                          {activeHint.checklist?.map((item) => (
-                            <FormControlLabel
-                              key={item}
-                              control={
-                                <Checkbox
-                                  size="small"
-                                  checked={violations.includes(item)}
-                                  onChange={(e) => setViolations((prev) =>
-                                    e.target.checked ? [...prev, item] : prev.filter((v) => v !== item)
-                                  )}
-                                />
-                              }
-                              label={<Typography variant="body2">{item}</Typography>}
-                            />
-                          ))}
+                          {activeHint.checklist?.map((item) => {
+                            const label = item?.label ?? item
+                            const weight = item?.weight
+                            const article = item?.article
+                            return (
+                              <FormControlLabel
+                                key={label}
+                                control={
+                                  <Checkbox
+                                    size="small"
+                                    checked={violations.includes(label)}
+                                    onChange={(e) => setViolations((prev) =>
+                                      e.target.checked ? [...prev, label] : prev.filter((v) => v !== label)
+                                    )}
+                                  />
+                                }
+                                label={
+                                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <Typography variant="body2">{label}</Typography>
+                                    {article && (
+                                      <Chip
+                                        size="small"
+                                        label={article}
+                                        color={weight === 3 ? 'error' : weight === 2 ? 'warning' : 'default'}
+                                        variant="outlined"
+                                        sx={{ fontSize: 11, height: 18, '& .MuiChip-label': { px: 0.75 } }}
+                                      />
+                                    )}
+                                  </Stack>
+                                }
+                              />
+                            )
+                          })}
                         </FormGroup>
                       </Stack>
                     </Collapse>
