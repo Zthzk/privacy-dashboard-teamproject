@@ -424,18 +424,22 @@ export default function AddDataSource() {
 
             </Stack>
           </MainCard>
+          
 
           <Stack spacing={2}>
-            <MainCard title="About Data Sources" sx={{ bgcolor: 'primary.lighter', borderColor: 'primary.light' }}>
+            <MainCard title={<Typography variant="subtitle1" sx={{ color: 'common.black' }}>
+                              About Data Sources
+                            </Typography>} 
+                      sx={{ bgcolor: 'primary.lighter', borderColor: 'primary.light' }}>
               <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
-                <Box sx={{ color: 'primary.main', pt: 0.25 }}>
+                <Box sx={{ color: 'common.black', pt: 0.25 }}>
                   <InfoCircleOutlined />
                 </Box>
                 <Stack spacing={1}>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ color: 'common.black' }}>
                     Adding data sources allows you to track the datasets, files, APIs, and references used in your ML pipelines.
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: 'common.black' }}>
                     Additional analysis can be added later in a dedicated workflow.
                   </Typography>
                 </Stack>

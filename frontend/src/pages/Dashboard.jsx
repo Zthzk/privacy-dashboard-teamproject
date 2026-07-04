@@ -256,7 +256,7 @@ export default function Dashboard() {
                     sx={{
                       cursor: 'pointer',
                       '&.Mui-selected': {
-                        bgcolor: 'primary.lighter',
+                        bgcolor: 'action.selected',
                         outline: '1px solid',
                         outlineColor: 'primary.light',
                       },

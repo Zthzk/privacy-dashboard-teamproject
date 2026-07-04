@@ -20,6 +20,7 @@ export default function ThemeCustomization({ children }) {
   const themeTypography = useMemo(() => Typography(state.fontFamily), [state.fontFamily]);
 
   const palette = useMemo(() => buildPalette(state.presetColor), [state.presetColor]);
+  console.log('PALETTE:', palette);
 
   const themeOptions = useMemo(
     () => ({
@@ -45,6 +46,10 @@ export default function ThemeCustomization({ children }) {
         light: {
           palette: palette.light,
           customShadows: CustomShadows(palette.light, 'light')
+        },
+        dark: {
+          palette: palette.dark,
+          customShadows: CustomShadows(palette.dark, 'dark')
         }
       },
       cssVariables: {

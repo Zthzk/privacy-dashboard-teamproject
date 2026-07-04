@@ -229,6 +229,7 @@ function EditProjectDialog({ project, saving, onClose, onSave }) {
     })
   }
 
+  
   return (
     <Dialog open={Boolean(project)} onClose={onClose} fullWidth maxWidth="sm">
       <Box key={project?.id ?? 'edit-project'} component="form" onSubmit={handleSubmit}>
