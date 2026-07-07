@@ -28,6 +28,8 @@ function Register() {
             // Store JWT tokens after successful registration
             localStorage.setItem('accessToken', response.data.access)
             localStorage.setItem('refreshToken', response.data.refresh)
+            // Store the registered user so the dashboard header can display the correct account name.
+            localStorage.setItem('currentUser', JSON.stringify(response.data.user))
 
             // Redirect newly registered user to dashboard
             navigate('/dashboard')

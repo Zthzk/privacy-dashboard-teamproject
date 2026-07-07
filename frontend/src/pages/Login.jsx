@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
 import './Login.css'
@@ -29,6 +29,20 @@ function Login() {
             // Save tokens for authenticated requests
             localStorage.setItem('accessToken', access)
             localStorage.setItem('refreshToken', refresh)
+
+            // Load the authenticated user so the dashboard header can show the real account name.
+        try {
+            const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me/`, {
+                headers: {
+                Authorization: `Bearer ${access}`,
+            },
+        })
+
+            localStorage.setItem('currentUser', JSON.stringify(userResponse.data))
+        } catch {
+        // Fallback to the submitted username if the profile endpoint is unavailable.
+            localStorage.setItem('currentUser', JSON.stringify({ username }))
+        }
 
             // Redirect authenticated user to dashboard
             navigate('/dashboard')

@@ -1,3 +1,4 @@
+import re
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
@@ -5,11 +6,31 @@ from rest_framework import serializers
 
 User = get_user_model()
 
+def validate_strong_password(value):
+    """Require passwords that are harder to guess."""
+    errors = []
+
+    # Enforce a minimum length so short passwords are rejected.
+    if len(value) < 10:
+        errors.append("Password must be at least 10 characters long.")
+
+    # Require different character groups to make passwords less predictable.
+    if not re.search(r"[A-Z]", value):
+        errors.append("Password must contain at least one uppercase letter.")
+    if not re.search(r"\d", value):
+        errors.append("Password must contain at least one number.")
+    if not re.search(r"[^A-Za-z0-9]", value):
+        errors.append("Password must contain at least one special character.")
+
+    if errors:
+        raise serializers.ValidationError(errors)
+
+    return value
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Validates registration data and creates a new user."""
 
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
@@ -34,6 +55,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data.get("email", ""),
             password=validated_data["password"],
         )
+    def validate_password(self, value):
+        """Validate registration passwords with the shared strong-password rules."""
+        return validate_strong_password(value)
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -47,7 +71,11 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
     uid = serializers.CharField()
     token = serializers.CharField()
-    new_password = serializers.CharField(write_only=True, min_length=8)
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        """Validate reset passwords with the shared strong-password rules."""
+        return validate_strong_password(value)
 
     def validate(self, attrs):
         """Tests that the reset token belongs to a valid user."""

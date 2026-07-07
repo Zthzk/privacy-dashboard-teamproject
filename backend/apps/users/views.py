@@ -67,8 +67,8 @@ def password_reset_request(request):
             )
 
         return Response(
-            {"message": "If the email exists, a password reset token was created."},
-            status=status.HTTP_200_OK,
+            {"email": ["This e-mail has not been registered."]},
+            status=status.HTTP_404_NOT_FOUND,
         )
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
