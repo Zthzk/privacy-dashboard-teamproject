@@ -6,16 +6,24 @@ import './Login.css'
 const API_BASE_URL = 'http://127.0.0.1:8000'
 
 function Register() {
-    // Handles user registration
+    // Provides programmatic navigation after successful registration
     const navigate = useNavigate()
 
+    // Registration form state
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+
+    // Stores validation or registration error messages
     const [error, setError] = useState('')
 
+    // Handles account creation.
+    // Sends the registration form data to the backend and if successful, stores the authentication data and redirects
+    // the newly registered user to the dashboard.
     const handleRegister = async (event) => {
         event.preventDefault()
+
+        // Clear any previous error before sending a new request
         setError('')
 
         try {
@@ -36,6 +44,8 @@ function Register() {
         } catch (error) {
             const data = error.response?.data
 
+            // Display the first available field-specific validation error.
+            // The order determines which error is shown when the backend returns validation errors for multiple fields.
             if (data?.password) {
                 setError(`Password: ${data.password[0]}`)
             } else if (data?.username) {
@@ -76,6 +86,7 @@ function Register() {
                         required
                         placeholder="Enter your email"
                         value={email}
+                        // Keep the username state synchronized with the value entered in the input.
                         onChange={(event) => setEmail(event.target.value)}
                     />
 
@@ -86,6 +97,7 @@ function Register() {
                         required
                         placeholder="Create a password"
                         value={password}
+                        // Keep the email state synchronized with the value entered in the input.
                         onChange={(event) => setPassword(event.target.value)}
                     />
 
@@ -94,6 +106,7 @@ function Register() {
                     {error && <div className="error-message">{error}</div>}
                 </form>
 
+                {/* Navigation link for users who already have an account */}
                 <p className="auth-link">
                     Already have an account? <Link to="/login">Sign in</Link>
                 </p>

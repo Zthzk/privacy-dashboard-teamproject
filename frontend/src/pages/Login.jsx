@@ -8,12 +8,17 @@ import './Login.css'
 const API_BASE_URL = 'http://127.0.0.1:8000'
 
 function Login() {
+    // Login form state
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
+
+    // Stores authentication error messages shown to the user
     const [error, setError] = useState('')
+
     const navigate = useNavigate()
 
-    // Handles user authentication and stores JWT tokens
+    // Handles user authentication.
+    // On successful login, stores JWT tokens, loads the authenticated user's profile, and redirects to the dashboard.
     const handleLogin = async (event) => {
         event.preventDefault()
         setError('')
@@ -37,10 +42,10 @@ function Login() {
                 Authorization: `Bearer ${access}`,
             },
         })
-
+            // Save the authenticated user's profile for later use
             localStorage.setItem('currentUser', JSON.stringify(userResponse.data))
         } catch {
-        // Fallback to the submitted username if the profile endpoint is unavailable.
+            // If the profile request fails, store the submitted username so the application can still display basic user information.
             localStorage.setItem('currentUser', JSON.stringify({ username }))
         }
 
@@ -69,6 +74,7 @@ function Login() {
                         placeholder="Enter username"
                         value={username}
                         onChange={(event) => setUsername(event.target.value)}
+                        // Improve keyboard navigation by moving focus to the password field with Enter or Arrow Down
                         onKeyDown={(event) => {
                             if (event.key === 'ArrowDown' || event.key === 'Enter') {
                                 event.preventDefault()
