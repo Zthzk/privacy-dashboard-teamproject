@@ -71,3 +71,35 @@ Important project documents are stored in `docs/`:
 - `api.md`: API endpoint conventions
 - `user-stories.md`: project user stories and implementation mapping
 - `definition-of-done.md`: completion criteria
+- `testing.md`: how tests are run and what they cover
+
+
+## Screenshots
+
+The screenshots below provide a visual overview of the main application workflows.
+
+### Dashboard Overview
+
+The dashboard summarizes the available projects, data sources, and identified privacy-risk levels.
+
+![Privacy Dashboard overview](docs/screenshots/dashboard-overview.png)
+
+### Project Details
+
+The project detail page groups the relevant data sources and privacy information for one ML project or pipeline.
+
+![Project detail view](docs/screenshots/project-details.png)
+
+### Data Source Assessment
+
+The data-source form allows users to document whether personal data or special categories of personal data are involved.
+
+![Data source assessment form](docs/screenshots/data-source-assessment.png)
+
+### Privacy Risk Result
+
+The risk result presents the calculated risk level and relevant recommendations in an understandable format.
+
+![Privacy risk result](docs/screenshots/privacy-risk-result.png)
+
+
