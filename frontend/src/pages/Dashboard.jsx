@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import Avatar from '@mui/material/Avatar'
@@ -20,11 +20,9 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
 import {
-  CarOutlined,
   CloseOutlined,
   DatabaseOutlined,
   EyeOutlined,
-  MailOutlined,
   MessageOutlined,
   MoreOutlined,
   RightOutlined,
@@ -88,10 +86,6 @@ function hasArt9Data(source) {
 
 function getProjectRisk(project) {
   return projectRiskChipProps(project)
-}
-
-function countSourcesByCategory(dataSources, categoryKey) {
-  return dataSources.filter((source) => source.metadata?.data_category_keys?.includes(categoryKey)).length
 }
 
 function ProjectIcon({ project }) {
@@ -168,9 +162,10 @@ export default function Dashboard() {
   }, [selectedProjectSources])
   const riskSummary = useMemo(
     () => [
-      { label: 'Contact data sources', value: countSourcesByCategory(dataSources, 'contact_data'), icon: MailOutlined, color: 'primary' },
-      { label: 'Location data sources', value: countSourcesByCategory(dataSources, 'location_data'), icon: CarOutlined, color: 'secondary' },
+      { label: 'Total data sources', value: dataSources.length, icon: DatabaseOutlined, color: 'primary' },
       { label: 'Personal data sources', value: dataSources.filter((source) => source.contains_personal_data).length, icon: TeamOutlined, color: 'success' },
+      { label: 'High risk sources', value: dataSources.filter((source) => getSourceRisk(source).label === 'High').length, icon: ThunderboltOutlined, color: 'error' },
+      { label: 'Art. 9 sources', value: dataSources.filter(hasArt9Data).length, icon: EyeOutlined, color: 'secondary' },
     ],
     [dataSources],
   )
@@ -478,7 +473,7 @@ export default function Dashboard() {
               <Box>
                 <Typography variant="subtitle1">Recommendation</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Review projects with personal data or Art. 9 categories before using their data sources in model training.
+                  Review projects with personal data or Art. 9 data before using their data sources in model training.
                 </Typography>
                 <Button size="small" endIcon={<RightOutlined aria-hidden="true" />}>
                   View details
