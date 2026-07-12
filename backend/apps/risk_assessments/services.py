@@ -215,51 +215,6 @@ def contains_art_9_data(data_source):
         return True
     return False
 
-def build_project_recommendations(overall_status, metrics, top_detected_data_categories):
-    # Start with the general recommendations for the traffic-light status.
-    # This keeps the output easy to understand for the data protection officer.
-    recommendations = list(RECOMMENDATIONS_BY_STATUS[overall_status])
-
-    # Yellow and red risks should include more concrete actions based on the
-    if overall_status in {"yellow", "red"}:
-        category_keys = {
-            category["key"]
-            for category in top_detected_data_categories
-        }
-
-        if "health_data" in category_keys:
-            recommendations.append(
-                "Review the handling of health data and confirm the GDPR Art. 9 exception."
-            )
-
-        if "biometric_genetic_data" in category_keys:
-            recommendations.append(
-                "Check whether biometric or genetic data is strictly necessary for the project."
-            )
-
-        if "financial_data" in category_keys:
-            recommendations.append(
-                "Mask or remove financial identifiers unless they are required."
-            )
-
-        if "direct_identifiers" in category_keys:
-            recommendations.append(
-                "Replace names and direct identifiers with project-specific IDs where possible."
-            )
-
-        if "contact_data" in category_keys:
-            recommendations.append(
-                "Remove email addresses, phone numbers, and addresses if they are not needed."
-            )
-
-    # Red risks need one extra Art. 9 action when special category data exists.
-    if overall_status == "red" and metrics["art_9_sources"] > 0:
-        recommendations.append(
-            "Confirm and document the legal exception for processing GDPR Art. 9 data."
-        )
-
-    return recommendations
-
 
 def calculate_project_risk(project):
     """Aggregate data-source risks into a project-level assessment.
@@ -273,49 +228,60 @@ def calculate_project_risk(project):
         level, explanation, metrics, and recommended actions.
     """
     data_sources = list(project.data_sources.all())
-    risk_levels = [normalize_risk_level(data_source) for data_source in data_sources]
+    risk_levels = [
+        normalize_risk_level(data_source)
+        for data_source in data_sources
+    ]
 
     metrics = {
         "total_data_sources": len(data_sources),
         "personal_data_sources": sum(
-            1 for data_source in data_sources if data_source.contains_personal_data
+            1
+            for data_source in data_sources
+            if data_source.contains_personal_data
         ),
         "high_risk_sources": risk_levels.count("high"),
         "medium_risk_sources": risk_levels.count("medium"),
         "art_9_sources": sum(
-            1 for data_source in data_sources if contains_art_9_data(data_source)
+            1
+            for data_source in data_sources
+            if contains_art_9_data(data_source)
         ),
     }
 
-   # The overall project status is determined by the highest risk level
-# found among all data sources.
-  if metrics["total_data_sources"] == 0:
-      overall_status = "green"
-      reason = "No data sources have been added yet."
+    # Project status follows the most severe condition found in its sources.
+    if metrics["total_data_sources"] == 0:
+        overall_status = "green"
+        reason = "No data sources have been added yet."
 
-  elif metrics["high_risk_sources"] > 0 or metrics["art_9_sources"] > 0:
-      overall_status = "red"
-      reason = (
-        "At least one data source is high risk or contains GDPR Art. 9 "
-        "special category data."
-      )
+    elif metrics["high_risk_sources"] > 0 or metrics["art_9_sources"] > 0:
+        overall_status = "red"
+        reason = (
+            "At least one data source is high risk or contains GDPR Art. 9 "
+            "special category data."
+    )
 
-  elif metrics["personal_data_sources"] > 0 or metrics["medium_risk_sources"] > 0:
-      overall_status = "yellow"
-      reason = (
-        "At least one data source contains personal data or has a medium "
-        "risk level."
-      )
+    elif metrics["personal_data_sources"] > 0 or metrics["medium_risk_sources"] > 0:
+        overall_status = "yellow"
+        reason = (
+            "At least one data source contains personal data or has medium "
+            "risk level."
+    )
 
-  else:
-      overall_status = "green"
-      reason = "No personal data or high-risk sources are currently detected."
+    else:
+        overall_status = "green"
+        reason = "No personal data or high-risk sources are currently detected."
 
-  recommendations = build_project_recommendations(
-    overall_status,
-    metrics,
-    top_detected_data_categories,)
-    
+    recommendations = list(RECOMMENDATIONS_BY_STATUS[overall_status])
+
+    if overall_status == "red" and metrics["art_9_sources"] > 0:
+        recommendations.append(
+            "Review the handling of health data and confirm the GDPR Art. 9 exception."
+        )
+        recommendations.append(
+            "Confirm and document the legal exception for processing GDPR Art. 9 data."
+        )
+
     return {
         "project_id": project.id,
         "overall_status": overall_status,
@@ -334,3 +300,5 @@ def calculate_project_risk(project):
         "metrics": metrics,
         "recommendations": recommendations,
     }
+
+
