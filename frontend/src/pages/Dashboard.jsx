@@ -31,6 +31,7 @@ import {
 } from '@ant-design/icons'
 
 import MainCard from 'components/MainCard'
+import DashboardPdfExportButton from 'components/pdf/DashboardPdfExport'
 import { getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { getProjectStyle, getVisibleProjects, projectIconMap } from 'utils/project-display'
@@ -185,6 +186,11 @@ export default function Dashboard() {
             Overview of your ML projects and their privacy risk status.
           </Typography>
         </Box>
+
+        {/* Show export button only after data has loaded to avoid generating an empty report */}
+        {!loading && (
+          <DashboardPdfExportButton projects={projects} riskSummary={riskSummary} />
+        )}
 
       </Stack>
 
