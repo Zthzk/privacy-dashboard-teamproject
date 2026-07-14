@@ -48,6 +48,8 @@ export default function Notification() {
         open={open}
         anchorEl={anchorRef.current}
         popperOptions={{ modifiers: [{ name: 'offset', options: { offset: [0, 9] } }] }}
+        // Match the profile menu layer so notification content is never hidden by sticky tables.
+        sx={(theme) => ({ zIndex: theme.zIndex.modal + 2 })}
       >
         <ClickAwayListener onClickAway={() => setOpen(false)}>
           <Paper sx={{ width: 320, maxWidth: 'calc(100vw - 24px)', boxShadow: 3 }}>

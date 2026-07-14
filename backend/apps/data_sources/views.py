@@ -44,7 +44,6 @@ def normalize_art_9_data(data_source):
     return "unknown"
 
 
-
 # Centralised here so the frontend does not need to duplicate hint texts.
 @require_http_methods(["GET"])
 def data_format_hints(request):

@@ -24,6 +24,8 @@ export default function MobileSection() {
         open={open}
         anchorEl={anchorRef.current}
         popperOptions={{ modifiers: [{ name: 'offset', options: { offset: [0, 9] } }] }}
+        // Keep the mobile account menu above sticky table headers and page overlays.
+        sx={(theme) => ({ zIndex: theme.zIndex.modal + 2 })}
       >
         <ClickAwayListener onClickAway={() => setOpen(false)}>
           <Paper sx={{ p: 1, boxShadow: 3 }}>
