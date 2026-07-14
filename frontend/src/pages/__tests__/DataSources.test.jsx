@@ -132,6 +132,7 @@ describe('DataSources page', () => {
     expect(screen.getByText('Change History')).toBeInTheDocument()
     expect(await screen.findByText('Current v2')).toBeInTheDocument()
     expect(screen.getByText('Compared with v1')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'View full history' })).toBeInTheDocument()
     expect(within(dialog).getByTestId('risk-severity-marker')).toHaveAttribute('data-severity-position', '50')
     within(dialog)
       .getAllByTestId('compliance-finding-marker')
@@ -175,6 +176,30 @@ describe('DataSources page', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'All selected compliance findings' })).not.toBeInTheDocument()
     })
+  })
+
+  test('opens the complete version history from the dataset preview', async () => {
+    const user = userEvent.setup()
+
+    renderDataSources()
+
+    await screen.findByText('Support Tickets')
+    await user.click(screen.getByRole('button', { name: 'Preview Support Tickets' }))
+
+    const previewDialog = screen.getByRole('dialog', { name: /Dataset Preview/ })
+    await within(previewDialog).findByText('Current v2')
+    await user.click(within(previewDialog).getByRole('button', { name: 'View full history' }))
+
+    const historyDialog = screen.getByRole('dialog', { name: /Version History/ })
+    expect(within(historyDialog).getByText('Version 2 Snapshot')).toBeInTheDocument()
+    expect(within(historyDialog).getByRole('button', { name: 'Select version 1' })).toBeInTheDocument()
+
+    await user.click(within(historyDialog).getByRole('button', { name: 'Close version history' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Version History/ })).not.toBeInTheDocument()
+    })
+    expect(screen.getByRole('dialog', { name: /Dataset Preview/ })).toBeInTheDocument()
   })
 
   test('opens the same dataset preview from the action button', async () => {

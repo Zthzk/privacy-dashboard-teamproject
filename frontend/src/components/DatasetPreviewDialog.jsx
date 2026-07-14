@@ -23,6 +23,7 @@ import {
   SecurityScanOutlined,
 } from '@ant-design/icons'
 
+import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
 import { getDataSourceVersions } from 'api/dataSources'
 import { getComplianceFindings, getDataSourcePreviewText } from 'utils/data-source-preview'
 
@@ -239,6 +240,7 @@ function ComplianceFindingsList({ findings }) {
 
 export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenProject }) {
   const [findingsPopupOpen, setFindingsPopupOpen] = useState(false)
+  const [historyPopupOpen, setHistoryPopupOpen] = useState(false)
   const [versionPreview, setVersionPreview] = useState({ versions: [], loading: false, error: '' })
   const previewText = getDataSourcePreviewText(source)
   const riskChip = getRiskChip(source?.risk_level)
@@ -297,6 +299,7 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
 
   function handleClose() {
     setFindingsPopupOpen(false)
+    setHistoryPopupOpen(false)
     onClose()
   }
 
@@ -541,6 +544,17 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
                       )}
                     </Stack>
                   )}
+
+                  <Button
+                    size="small"
+                    color="primary"
+                    aria-label="View full history"
+                    endIcon={<RightOutlined />}
+                    sx={{ alignSelf: 'flex-start', px: 0, minWidth: 'auto' }}
+                    onClick={() => setHistoryPopupOpen(true)}
+                  >
+                    View full history
+                  </Button>
                 </Stack>
               )}
             </PreviewPanel>
@@ -628,6 +642,11 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
           </Button>
         </DialogActions>
       </Dialog>
+      <DataSourceVersionHistoryDialog
+        source={source}
+        open={historyPopupOpen}
+        onClose={() => setHistoryPopupOpen(false)}
+      />
     </Dialog>
   )
 }
