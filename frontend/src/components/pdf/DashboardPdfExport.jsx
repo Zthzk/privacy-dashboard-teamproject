@@ -371,7 +371,6 @@ function DashboardReportDocument({ projects, riskSummary, generatedAt }) {
     </Document>
   )
 }
-
 // ─── Export Button ─────────────────────────────────────────────────────────────
 
 export default function DashboardPdfExportButton({ projects, riskSummary }) {
@@ -415,4 +414,3 @@ export default function DashboardPdfExportButton({ projects, riskSummary }) {
     </Button>
   )
 }
-

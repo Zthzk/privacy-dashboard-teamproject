@@ -12,7 +12,6 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
-import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import OutlinedInput from '@mui/material/OutlinedInput'
 import Select from '@mui/material/Select'
@@ -24,13 +23,14 @@ import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import {
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   FolderOutlined,
-  MoreOutlined,
   PlusOutlined,
   RightOutlined,
   SearchOutlined,
@@ -86,6 +86,7 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
+// Maps backend risk values and traffic-light values to Material UI Chip properties.
 function getProjectRisk(project) {
   const riskValue = project.overall_status ?? project.risk_status ?? project.risk_level
 
@@ -105,11 +106,13 @@ function getProjectRisk(project) {
     return { level: 'medium', label: 'Medium', color: 'warning' }
   }
 
-  return { level: 'low', label: 'Low', color: 'success' }
+  return { level: 'low', label: 'Low', color: 'success' } // Missing, unknown, or explicitly low values are displayed as low risk
 }
 
 function ProjectIcon({ project }) {
   const style = getProjectStyle(project)
+   // Prefer an icon already attached to the project. Otherwise resolve it
+   // from the stored icon key and finally fall back to a folder icon
   const Icon = project.icon || projectIconMap[style.key] || FolderOutlined
 
   return (
@@ -306,8 +309,6 @@ export default function Projects() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [loading, setLoading] = useState(() => readCachedProjects().length === 0)
   const [error, setError] = useState('')
-  const [menuAnchor, setMenuAnchor] = useState(null)
-  const [menuProject, setMenuProject] = useState(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createForm, setCreateForm] = useState(initialCreateForm)
   const [createErrors, setCreateErrors] = useState({})
@@ -421,16 +422,6 @@ export default function Projects() {
     { key: 'high', label: 'High Risk', icon: <Box component="span" sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'error.main' }} /> },
   ]
 
-  function openProjectMenu(event, project) {
-    setMenuAnchor(event.currentTarget)
-    setMenuProject(project)
-  }
-
-  function closeProjectMenu() {
-    setMenuAnchor(null)
-    setMenuProject(null)
-  }
-
   function closeCreateDialog() {
     setCreateDialogOpen(false)
     setCreateForm(initialCreateForm)
@@ -499,7 +490,6 @@ export default function Projects() {
 
   function openEditDialog(project) {
     setEditingProject(project)
-    closeProjectMenu()
   }
 
   function closeEditDialog() {
@@ -509,7 +499,6 @@ export default function Projects() {
 
   function openDeleteDialog(project) {
     setDeleteDialogProject(project)
-    closeProjectMenu()
   }
 
   function closeDeleteDialog() {
@@ -681,7 +670,7 @@ export default function Projects() {
                   <TableCell sx={{ width: 145 }}>Data Sources</TableCell>
                   <TableCell sx={{ width: 150 }}>Risk</TableCell>
                   <TableCell sx={{ width: 170 }}>Last Updated</TableCell>
-                  <TableCell align="right" sx={{ width: 110 }}>Actions</TableCell>
+                  <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -755,16 +744,51 @@ export default function Projects() {
                         </TableCell>
                         <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(project.updated_at)}</TableCell>
                         <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                          <IconButton
-                            size="small"
-                            aria-label={`More actions for ${project.name}`}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              openProjectMenu(event, project)
-                            }}
-                          >
-                            <MoreOutlined />
-                          </IconButton>
+                          <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+                            <Tooltip title="Preview project">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Preview ${project.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    navigate(`/projects/${project.id}`)
+                                  }}
+                                >
+                                  <EyeOutlined />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title="Edit project">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Edit ${project.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    openEditDialog(project)
+                                  }}
+                                >
+                                  <EditOutlined />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title="Delete project">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  aria-label={`Delete ${project.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    openDeleteDialog(project)
+                                  }}
+                                >
+                                  <DeleteOutlined />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     )
@@ -814,17 +838,6 @@ export default function Projects() {
           </Stack>
         </MainCard>
       </Stack>
-
-      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeProjectMenu}>
-        <MenuItem onClick={() => openEditDialog(menuProject)}>
-          <EditOutlined style={{ marginRight: 10 }} />
-          Edit
-        </MenuItem>
-        <MenuItem onClick={() => openDeleteDialog(menuProject)} sx={{ color: 'error.main' }}>
-          <DeleteOutlined style={{ marginRight: 10 }} />
-          Delete
-        </MenuItem>
-      </Menu>
 
       <Dialog open={Boolean(deleteDialogProject)} onClose={closeDeleteDialog} fullWidth maxWidth="xs">
         <DialogTitle>
