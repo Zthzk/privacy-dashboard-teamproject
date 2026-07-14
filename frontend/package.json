@@ -21,6 +21,7 @@
     "@mui/material": "^9.0.1",
     "@mui/system": "^9.0.1",
     "@mui/x-charts": "^9.2.0",
+    "@react-pdf/renderer": "^4.5.1",
     "axios": "^1.16.0",
     "formik": "^2.4.9",
     "framer-motion": "^12.38.0",

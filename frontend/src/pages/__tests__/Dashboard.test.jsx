@@ -103,6 +103,25 @@ beforeEach(() => {
 })
 
 describe('Dashboard page', () => {
+  test('risk summary renders reliable metrics without category-derived labels', async () => {
+    renderDashboard()
+
+    await screen.findByText('Support Analytics Project')
+
+    expect(screen.getByText('Risk Summary')).toBeInTheDocument()
+    expect(screen.queryByText('Contact data sources')).not.toBeInTheDocument()
+    expect(screen.queryByText('Location data sources')).not.toBeInTheDocument()
+    expect(screen.getByText('Total data sources')).toBeInTheDocument()
+    expect(screen.getByText('Personal data sources')).toBeInTheDocument()
+    expect(screen.getByText('High risk sources')).toBeInTheDocument()
+    expect(screen.getByText('Art. 9 sources')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Review projects with personal data or Art. 9 data before using their data sources in model training.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   test('opens data source action menu inside project preview', async () => {
     const user = userEvent.setup()
 

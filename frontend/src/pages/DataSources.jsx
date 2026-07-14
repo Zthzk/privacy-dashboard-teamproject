@@ -487,7 +487,6 @@ export default function DataSources() {
         source={dataSourcePendingHistory}
         onClose={() => setDataSourcePendingHistory(null)}
       />
-
     </Stack>
   )
 }

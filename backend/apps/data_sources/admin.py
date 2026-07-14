@@ -19,4 +19,5 @@ class DataSourceAdmin(admin.ModelAdmin):
         "contains_personal_data",
         "project",
     )
+    readonly_fields = ("contains_personal_data",)
     search_fields = ("name", "description", "location", "project__name")

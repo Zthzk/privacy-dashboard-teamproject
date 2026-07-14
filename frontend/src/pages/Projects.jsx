@@ -86,6 +86,7 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
+// Maps backend risk values and traffic-light values to Material UI Chip properties.
 function getProjectRisk(project) {
   const riskValue = project.overall_status ?? project.risk_status ?? project.risk_level
 
@@ -105,11 +106,13 @@ function getProjectRisk(project) {
     return { level: 'medium', label: 'Medium', color: 'warning' }
   }
 
-  return { level: 'low', label: 'Low', color: 'success' }
+  return { level: 'low', label: 'Low', color: 'success' } // Missing, unknown, or explicitly low values are displayed as low risk
 }
 
 function ProjectIcon({ project }) {
   const style = getProjectStyle(project)
+   // Prefer an icon already attached to the project. Otherwise resolve it
+   // from the stored icon key and finally fall back to a folder icon
   const Icon = project.icon || projectIconMap[style.key] || FolderOutlined
 
   return (

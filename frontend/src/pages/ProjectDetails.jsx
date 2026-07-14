@@ -55,6 +55,7 @@ import {
 import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
 import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import MainCard from 'components/MainCard'
+import ProjectPdfExportButton from 'components/pdf/ProjectPdfExport'
 import { deleteDataSource } from 'api/dataSources'
 import { getProjectOverview, updateProject } from 'api/projects'
 import { readCachedDataSources, writeCachedDataSources } from 'utils/data-source-cache'
@@ -324,6 +325,8 @@ function getSourceDataCategoryKeys(source) {
   return [...inferredKeys]
 }
 
+// counts how many data sources contain each normalized category and
+// returns the backend-compatible summary shape used by the category card
 function buildDetectedDataCategories(dataSources) {
   const counts = new Map()
 
@@ -333,6 +336,8 @@ function buildDetectedDataCategories(dataSources) {
     })
   })
 
+  // iterate over the stable display order rather than Map insertion order
+  // so the result remains predictable
   return dataCategoryOrder
     .filter((key) => counts.has(key))
     .map((key) => ({
@@ -344,6 +349,10 @@ function buildDetectedDataCategories(dataSources) {
     }))
 }
 
+// Sorts categories using three deterministic criteria:
+// 1. Categories detected in more sources appear first.
+// 2. Equal counts are resolved using business/privacy priority.
+// 3. Remaining ties use the stable display order.
 function sortDetectedDataCategories(categories) {
   return [...categories].sort((first, second) => {
     const countDiff = (second.source_count ?? 0) - (first.source_count ?? 0)
@@ -370,6 +379,7 @@ function buildRiskAssessmentFallback(dataSources) {
   let reason = 'No personal data or high-risk categories are currently detected.'
   const recommendations = ['Keep data source metadata documented and review it when sources change.']
 
+  // Art. 9 data is treated like a high-risk source
   if (metrics.high_risk_sources > 0 || metrics.art_9_sources > 0) {
     overallStatus = 'red'
     reason = 'At least one data source is high risk or contains GDPR Art. 9 special category data.'
@@ -404,12 +414,15 @@ function normalizeSampleDataSource(source) {
   }
 }
 
+// allows project details to appear immediately while the latest
+// server response is still loading or temporarily unavailable
 function buildLocalProjectOverview(projectId) {
   // Build the same shape as the API response from session cache for instant project-detail recovery.
   const projects = applyProjectStyleOverrides(readCachedProjects(), readProjectStyleOverrides())
   const project = projects.find((item) => String(item.id) === String(projectId))
   if (!project) return null
 
+  // Route parameters are strings, while cached IDs may be numbers
   const dataSources = readCachedDataSources()
     .filter((source) => String(source.project) === String(projectId))
     .map(normalizeSampleDataSource)
@@ -476,7 +489,7 @@ function RiskDistributionCard({ metrics }) {
   const total = Math.max(metrics.total_data_sources ?? high + medium, 0)
   const low = Math.max(total - high - medium, 0)
   const hasSources = total > 0
-  const safeTotal = hasSources ? total : 1
+  const safeTotal = hasSources ? total : 1 // avoid division by zero while keeping all displayed percentages at zero
   const highDegrees = (high / safeTotal) * 360
   const mediumDegrees = (medium / safeTotal) * 360
   const highEnd = highDegrees
@@ -688,9 +701,13 @@ export default function ProjectDetails() {
   const [savingProject, setSavingProject] = useState(false)
 
   useEffect(() => {
+    // Prevent asynchronous callbacks from updating state after the component
+    // has unmounted or projectId has changed.
     let isActive = true
     const localOverview = buildLocalProjectOverview(projectId)
 
+    // defer the local state update until after the current effect setup
+    // avoid performing synchronous state updates directly inside the effect
     queueMicrotask(() => {
       if (!isActive) return
 
@@ -747,6 +764,7 @@ export default function ProjectDetails() {
       })
 
     return () => {
+      // ignore any pending API result after cleanup
       isActive = false
     }
   }, [projectId])
@@ -850,6 +868,8 @@ export default function ProjectDetails() {
     })
   }, [dataSources, search])
 
+  // prefer the backend assessment. Build a local result only when the API
+  // response or cached overview does not contain one.
   const effectiveRiskAssessment = useMemo(
     () => riskAssessment ?? buildRiskAssessmentFallback(dataSources),
     [dataSources, riskAssessment],
@@ -960,6 +980,11 @@ export default function ProjectDetails() {
               </Stack>
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <ProjectPdfExportButton
+                project={project}
+                dataSources={dataSources}
+                riskAssessment={riskAssessment}
+              />
               <Button variant="outlined" startIcon={<EditOutlined />} onClick={openEditProjectDialog} sx={{ minWidth: 150 }}>
                 Edit Project
               </Button>
@@ -1255,7 +1280,10 @@ export default function ProjectDetails() {
                                     color="error"
                                     aria-label={`Delete ${source.name}`}
                                     disabled={deletingDataSourceId === source.id}
-                                    onClick={() => setDataSourcePendingDelete(source)}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      setDataSourcePendingDelete(source)
+                                    }}
                                   >
                                     <DeleteOutlined />
                                   </IconButton>
@@ -1302,7 +1330,6 @@ export default function ProjectDetails() {
             source={dataSourcePendingHistory}
             onClose={() => setDataSourcePendingHistory(null)}
           />
-
           <Dialog
             open={Boolean(dataSourcePendingDelete)}
             onClose={() => setDataSourcePendingDelete(null)}

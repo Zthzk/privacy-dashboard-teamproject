@@ -14,6 +14,8 @@ from django.views.decorators.http import require_http_methods
 from apps.projects.models import Project
 from apps.risk_assessments.services import apply_data_source_risk_assessment
 
+from apps.risk_assessments.violation_weights import VIOLATION_WEIGHTS
+
 from .format_hints import DATA_FORMAT_HINTS
 from .models import DataSource, DataSourceVersion
 
@@ -25,6 +27,7 @@ RISK_LABELS = {
 }
 
 
+# Reads the stored risk level from metadata and maps it to a canonical label key.
 def normalize_risk_level(data_source):
     """Return a supported risk level for the current data source."""
     risk_level = (data_source.metadata or {}).get("risk_level")
@@ -35,6 +38,7 @@ def normalize_risk_level(data_source):
     return "low"
 
 
+# Normalises the art_9_data metadata value to one of the four expected string tokens.
 def normalize_art_9_data(data_source):
     """Normalize the current Art. 9 assessment to a supported string value."""
     art_9_data = (data_source.metadata or {}).get("art_9_data")
@@ -45,17 +49,34 @@ def normalize_art_9_data(data_source):
     return "unknown"
 
 
+# Centralised here so the frontend does not need to duplicate hint texts.
 @require_http_methods(["GET"])
 def data_format_hints(request):
-    """Centralised here so the frontend does not need to duplicate hint texts."""
-    return JsonResponse(DATA_FORMAT_HINTS)
+    enriched = {}
+    for fmt, hints in DATA_FORMAT_HINTS.items():
+        enriched[fmt] = {
+            **hints,
+            "checklist": [
+                {
+                    "label": label,
+                    **VIOLATION_WEIGHTS.get(
+                        label,
+                        {
+                            "weight": 1,
+                            "article": "Art. 6 GDPR",
+                            "is_personal_data": False,
+                            "is_art_9": False,
+                        },
+                    ),
+                }
+                for label in hints["checklist"]
+            ],
+        }
+    return JsonResponse(enriched)
 
 
 def latest_version_number(data_source):
-    """
-    Return the highest version number associated with the given data source.
-    Returns None if the data source has no version history.
-    """
+    """Return the highest stored version number for a data source, if any."""
     annotated_latest_version_number = getattr(
         data_source,
         "current_version_number",
@@ -70,6 +91,7 @@ def latest_version_number(data_source):
     return latest_version.version_number
 
 
+# Converts a DataSource model instance to the dict returned in all API responses.
 def serialize_data_source(data_source, include_project=False):
     """Convert a DataSource instance into an API response dictionary."""
     risk_level = normalize_risk_level(data_source)
@@ -244,6 +266,7 @@ def data_sources(request):
     )
 
 
+# Builds a consistent JSON error response, optionally including field-level validation errors.
 def json_error(message, status=400, errors=None):
     """Build a consistent JSON error response for API validation failures."""
     payload = {"error": message}
@@ -253,6 +276,7 @@ def json_error(message, status=400, errors=None):
     return JsonResponse(payload, status=status)
 
 
+# Parses the request body as JSON, returning None on malformed input.
 def parse_json_body(request):
     """Parse the request body as JSON, returning None for invalid JSON."""
     try:
@@ -261,6 +285,7 @@ def parse_json_body(request):
         return None
 
 
+# Validates and normalises the shared fields present in both POST and PATCH payloads.
 def validate_data_source_payload(payload):
     """Validate and normalize shared fields used when creating a data source."""
     metadata = payload.get("metadata", {})
@@ -269,13 +294,8 @@ def validate_data_source_payload(payload):
     if not isinstance(metadata, dict):
         return None, json_error("metadata must be a JSON object.")
 
-    contains_personal_data = payload.get("contains_personal_data", False)
-    if not isinstance(contains_personal_data, bool):
-        return None, json_error("contains_personal_data must be a boolean.")
-
     return {
         "metadata": metadata,
-        "contains_personal_data": contains_personal_data,
     }, None
 
 
@@ -323,7 +343,6 @@ def project_data_sources(request, project_id):
         data_format=payload.get("data_format", DataSource.DataFormat.TEXT),
         description=payload.get("description", ""),
         location=payload.get("location", ""),
-        contains_personal_data=normalized_payload["contains_personal_data"],
         metadata=normalized_payload["metadata"],
         compliance_violations=compliance_violations,
     )

@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
@@ -52,9 +53,25 @@ export default function DataFormatHintAlert({ hint }) {
             {hint.checklist?.length > 0 && (
               <Stack spacing={0.25}>
                 <Typography variant="body2" fontWeight={500}>Check your data for:</Typography>
-                {hint.checklist.map((item) => (
-                  <Typography key={item} variant="body2">• {item}</Typography>
-                ))}
+                {hint.checklist.map((item) => {
+                  const label = item?.label ?? item
+                  const weight = item?.weight
+                  const article = item?.article
+                  return (
+                    <Stack key={label} direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Typography variant="body2">• {label}</Typography>
+                      {article && (
+                        <Chip
+                          size="small"
+                          label={article}
+                          color={weight === 3 ? 'error' : weight === 2 ? 'warning' : 'default'}
+                          variant="outlined"
+                          sx={{ fontSize: 11, height: 18, '& .MuiChip-label': { px: 0.75 } }}
+                        />
+                      )}
+                    </Stack>
+                  )
+                })}
               </Stack>
             )}
           </Stack>
