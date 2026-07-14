@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import Avatar from '@mui/material/Avatar'
@@ -21,11 +21,9 @@ import TableRow from '@mui/material/TableRow'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import {
-  CarOutlined,
   CloseOutlined,
   DatabaseOutlined,
   EyeOutlined,
-  MailOutlined,
   MessageOutlined,
   MoreOutlined,
   RightOutlined,
@@ -35,6 +33,7 @@ import {
 
 import MainCard from 'components/MainCard'
 import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
+import DashboardPdfExportButton from 'components/pdf/DashboardPdfExport'
 import { getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { getProjectStyle, getVisibleProjects, projectIconMap } from 'utils/project-display'
@@ -90,10 +89,6 @@ function hasArt9Data(source) {
 
 function getProjectRisk(project) {
   return projectRiskChipProps(project)
-}
-
-function countSourcesByCategory(dataSources, categoryKey) {
-  return dataSources.filter((source) => source.metadata?.data_category_keys?.includes(categoryKey)).length
 }
 
 function ProjectIcon({ project }) {
@@ -171,9 +166,10 @@ export default function Dashboard() {
   }, [selectedProjectSources])
   const riskSummary = useMemo(
     () => [
-      { label: 'Contact data sources', value: countSourcesByCategory(dataSources, 'contact_data'), icon: MailOutlined, color: 'primary' },
-      { label: 'Location data sources', value: countSourcesByCategory(dataSources, 'location_data'), icon: CarOutlined, color: 'secondary' },
+      { label: 'Total data sources', value: dataSources.length, icon: DatabaseOutlined, color: 'primary' },
       { label: 'Personal data sources', value: dataSources.filter((source) => source.contains_personal_data).length, icon: TeamOutlined, color: 'success' },
+      { label: 'High risk sources', value: dataSources.filter((source) => getSourceRisk(source).label === 'High').length, icon: ThunderboltOutlined, color: 'error' },
+      { label: 'Art. 9 sources', value: dataSources.filter(hasArt9Data).length, icon: EyeOutlined, color: 'secondary' },
     ],
     [dataSources],
   )
@@ -193,6 +189,11 @@ export default function Dashboard() {
             Overview of your ML projects and their privacy risk status.
           </Typography>
         </Box>
+
+        {/* Show export button only after data has loaded to avoid generating an empty report */}
+        {!loading && (
+          <DashboardPdfExportButton projects={projects} riskSummary={riskSummary} />
+        )}
 
       </Stack>
 
@@ -540,7 +541,7 @@ export default function Dashboard() {
               <Box>
                 <Typography variant="subtitle1">Recommendation</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Review projects with personal data or Art. 9 categories before using their data sources in model training.
+                  Review projects with personal data or Art. 9 data before using their data sources in model training.
                 </Typography>
                 <Button size="small" endIcon={<RightOutlined aria-hidden="true" />}>
                   View details

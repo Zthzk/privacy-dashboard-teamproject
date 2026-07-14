@@ -53,6 +53,7 @@ import {
 
 import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import MainCard from 'components/MainCard'
+import ProjectPdfExportButton from 'components/pdf/ProjectPdfExport'
 import { deleteDataSource } from 'api/dataSources'
 import { getProjectOverview, updateProject } from 'api/projects'
 import { readCachedDataSources, writeCachedDataSources } from 'utils/data-source-cache'
@@ -976,6 +977,11 @@ export default function ProjectDetails() {
               </Stack>
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <ProjectPdfExportButton
+                project={project}
+                dataSources={dataSources}
+                riskAssessment={riskAssessment}
+              />
               <Button variant="outlined" startIcon={<EditOutlined />} onClick={openEditProjectDialog} sx={{ minWidth: 150 }}>
                 Edit Project
               </Button>

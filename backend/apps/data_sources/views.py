@@ -11,6 +11,8 @@ from django.views.decorators.http import require_http_methods
 from apps.projects.models import Project
 from apps.risk_assessments.services import apply_data_source_risk_assessment
 
+from apps.risk_assessments.violation_weights import VIOLATION_WEIGHTS
+
 from .format_hints import DATA_FORMAT_HINTS
 from .models import DataSource
 
@@ -22,6 +24,7 @@ RISK_LABELS = {
 }
 
 
+# Reads the stored risk level from metadata and maps it to a canonical label key.
 def normalize_risk_level(data_source):
     risk_level = data_source.metadata.get("risk_level")
     if risk_level in RISK_LABELS:
@@ -31,6 +34,7 @@ def normalize_risk_level(data_source):
     return "low"
 
 
+# Normalises the art_9_data metadata value to one of the four expected string tokens.
 def normalize_art_9_data(data_source):
     art_9_data = data_source.metadata.get("art_9_data")
     if isinstance(art_9_data, bool):
@@ -43,9 +47,30 @@ def normalize_art_9_data(data_source):
 # Centralised here so the frontend does not need to duplicate hint texts.
 @require_http_methods(["GET"])
 def data_format_hints(request):
-    return JsonResponse(DATA_FORMAT_HINTS)
+    enriched = {}
+    for fmt, hints in DATA_FORMAT_HINTS.items():
+        enriched[fmt] = {
+            **hints,
+            "checklist": [
+                {
+                    "label": label,
+                    **VIOLATION_WEIGHTS.get(
+                        label,
+                        {
+                            "weight": 1,
+                            "article": "Art. 6 GDPR",
+                            "is_personal_data": False,
+                            "is_art_9": False,
+                        },
+                    ),
+                }
+                for label in hints["checklist"]
+            ],
+        }
+    return JsonResponse(enriched)
 
 
+# Converts a DataSource model instance to the dict returned in all API responses.
 def serialize_data_source(data_source, include_project=False):
     risk_level = normalize_risk_level(data_source)
     art_9_data = normalize_art_9_data(data_source)
@@ -94,6 +119,7 @@ def data_sources(request):
     )
 
 
+# Builds a consistent JSON error response, optionally including field-level validation errors.
 def json_error(message, status=400, errors=None):
     payload = {"error": message}
     if errors:
@@ -102,6 +128,7 @@ def json_error(message, status=400, errors=None):
     return JsonResponse(payload, status=status)
 
 
+# Parses the request body as JSON, returning None on malformed input.
 def parse_json_body(request):
     try:
         return json.loads(request.body or "{}")
@@ -109,6 +136,7 @@ def parse_json_body(request):
         return None
 
 
+# Validates and normalises the shared fields present in both POST and PATCH payloads.
 def validate_data_source_payload(payload):
     metadata = payload.get("metadata", {})
     if metadata is None:
@@ -116,13 +144,8 @@ def validate_data_source_payload(payload):
     if not isinstance(metadata, dict):
         return None, json_error("metadata must be a JSON object.")
 
-    contains_personal_data = payload.get("contains_personal_data", False)
-    if not isinstance(contains_personal_data, bool):
-        return None, json_error("contains_personal_data must be a boolean.")
-
     return {
         "metadata": metadata,
-        "contains_personal_data": contains_personal_data,
     }, None
 
 
@@ -167,7 +190,6 @@ def project_data_sources(request, project_id):
         data_format=payload.get("data_format", DataSource.DataFormat.TEXT),
         description=payload.get("description", ""),
         location=payload.get("location", ""),
-        contains_personal_data=normalized_payload["contains_personal_data"],
         metadata=normalized_payload["metadata"],
         compliance_violations=compliance_violations,
     )
@@ -232,11 +254,6 @@ def project_data_source_detail(request, project_id, data_source_id):
         if not isinstance(metadata, dict):
             return json_error("metadata must be a JSON object.")
         data_source.metadata = metadata
-    if "contains_personal_data" in payload:
-        contains_personal_data = payload.get("contains_personal_data")
-        if not isinstance(contains_personal_data, bool):
-            return json_error("contains_personal_data must be a boolean.")
-        data_source.contains_personal_data = contains_personal_data
     if "compliance_violations" in payload:
         compliance_violations = payload.get("compliance_violations")
         if not isinstance(compliance_violations, list):
