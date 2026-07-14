@@ -25,6 +25,8 @@ RISK_LEVEL_DISPLAY = {
     "high": "High",
 }
 
+# Default project recommendations shown for each overall risk level.
+# Additional recommendations may be appended later based on specific conditions such as GDPR Art. 9 data.
 RECOMMENDATIONS_BY_STATUS = {
     "yellow": [
         "Review and document the legal basis for processing personal data.",
@@ -234,6 +236,8 @@ def calculate_project_risk(project):
     ]
 
     metrics = {
+        # Aggregate project-level metrics from all data sources.
+        # These values drive both the overall traffic-light status and the summary cards displayed in the frontend.
         "total_data_sources": len(data_sources),
         "personal_data_sources": sum(
             1
@@ -255,6 +259,8 @@ def calculate_project_risk(project):
         reason = "No data sources have been added yet."
 
     elif metrics["high_risk_sources"] > 0 or metrics["art_9_sources"] > 0:
+        # Projects containing GDPR Art. 9 data require additional compliance guidance beyond
+        # the default high-risk actions.
         overall_status = "red"
         reason = (
             "At least one data source is high risk or contains GDPR Art. 9 "
@@ -272,6 +278,9 @@ def calculate_project_risk(project):
         overall_status = "green"
         reason = "No personal data or high-risk sources are currently detected."
 
+    # Copy the default recommendation list for the calculated status.
+    # A copy is created so additional context-specific recommendations can be appended
+    # without modifying the shared defaults.
     recommendations = list(RECOMMENDATIONS_BY_STATUS[overall_status])
 
     if overall_status == "red" and metrics["art_9_sources"] > 0:
