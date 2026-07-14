@@ -1340,6 +1340,7 @@ export default function ProjectDetails() {
 
               <DataCategoryCard categories={detectedDataCategories} />
             </Stack>
+          </Box>
 
           <DatasetPreviewDialog
             source={dataSourcePendingPreview}
