@@ -74,6 +74,7 @@ export default function Profile() {
         open={open}
         anchorEl={anchorRef.current}
         popperOptions={{ modifiers: [{ name: 'offset', options: { offset: [0, 9] } }] }}
+        sx={(theme) => ({ zIndex: theme.zIndex.modal + 2 })}
       >
         <ClickAwayListener onClickAway={() => setOpen(false)}>
           <Paper sx={{ width: 260, maxWidth: 'calc(100vw - 24px)', boxShadow: 3 }}>
