@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { deleteDataSource, getDataFormatHints, getDataSource, updateDataSource } from 'api/dataSources'
@@ -37,13 +37,24 @@ const updatedDataSource = {
   location: 'datasets/support-updated.json',
 }
 
-function renderEditDataSource(initialEntry = '/data-sources/11/edit?project=1') {
+function LocationDestination({ label }) {
+  const location = useLocation()
+
+  // Render the destination URL so return-context assertions stay independent from page internals.
+  return <div>{`${label}: ${location.pathname}${location.search}`}</div>
+}
+
+function renderEditDataSource(initialEntry = '/data-sources/11/edit?project=1', routerOptions = {}) {
+  const initialEntries = routerOptions.initialEntries ?? [initialEntry]
+  const initialIndex = routerOptions.initialIndex ?? initialEntries.length - 1
+
   return render(
-    <MemoryRouter initialEntries={[initialEntry]}>
+    <MemoryRouter initialEntries={initialEntries} initialIndex={initialIndex}>
       <Routes>
         <Route path="/data-sources/:dataSourceId/edit" element={<EditDataSource />} />
-        <Route path="/data-sources" element={<div>Data sources destination</div>} />
-        <Route path="/projects/:projectId" element={<div>Project details destination</div>} />
+        <Route path="/data-sources" element={<LocationDestination label="Data sources destination" />} />
+        <Route path="/dashboard" element={<LocationDestination label="Dashboard destination" />} />
+        <Route path="/projects/:projectId" element={<LocationDestination label="Project details destination" />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -91,10 +102,43 @@ describe('EditDataSource page', () => {
           metadata: expect.objectContaining({ manual_data: 'Example support ticket' }),
         }),
       )
-      expect(screen.getByText('Project details destination')).toBeInTheDocument()
+      expect(screen.getByText('Data sources destination: /data-sources')).toBeInTheDocument()
     })
 
     expect(readCachedDataSources()).toEqual([updatedDataSource])
+  })
+
+  test('returns to project details after saving from project context', async () => {
+    const user = userEvent.setup()
+
+    // Saving from project details must not redirect users back to the global data-source list.
+    renderEditDataSource('/data-sources/11/edit?project=1&returnTo=project')
+
+    const nameInput = await screen.findByDisplayValue('Support Tickets')
+
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Updated Support Tickets')
+    await user.click(screen.getByRole('button', { name: /Save Changes/ }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Project details destination: /projects/1')).toBeInTheDocument()
+    })
+  })
+
+  test('returns to dashboard after saving from dashboard context', async () => {
+    const user = userEvent.setup()
+
+    renderEditDataSource('/data-sources/11/edit?project=1&returnTo=dashboard')
+
+    const nameInput = await screen.findByDisplayValue('Support Tickets')
+
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Updated Support Tickets')
+    await user.click(screen.getByRole('button', { name: /Save Changes/ }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard destination: /dashboard')).toBeInTheDocument()
+    })
   })
 
   test('deletes a data source after confirmation and clears it from cache', async () => {
@@ -111,27 +155,43 @@ describe('EditDataSource page', () => {
 
     await waitFor(() => {
       expect(deleteDataSource).toHaveBeenCalledWith(1, 11)
-      expect(screen.getByText('Project details destination')).toBeInTheDocument()
+      expect(screen.getByText('Data sources destination: /data-sources')).toBeInTheDocument()
     })
 
     expect(readCachedDataSources()).toEqual([])
   })
 
-  test('cancels back to the current project details page', async () => {
+  test('cancels back to the previous page', async () => {
     const user = userEvent.setup()
 
-    renderEditDataSource()
+    renderEditDataSource('/data-sources/11/edit?project=1', {
+      initialEntries: ['/data-sources', '/data-sources/11/edit?project=1'],
+    })
 
     await screen.findByDisplayValue('Support Tickets')
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-    expect(screen.getByText('Project details destination')).toBeInTheDocument()
+    expect(screen.getByText('Data sources destination: /data-sources')).toBeInTheDocument()
+  })
+
+  test('returns to project details when canceling from project context without history', async () => {
+    const user = userEvent.setup()
+
+    // This guards the explicit returnTo query param when browser history cannot help.
+    renderEditDataSource('/data-sources/11/edit?project=1&returnTo=project')
+
+    await screen.findByDisplayValue('Support Tickets')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Project details destination: /projects/1')).toBeInTheDocument()
   })
 
   test('shows an error for an invalid edit route', () => {
+    // Without a project id the API route cannot be constructed safely.
     renderEditDataSource('/data-sources/11/edit')
 
     expect(screen.getByText('Could not identify the data source to edit.')).toBeInTheDocument()
     expect(getDataSource).not.toHaveBeenCalled()
+    expect(getDataFormatHints).not.toHaveBeenCalled()
   })
 })

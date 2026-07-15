@@ -49,7 +49,8 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(data_source.name, "Customer CSV")
         self.assertEqual(data_source.source_type, DataSource.SourceType.FILE)
         self.assertEqual(data_source.data_format, DataSource.DataFormat.CSV)
-        self.assertTrue(data_source.contains_personal_data)
+        self.assertFalse(data_source.contains_personal_data)
+        self.assertEqual(data_source.metadata["risk_level"], "low")
 
     def test_can_add_data_source_with_frontend_payload(self):
         response = self.post_json(
@@ -71,54 +72,70 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(payload["location"], "manual input")
         self.assertFalse(payload["contains_personal_data"])
         self.assertEqual(payload["metadata"]["manual_data"], "Example customer note")
+        self.assertNotIn("preview_text", payload)
         self.assertEqual(payload["risk_level"], "low")
         self.assertEqual(payload["art_9_data"], "no")
 
-    def test_detects_personal_data_risk_from_manual_data(self):
+    def test_large_manual_data_is_stored_without_backend_preview_text(self):
         response = self.post_json(
             self.url,
             {
-                "name": "Support notes",
+                "name": "Long manual sample",
                 "source_type": DataSource.SourceType.MANUAL,
                 "data_format": DataSource.DataFormat.TEXT,
                 "location": "manual input",
+                "metadata": {"manual_data": "A" * 1200},
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["metadata"]["manual_data"], "A" * 1200)
+        self.assertNotIn("preview_text", payload)
+
+    def test_text_fields_do_not_affect_risk_without_violations(self):
+        response = self.post_json(
+            self.url,
+            {
+                "name": "Patient Email IP Phone Biometric Dataset",
+                "source_type": DataSource.SourceType.API,
+                "data_format": DataSource.DataFormat.JSON,
+                "description": "Medical diagnosis with fingerprint and facial recognition notes.",
+                "location": "https://example.test/users?email=anna@example.com",
                 "metadata": {
-                    "manual_data": "Name: Anna Mueller\nEmail: anna@example.com",
+                    "manual_data": (
+                        "Name: Anna Mueller\nEmail: anna@example.com\n"
+                        "Phone: +49 123 4567890\nIP: 192.168.1.10\n"
+                        "Patient health diagnosis and medication."
+                    ),
                 },
             },
         )
 
         self.assertEqual(response.status_code, 201)
         payload = response.json()
-        self.assertTrue(payload["contains_personal_data"])
-        self.assertEqual(payload["risk_level"], "medium")
+        self.assertFalse(payload["contains_personal_data"])
+        self.assertEqual(payload["risk_level"], "low")
         self.assertEqual(payload["art_9_data"], "no")
-        self.assertIn("email", payload["metadata"]["personal_data_categories"])
-        self.assertIn("name", payload["metadata"]["personal_data_categories"])
-        self.assertIn("contact_data", payload["metadata"]["data_category_keys"])
-        self.assertIn("direct_identifiers", payload["metadata"]["data_category_keys"])
 
-    def test_detects_art_9_risk_from_manual_data(self):
+    def test_submitted_contains_personal_data_is_ignored_on_create(self):
         response = self.post_json(
             self.url,
             {
-                "name": "Patient notes",
+                "name": "Manual Flagged Source",
                 "source_type": DataSource.SourceType.MANUAL,
                 "data_format": DataSource.DataFormat.TEXT,
                 "location": "manual input",
-                "metadata": {
-                    "manual_data": "Patient diagnosis and medication notes.",
-                },
+                "contains_personal_data": True,
+                "metadata": {"manual_data": "Patient diagnosis and medication notes."},
             },
         )
 
         self.assertEqual(response.status_code, 201)
         payload = response.json()
-        self.assertTrue(payload["contains_personal_data"])
-        self.assertEqual(payload["risk_level"], "high")
-        self.assertEqual(payload["art_9_data"], "possible")
-        self.assertIn("health", payload["metadata"]["art_9_categories"])
-        self.assertIn("health_data", payload["metadata"]["data_category_keys"])
+        self.assertFalse(payload["contains_personal_data"])
+        self.assertEqual(payload["risk_level"], "low")
+        self.assertEqual(payload["art_9_data"], "no")
 
     def test_can_add_data_source_with_csrf_checks_enabled(self):
         csrf_client = Client(enforce_csrf_checks=True)
@@ -242,14 +259,15 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(data_source.source_type, DataSource.SourceType.API)
         self.assertEqual(data_source.data_format, DataSource.DataFormat.JSON)
         self.assertEqual(data_source.location, "https://example.test/api")
-        self.assertTrue(data_source.contains_personal_data)
-        self.assertEqual(data_source.metadata["risk_level"], "medium")
+        self.assertFalse(data_source.contains_personal_data)
+        self.assertEqual(data_source.metadata["risk_level"], "low")
 
-    def test_recalculates_risk_when_data_source_is_updated(self):
+    def test_recalculates_risk_from_violations_when_data_source_is_updated(self):
         data_source = DataSource.objects.create(
             project=self.project,
             name="Old Source",
-            metadata={"manual_data": "No personal data here."},
+            metadata={"manual_data": "Email: old@example.com. Medical diagnosis included."},
+            contains_personal_data=True,
         )
         url = reverse(
             "project-data-source-detail",
@@ -265,15 +283,16 @@ class ProjectDataSourcesApiTests(TestCase):
                 "metadata": {
                     "manual_data": "Email: anna@example.com. Medical diagnosis included.",
                 },
+                "contains_personal_data": True,
             }),
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertTrue(payload["contains_personal_data"])
-        self.assertEqual(payload["risk_level"], "high")
-        self.assertEqual(payload["art_9_data"], "possible")
+        self.assertFalse(payload["contains_personal_data"])
+        self.assertEqual(payload["risk_level"], "low")
+        self.assertEqual(payload["art_9_data"], "no")
 
     def test_can_move_data_source_to_another_project(self):
         data_source = DataSource.objects.create(
@@ -416,6 +435,193 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertEqual(response.json()["compliance_violations"], [])
 
 
+class ComplianceViolationRiskTests(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name="Risk Test Project")
+        self.url = reverse(
+            "project-data-sources",
+            kwargs={"project_id": self.project.id},
+        )
+
+    def post_json(self, payload):
+        return self.client.post(
+            self.url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_face_violation_raises_risk_to_high(self):
+        response = self.post_json({
+            "name": "Face Dataset",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.IMAGE,
+            "compliance_violations": [
+                "Faces or facial features (biometric data identification risks)",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["art_9_data"], "possible")
+        self.assertTrue(payload["contains_personal_data"])
+
+    def test_license_plate_violation_raises_risk_to_medium(self):
+        response = self.post_json({
+            "name": "Traffic Camera Feed",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.IMAGE,
+            "compliance_violations": [
+                "License plates or vehicle identifiers",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "medium")
+        self.assertTrue(payload["contains_personal_data"])
+
+    def test_general_compliance_violation_raises_risk_without_personal_data(self):
+        response = self.post_json({
+            "name": "Completeness Report",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.CSV,
+            "compliance_violations": [
+                "Evaluate data completeness, identifying missing attributes or anomalies that degrade safety",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "medium")
+        self.assertEqual(payload["art_9_data"], "no")
+        self.assertFalse(payload["metadata"]["contains_art9_data"])
+        self.assertFalse(payload["contains_personal_data"])
+
+    def test_multiple_general_compliance_violations_raise_high_without_personal_data(self):
+        response = self.post_json({
+            "name": "Scraped Bias Report",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.IMAGE,
+            "compliance_violations": [
+                "Check if images were harvested via untargeted scraping",
+                "Evaluate if dataset representation has demographic gaps or biases",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["art_9_data"], "no")
+        self.assertFalse(payload["metadata"]["contains_art9_data"])
+        self.assertFalse(payload["contains_personal_data"])
+
+    def test_three_weight_1_violations_escalate_to_high_without_art9(self):
+        # Three simultaneous personal data categories carry compounded risk equal
+        # to a high-risk source, but they are still not Art. 9 data.
+        response = self.post_json({
+            "name": "Customer Text Export",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.TEXT,
+            "compliance_violations": [
+                "Names, surnames, and pseudonyms",
+                "Email addresses and domain information",
+                "Phone numbers and digital messaging handles",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "high")
+        self.assertEqual(payload["art_9_data"], "no")
+        self.assertFalse(payload["metadata"]["contains_art9_data"])
+        self.assertTrue(payload["contains_personal_data"])
+
+    def test_two_weight_1_violations_stay_at_medium(self):
+        response = self.post_json({
+            "name": "Newsletter List",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.TEXT,
+            "compliance_violations": [
+                "Names, surnames, and pseudonyms",
+                "Email addresses and domain information",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "medium")
+
+    def test_no_violations_do_not_fall_back_to_keyword_detection(self):
+        response = self.post_json({
+            "name": "Patient Notes",
+            "source_type": DataSource.SourceType.MANUAL,
+            "data_format": DataSource.DataFormat.TEXT,
+            "metadata": {"manual_data": "Patient health diagnosis."},
+            "compliance_violations": [],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "low")
+        self.assertEqual(payload["art_9_data"], "no")
+        self.assertFalse(payload["contains_personal_data"])
+
+    def test_unknown_violation_labels_are_ignored(self):
+        response = self.post_json({
+            "name": "Unknown Violation Source",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.OTHER,
+            "compliance_violations": ["This label does not exist in the weights registry"],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "low")
+
+    def test_clearing_all_violations_returns_risk_to_low(self):
+        # Regression: previously the old contains_personal_data=True on the model
+        # was used as assessment input, so clearing violations kept risk at medium.
+        data_source = DataSource.objects.create(
+            project=self.project,
+            name="Image Set",
+            data_format=DataSource.DataFormat.IMAGE,
+            compliance_violations=["Faces or facial features (biometric data identification risks)"],
+            contains_personal_data=True,
+            metadata={"risk_level": "high"},
+        )
+        url = reverse(
+            "project-data-source-detail",
+            kwargs={"project_id": self.project.id, "data_source_id": data_source.id},
+        )
+
+        response = self.client.patch(
+            url,
+            data=json.dumps({"compliance_violations": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["risk_level"], "low")
+        self.assertFalse(payload["contains_personal_data"])
+        self.assertFalse(payload["metadata"]["contains_art9_data"])
+
+    def test_violation_score_is_stored_in_metadata(self):
+        response = self.post_json({
+            "name": "Voice Dataset",
+            "source_type": DataSource.SourceType.FILE,
+            "data_format": DataSource.DataFormat.AUDIO,
+            "compliance_violations": [
+                "Voice recordings capable of identifying specific natural persons",
+            ],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["metadata"]["violation_score"], 3)
+
+
 class DataFormatHintsApiTests(TestCase):
     def test_returns_hints_for_all_known_formats(self):
         response = self.client.get(reverse("data-format-hints"))
@@ -430,6 +636,41 @@ class DataFormatHintsApiTests(TestCase):
             self.assertIn("relevant_articles", payload[data_format])
             self.assertIn("checklist", payload[data_format])
 
+    def test_checklist_items_include_weight_and_article(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        for item in payload["image"]["checklist"]:
+            self.assertIn("label", item)
+            self.assertIn("weight", item)
+            self.assertIn("article", item)
+            self.assertIn("is_personal_data", item)
+            self.assertIn("is_art_9", item)
+            self.assertIsInstance(item["weight"], int)
+            self.assertIs(type(item["is_personal_data"]), bool)
+            self.assertIs(type(item["is_art_9"]), bool)
+
+    def test_face_checklist_item_has_art9_weight(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        face_item = next(
+            item for item in payload["image"]["checklist"]
+            if item["label"] == "Faces or facial features (biometric data identification risks)"
+        )
+        self.assertEqual(face_item["weight"], 3)
+        self.assertIn("Art. 9", face_item["article"])
+
+    def test_license_plate_has_lower_weight_than_face(self):
+        response = self.client.get(reverse("data-format-hints"))
+
+        payload = response.json()
+        checklist = {item["label"]: item for item in payload["image"]["checklist"]}
+        self.assertLess(
+            checklist["License plates or vehicle identifiers"]["weight"],
+            checklist["Faces or facial features (biometric data identification risks)"]["weight"],
+        )
+
     def test_image_format_has_art9_risk(self):
         response = self.client.get(reverse("data-format-hints"))
 
@@ -442,4 +683,3 @@ class DataFormatHintsApiTests(TestCase):
         payload = response.json()
         for data_format in ["text", "csv", "json", "other"]:
             self.assertFalse(payload[data_format]["art9_risk"])
-
