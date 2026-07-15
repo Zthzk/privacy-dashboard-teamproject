@@ -44,6 +44,7 @@ function titleCase(value) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+// Supports both the current top-level API field and versions using the earlier metadata-based structure
 function getArt9Display(source) {
   return titleCase(source?.art_9_data ?? source?.metadata?.art_9_data)
 }
@@ -201,6 +202,9 @@ function RiskRow({ label, children }) {
   )
 }
 
+
+// Reuse the same renderer in the preview and full findings dialog so their
+// structure, spacing, and accessibility behavior remain consistent 
 function ComplianceFindingsList({ findings }) {
   // Use one list renderer for the card and popup so bullet alignment cannot drift.
   return (
@@ -241,11 +245,15 @@ function ComplianceFindingsList({ findings }) {
 export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenProject }) {
   const [findingsPopupOpen, setFindingsPopupOpen] = useState(false)
   const [historyPopupOpen, setHistoryPopupOpen] = useState(false)
+  
+  // Keep the history request state together because the values describe one
+  // asynchronous operation and should normally be updated at the same time
   const [versionPreview, setVersionPreview] = useState({ versions: [], loading: false, error: '' })
   const previewText = getDataSourcePreviewText(source)
   const riskChip = getRiskChip(source?.risk_level)
   const complianceFindings = getComplianceFindings(source)
   const containsPersonalData = Boolean(source?.contains_personal_data)
+  
   // Split findings into the visible teaser list and hidden items opened from the popup.
   const visibleFindings = complianceFindings.slice(0, PREVIEW_FINDINGS_LIMIT)
   const hiddenFindingsCount = complianceFindings.length - PREVIEW_FINDINGS_LIMIT
@@ -259,6 +267,11 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
   )
 
   useEffect(() => {
+    /*
+     * Ignore responses after the selected source changes or this component
+     * unmounts. Otherwise an older request could overwrite the history of a
+     * newly selected source
+     */
     let isActive = true
 
     if (!source?.project || !source?.id) {
@@ -297,6 +310,8 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
     }
   }, [source])
 
+  // Closing the parent dialog also resets its nested dialogs so they do not
+  // reopen unexpectedly when another data source is selected
   function handleClose() {
     setFindingsPopupOpen(false)
     setHistoryPopupOpen(false)

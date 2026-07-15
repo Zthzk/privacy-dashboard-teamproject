@@ -50,6 +50,7 @@ function getRiskChip(riskLevel) {
   return { label: 'Low', color: 'success' }
 }
 
+// Supports both the current top-level API field and versions stored using the older metadata structure.
 function getArt9Value(source) {
   return source?.art_9_data ?? source?.metadata?.art_9_data ?? 'unknown'
 }
@@ -71,6 +72,8 @@ function getPrivacyStatus(version) {
   }
 }
 
+// compares only the privacy fields currently presented as tracked changes
+// general source metadata is shown in the snapshot 
 function buildChangeItems(selectedVersion, previousVersion) {
   if (!selectedVersion || !previousVersion) return []
 
@@ -186,6 +189,11 @@ export default function DataSourceVersionHistoryDialog({ source, open, onClose }
       }
     }
 
+    /*
+     * Defer these synchronous state updates until after the effect starts.
+     * avoids updating several pieces of dialog state directly during effect
+     * initialization while still resetting them before the request normally completes
+     */
     queueMicrotask(() => {
       if (!isActive) return
       setVersions([])
@@ -200,6 +208,7 @@ export default function DataSourceVersionHistoryDialog({ source, open, onClose }
 
         const nextVersions = Array.isArray(versionList) ? versionList : []
         setVersions(nextVersions)
+        // The API returns newest versions first, so select the latest one.
         setSelectedVersionNumber(nextVersions[0]?.version_number ?? null)
       })
       .catch(() => {
