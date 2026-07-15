@@ -8,9 +8,11 @@ import { createDataSource, getDataFormatHints } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import AddDataSource from '../AddDataSource'
 
+// Mock backend API calls so tests run without a real server
 vi.mock('api/dataSources')
 vi.mock('api/projects')
 
+// Sample project fixture used across tests
 const project = {
   id: 1,
   name: 'Support Analytics Project',
@@ -20,6 +22,7 @@ const project = {
   updated_at: '2026-05-18T10:00:00Z',
 }
 
+// Sample data source returned by the backend after a successful create
 const createdDataSource = {
   id: 11,
   project: 1,
@@ -33,6 +36,7 @@ const createdDataSource = {
   metadata: { manual_data: 'Example support ticket' },
 }
 
+// Renders the current URL so tests can assert navigation behavior without a real browser
 function LocationDestination({ label }) {
   const location = useLocation()
 
@@ -40,6 +44,7 @@ function LocationDestination({ label }) {
   return <div>{`${label}: ${location.pathname}${location.search}`}</div>
 }
 
+// Mounts AddDataSource inside a router with sibling routes for asserting navigation targets
 function renderAddDataSource(initialEntry = '/data-sources/new?project=1') {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
@@ -53,10 +58,12 @@ function renderAddDataSource(initialEntry = '/data-sources/new?project=1') {
   )
 }
 
+// Reads cached data sources from sessionStorage to verify the cache was updated after save
 function readCachedDataSources() {
   return JSON.parse(window.sessionStorage.getItem('privacy-dashboard.data-sources') || '[]')
 }
 
+// Reset mocks and provide default API responses before each test
 beforeEach(() => {
   vi.clearAllMocks()
   window.sessionStorage.clear()
@@ -66,6 +73,8 @@ beforeEach(() => {
 })
 
 describe('AddDataSource page', () => {
+  // Full happy-path: preset project loads, form is filled, data source is created and cached,
+  // then the page navigates to /data-sources (global flow without returnTo=project)
   test('loads the preset project and creates a data source', async () => {
     const user = userEvent.setup()
 
@@ -95,10 +104,11 @@ describe('AddDataSource page', () => {
     expect(readCachedDataSources()).toEqual([createdDataSource])
   })
 
+  // When the user arrives via a project page (returnTo=project), saving should return to
+  // the project overview rather than the global data-source list
   test('returns to project details after creating from project context', async () => {
     const user = userEvent.setup()
 
-    // Project-origin creation should return to the project overview, not the global data-source list.
     renderAddDataSource('/data-sources/new?project=1&returnTo=project')
 
     expect(await screen.findByDisplayValue('Support Analytics Project')).toBeInTheDocument()
@@ -112,10 +122,10 @@ describe('AddDataSource page', () => {
     })
   })
 
+  // Cancel uses the same return context as save so users do not lose their place
   test('cancels back to the selected project details page', async () => {
     const user = userEvent.setup()
 
-    // Cancel uses the same return context as save so users do not lose their place.
     renderAddDataSource('/data-sources/new?project=1&returnTo=project')
 
     await screen.findByDisplayValue('Support Analytics Project')
@@ -124,6 +134,7 @@ describe('AddDataSource page', () => {
     expect(screen.getByText('Project details destination: /projects/1')).toBeInTheDocument()
   })
 
+  // Submitting without filling required fields should show inline errors and not call the API
   test('shows validation errors when required fields are missing', async () => {
     const { container } = renderAddDataSource('/data-sources/new')
     await screen.findByRole('heading', { name: 'Add Data Source' })
@@ -135,6 +146,7 @@ describe('AddDataSource page', () => {
     expect(createDataSource).not.toHaveBeenCalled()
   })
 
+  // When no projects exist yet, the form shows a call-to-action directing the user to create one first
   test('points users to projects when no projects exist', async () => {
     getProjects.mockResolvedValue([])
 
