@@ -15,6 +15,7 @@ import Link from '@mui/material/Link'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { InfoCircleOutlined, SaveOutlined, UploadOutlined } from '@ant-design/icons'
 
@@ -128,6 +129,10 @@ export default function AddDataSource() {
     [form.project, projects],
   )
   const submitDisabled = saving || projects.length === 0 || !form.name.trim()
+
+  // Import requires a project to be selected so the backend knows where to create the data sources.
+  // presetProject covers the case where the user arrived via a project-specific link (URL param).
+  const noProjectSelected = !form.project && !presetProject
 
   // Auto-focus name input after projects are loaded
   useEffect(() => {
@@ -473,14 +478,21 @@ export default function AddDataSource() {
               Cancel
             </Button>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <Button
-                variant="outlined"
-                startIcon={<UploadOutlined />}
-                onClick={() => setImportDialogOpen(true)}
-                disabled={saving}
-              >
-                Import JSON
-              </Button>
+              {/* Tooltip explains why the button is greyed out when no project is selected.
+                  The <span> wrapper is required because disabled buttons suppress mouse events,
+                  which would otherwise prevent the tooltip from appearing. */}
+              <Tooltip title={noProjectSelected ? 'Please select a project first' : ''}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={<UploadOutlined />}
+                    onClick={() => setImportDialogOpen(true)}
+                    disabled={saving || noProjectSelected}
+                  >
+                    Import JSON
+                  </Button>
+                </span>
+              </Tooltip>
               <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={submitDisabled}>
                 {saving ? 'Adding...' : 'Add Data Source'}
               </Button>
