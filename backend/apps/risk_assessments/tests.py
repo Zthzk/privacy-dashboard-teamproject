@@ -166,7 +166,10 @@ class ProjectRiskAssessmentApiTests(TestCase):
         self.assertEqual(payload["metrics"]["personal_data_sources"], 0)
         self.assertGreaterEqual(len(payload["recommendations"]), 1)
 
+
     def test_personal_data_returns_yellow_risk_assessment(self):
+        # A project containing ordinary personal data should be classified as medium risk
+        # and return the corresponding recommendations.
         project = Project.objects.create(name="Personal Data Project")
         DataSource.objects.create(
             project=project,
@@ -184,14 +187,22 @@ class ProjectRiskAssessmentApiTests(TestCase):
         self.assertEqual(payload["metrics"]["total_data_sources"], 1)
         self.assertEqual(payload["metrics"]["personal_data_sources"], 1)
         self.assertEqual(payload["metrics"]["medium_risk_sources"], 1)
+        self.assertIn("Review and document the legal basis for processing personal data.",payload["recommendations"],)
+        self.assertIn("Remove or pseudonymize direct identifiers that are not required.",payload["recommendations"],)
 
     def test_art9_or_high_risk_data_returns_red_risk_assessment(self):
+        # Art. 9 data should elevate the project to high risk and include both the default high-risk recommendations
+        # and Art. 9 guidance.
         project = Project.objects.create(name="Sensitive Data Project")
         DataSource.objects.create(
             project=project,
             name="Medical Notes",
             contains_personal_data=True,
-            metadata={"risk_level": "red", "contains_art9_data": True},
+            metadata={
+                "risk_level": "red",
+                "contains_art9_data": True,
+                "data_category_keys": ["health_data"],
+            },
         )
 
         response = self.client.get(self.risk_url(project))
@@ -202,8 +213,14 @@ class ProjectRiskAssessmentApiTests(TestCase):
         self.assertEqual(payload["risk_level"], "high")
         self.assertEqual(payload["metrics"]["high_risk_sources"], 1)
         self.assertEqual(payload["metrics"]["art_9_sources"], 1)
+        self.assertIn("Stop using the high-risk data for training until it has been reviewed.", payload["recommendations"],)
+        self.assertIn("Check whether a Data Protection Impact Assessment is required.", payload["recommendations"],)
+        self.assertIn("Review the handling of health data and confirm the GDPR Art. 9 exception.", payload["recommendations"],)
+        self.assertIn("Confirm and document the legal exception for processing GDPR Art. 9 data.", payload["recommendations"],)
 
     def test_project_risk_response_omits_top_detected_data_categories(self):
+        # The project risk endpoint should return risk metrics and recommendations
+        # without exposing the deprecated top_detected_data_categories field.
         project = Project.objects.create(name="Category Project")
         DataSource.objects.create(
             project=project,
