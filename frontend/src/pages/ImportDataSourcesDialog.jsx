@@ -158,8 +158,11 @@ export default function ImportDataSourcesDialog({ open, onClose, projectId, proj
         setCompletedCount(i + 1)
         setProgress(Math.round(((i + 1) / entries.length) * 100))
       } catch (err) {
-        // Stop on first error and report progress
-        const message = err?.error ?? `Failed on entry ${i + 1} ("${entries[i].name}"). Import stopped.`
+        // Prefer the most specific error available. Django field-level errors (e.g. duplicate
+        // name from validate_constraints) are nested in err.errors — surface those first so
+        // the user sees the actual reason rather than the generic "validation failed" message.
+        const fieldError = err.errors && Object.values(err.errors).flat()[0]
+        const message = fieldError ?? err?.error ?? `Failed on entry ${i + 1} ("${entries[i].name}"). Import stopped.`
         setImportError(message)
         setImportState('error')
         return

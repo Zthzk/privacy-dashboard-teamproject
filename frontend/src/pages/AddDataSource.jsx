@@ -220,8 +220,7 @@ export default function AddDataSource() {
         project_name: createdDataSource.project_name ?? selectedProject?.name ?? '',
       })
 
-      // Navigate to project details or data sources list
-      navigate(getProjectDetailsPath(createdDataSource.project ?? form.project))
+      navigate(getReturnPath(returnTo, createdDataSource.project ?? form.project))
     } catch (saveError) {
       setError(saveError?.error ?? 'Could not save data source. Please check the form and try again.')
       setSaving(false)
