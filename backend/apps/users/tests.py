@@ -120,7 +120,7 @@ class AuthenticationTests(TestCase):
             {
                 "username": "newuser",
                 "email": "newuser@example.com",
-                "password": "SecurePassword123!",
+                "password": "Securepassword123?",
             },
             format="json",
         )

@@ -25,6 +25,24 @@ RISK_LEVEL_DISPLAY = {
     "high": "High",
 }
 
+# Default project recommendations shown for each overall risk level.
+# Additional recommendations may be appended later based on specific conditions such as GDPR Art. 9 data.
+RECOMMENDATIONS_BY_STATUS = {
+    "yellow": [
+        "Review and document the legal basis for processing personal data.",
+        "Remove or pseudonymize direct identifiers that are not required.",
+        "Limit access to the personal data sources to necessary team members only.",
+    ],
+    "red": [
+        "Stop using the high-risk data for training until it has been reviewed.",
+        "Check whether a Data Protection Impact Assessment is required.",
+        "Document safeguards such as access control, encryption, and pseudonymization.",
+    ],
+    "green": [
+        "Keep the data source metadata up to date and review it when sources change.",
+    ],
+}
+
 # The score and Art. 9 classification are intentionally separate: several
 # lower-weight non-Art. 9 violations may also produce a high total score.
 VIOLATION_HIGH_THRESHOLD = 3
@@ -212,17 +230,26 @@ def calculate_project_risk(project):
         level, explanation, metrics, and recommended actions.
     """
     data_sources = list(project.data_sources.all())
-    risk_levels = [normalize_risk_level(data_source) for data_source in data_sources]
+    risk_levels = [
+        normalize_risk_level(data_source)
+        for data_source in data_sources
+    ]
 
     metrics = {
+        # Aggregate project-level metrics from all data sources.
+        # These values drive both the overall traffic-light status and the summary cards displayed in the frontend.
         "total_data_sources": len(data_sources),
         "personal_data_sources": sum(
-            1 for data_source in data_sources if data_source.contains_personal_data
+            1
+            for data_source in data_sources
+            if data_source.contains_personal_data
         ),
         "high_risk_sources": risk_levels.count("high"),
         "medium_risk_sources": risk_levels.count("medium"),
         "art_9_sources": sum(
-            1 for data_source in data_sources if contains_art_9_data(data_source)
+            1
+            for data_source in data_sources
+            if contains_art_9_data(data_source)
         ),
     }
 
@@ -230,37 +257,39 @@ def calculate_project_risk(project):
     if metrics["total_data_sources"] == 0:
         overall_status = "green"
         reason = "No data sources have been added yet."
-        recommendations = [
-            "Add data sources to start the privacy risk assessment.",
-        ]
+
     elif metrics["high_risk_sources"] > 0 or metrics["art_9_sources"] > 0:
+        # Projects containing GDPR Art. 9 data require additional compliance guidance beyond
+        # the default high-risk actions.
         overall_status = "red"
         reason = (
             "At least one data source is high risk or contains GDPR Art. 9 "
             "special category data."
-        )
-        recommendations = [
-            "Review high-risk and Art. 9 data sources before model training.",
-            "Check whether a DPIA is required for this processing activity.",
-            "Document safeguards and access restrictions for sensitive data.",
-        ]
+    )
+
     elif metrics["personal_data_sources"] > 0 or metrics["medium_risk_sources"] > 0:
         overall_status = "yellow"
         reason = (
             "At least one data source contains personal data or has medium "
             "risk level."
-        )
-        recommendations = [
-            "Review legal basis for processing and ensure documentation is up to date.",
-            "Minimize directly identifying attributes where possible.",
-            "Document the processing purpose for each personal data source.",
-        ]
+    )
+
     else:
         overall_status = "green"
         reason = "No personal data or high-risk sources are currently detected."
-        recommendations = [
-            "Keep data source metadata documented and review it when sources change.",
-        ]
+
+    # Copy the default recommendation list for the calculated status.
+    # A copy is created so additional context-specific recommendations can be appended
+    # without modifying the shared defaults.
+    recommendations = list(RECOMMENDATIONS_BY_STATUS[overall_status])
+
+    if overall_status == "red" and metrics["art_9_sources"] > 0:
+        recommendations.append(
+            "Review the handling of health data and confirm the GDPR Art. 9 exception."
+        )
+        recommendations.append(
+            "Confirm and document the legal exception for processing GDPR Art. 9 data."
+        )
 
     return {
         "project_id": project.id,
@@ -280,3 +309,5 @@ def calculate_project_risk(project):
         "metrics": metrics,
         "recommendations": recommendations,
     }
+
+
