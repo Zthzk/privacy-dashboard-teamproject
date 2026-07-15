@@ -11,6 +11,10 @@ import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -23,7 +27,9 @@ import Typography from '@mui/material/Typography'
 import {
   CloseOutlined,
   DatabaseOutlined,
+  EditOutlined,
   EyeOutlined,
+  HistoryOutlined,
   MessageOutlined,
   MoreOutlined,
   RightOutlined,
@@ -32,6 +38,7 @@ import {
 } from '@ant-design/icons'
 
 import MainCard from 'components/MainCard'
+import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
 import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import DashboardPdfExportButton from 'components/pdf/DashboardPdfExport'
 import { getAllDataSources } from 'api/dataSources'
@@ -117,6 +124,8 @@ export default function Dashboard() {
   const [selectedProjectId, setSelectedProjectId] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [dataSourcePendingPreview, setDataSourcePendingPreview] = useState(null)
+  const [dataSourcePendingHistory, setDataSourcePendingHistory] = useState(null)
+  const [dataSourceActionMenu, setDataSourceActionMenu] = useState({ anchorEl: null, source: null })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -173,6 +182,33 @@ export default function Dashboard() {
     ],
     [dataSources],
   )
+
+  const closeDataSourceActionMenu = () => {
+    setDataSourceActionMenu({ anchorEl: null, source: null })
+  }
+
+  const openDataSourceActionMenu = (event, source) => {
+    event.stopPropagation()
+    setDataSourceActionMenu({ anchorEl: event.currentTarget, source })
+  }
+
+  const openDataSourcePreview = (source) => {
+    closeDataSourceActionMenu()
+    setDataSourcePendingPreview(source)
+  }
+
+  const openDataSourceHistory = (source) => {
+    closeDataSourceActionMenu()
+    setDataSourcePendingHistory(source)
+  }
+
+  const editDataSource = (source) => {
+    closeDataSourceActionMenu()
+    if (source?.id) {
+      setPreviewOpen(false)
+      navigate(`/data-sources/${source.id}/edit?project=${source.project ?? selectedProject?.id}&returnTo=dashboard`)
+    }
+  }
 
   return (
     <Stack spacing={2.5}>
@@ -439,7 +475,7 @@ export default function Dashboard() {
                                   aria-label={`Preview ${source.name}`}
                                   onClick={(event) => {
                                     event.stopPropagation()
-                                    setDataSourcePendingPreview(source)
+                                    openDataSourcePreview(source)
                                   }}
                                 >
                                   <EyeOutlined />
@@ -449,7 +485,10 @@ export default function Dashboard() {
                             <IconButton
                               size="small"
                               aria-label={`More actions for ${source.name}`}
-                              onClick={(event) => event.stopPropagation()}
+                              aria-controls={dataSourceActionMenu.source?.id === source.id ? 'dashboard-data-source-actions' : undefined}
+                              aria-haspopup="menu"
+                              aria-expanded={dataSourceActionMenu.source?.id === source.id ? 'true' : undefined}
+                              onClick={(event) => openDataSourceActionMenu(event, source)}
                             >
                               <MoreOutlined />
                             </IconButton>
@@ -470,6 +509,37 @@ export default function Dashboard() {
       </Dialog>
       )}
 
+      <Menu
+        id="dashboard-data-source-actions"
+        anchorEl={dataSourceActionMenu.anchorEl}
+        open={Boolean(dataSourceActionMenu.anchorEl)}
+        onClose={closeDataSourceActionMenu}
+        onClick={(event) => event.stopPropagation()}
+        slotProps={{
+          list: {
+            'aria-label': dataSourceActionMenu.source ? `Actions for ${dataSourceActionMenu.source.name}` : 'Data source actions',
+          },
+        }}
+      >
+        <MenuItem onClick={() => openDataSourcePreview(dataSourceActionMenu.source)}>
+          <ListItemIcon>
+            <EyeOutlined aria-hidden="true" />
+          </ListItemIcon>
+          <ListItemText>Preview data source</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => openDataSourceHistory(dataSourceActionMenu.source)}>
+          <ListItemIcon>
+            <HistoryOutlined aria-hidden="true" />
+          </ListItemIcon>
+          <ListItemText>View version history</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => editDataSource(dataSourceActionMenu.source)}>
+          <ListItemIcon>
+            <EditOutlined aria-hidden="true" />
+          </ListItemIcon>
+          <ListItemText>Edit data source</ListItemText>
+        </MenuItem>
+      </Menu>
       <DatasetPreviewDialog
         source={dataSourcePendingPreview}
         onClose={() => setDataSourcePendingPreview(null)}
@@ -484,13 +554,15 @@ export default function Dashboard() {
         onEdit={() => {
           const source = dataSourcePendingPreview
           setDataSourcePendingPreview(null)
-          if (source?.id) {
-            setPreviewOpen(false)
-            navigate(`/data-sources/${source.id}/edit?project=${source.project ?? selectedProject?.id}&returnTo=dashboard`)
-          }
+          editDataSource(source)
         }}
       />
 
+      <DataSourceVersionHistoryDialog
+        open={Boolean(dataSourcePendingHistory)}
+        source={dataSourcePendingHistory}
+        onClose={() => setDataSourcePendingHistory(null)}
+      />
       {/* Aggregated risk indicators across all loaded data sources. */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr' }, gap: 2.5 }}>
         <MainCard>

@@ -110,9 +110,9 @@ class AuthenticationTests(TestCase):
         )
 
         return response.data["access"]
-    
+
     # Register tests
-    
+
     def test_user_can_register_with_valid_data(self):
         """Tests that valid registration data creates a new user."""
         response = self.client.post(

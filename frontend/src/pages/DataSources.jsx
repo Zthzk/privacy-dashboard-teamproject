@@ -27,12 +27,14 @@ import {
   EditOutlined,
   EyeOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   PictureOutlined,
   PlusOutlined,
   SearchOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons'
 
+import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
 import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import MainCard from 'components/MainCard'
 import { deleteDataSource, getAllDataSources } from 'api/dataSources'
@@ -105,6 +107,7 @@ export default function DataSources() {
   const [projectsLoaded, setProjectsLoaded] = useState(false)
   const [error, setError] = useState('')
   const [dataSourcePendingPreview, setDataSourcePendingPreview] = useState(null)
+  const [dataSourcePendingHistory, setDataSourcePendingHistory] = useState(null)
 
   useEffect(() => {
     let isActive = true
@@ -305,14 +308,15 @@ export default function DataSources() {
                 <TableCell sx={{ width: 120 }}>Type</TableCell>
                 <TableCell sx={{ width: 120 }}>Format</TableCell>
                 <TableCell sx={{ width: 270 }}>Location / Reference</TableCell>
+                <TableCell sx={{ width: 105 }}>Version</TableCell>
                 <TableCell sx={{ width: 150 }}>Last Updated</TableCell>
-                <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
+                <TableCell align="right" sx={{ width: 180 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <Typography color="text.secondary">Loading data sources...</Typography>
                   </TableCell>
                 </TableRow>
@@ -320,7 +324,7 @@ export default function DataSources() {
 
               {!loading && filteredDataSources.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <Typography variant="subtitle1">
                       {dataSources.length === 0 ? 'No data sources added yet.' : 'No data sources match your search.'}
                     </Typography>
@@ -392,18 +396,38 @@ export default function DataSources() {
                           {source.location || '-'}
                         </Typography>
                       </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={`v${source.current_version_number ?? 1}`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      </TableCell>
                       <TableCell>{formatDate(source.updated_at)}</TableCell>
-                      <TableCell align="right">
+                      <TableCell
+                        align="right"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
                         <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+                          <Tooltip title="View version history">
+                            <span>
+                              <IconButton
+                                size="small"
+                                aria-label={`Version history ${source.name}`}
+                                onClick={() => setDataSourcePendingHistory(source)}
+                              >
+                                <HistoryOutlined />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
                           <Tooltip title="Preview data source">
                             <span>
                               <IconButton
                                 size="small"
                                 aria-label={`Preview ${source.name}`}
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  openDataSourcePreview(source)
-                                }}
+                                onClick={() => openDataSourcePreview(source)}
                               >
                                 <EyeOutlined />
                               </IconButton>
@@ -414,10 +438,7 @@ export default function DataSources() {
                               <IconButton
                                 size="small"
                                 aria-label={`Edit ${source.name}`}
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleEditDataSource(source)
-                                }}
+                                onClick={() => handleEditDataSource(source)}
                               >
                                 <EditOutlined />
                               </IconButton>
@@ -429,10 +450,7 @@ export default function DataSources() {
                                 size="small"
                                 color="error"
                                 aria-label={`Delete ${source.name}`}
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleDeleteDataSource(source)
-                                }}
+                                onClick={() => handleDeleteDataSource(source)}
                               >
                                 <DeleteOutlined />
                               </IconButton>
@@ -464,6 +482,11 @@ export default function DataSources() {
         }}
       />
 
+      <DataSourceVersionHistoryDialog
+        open={Boolean(dataSourcePendingHistory)}
+        source={dataSourcePendingHistory}
+        onClose={() => setDataSourcePendingHistory(null)}
+      />
     </Stack>
   )
 }

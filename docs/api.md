@@ -106,6 +106,7 @@ Response:
   "metadata": {
     "manual_data": "Example customer note"
   },
+  "current_version_number": 1,
   "created_at": "2026-05-06T10:00:00Z",
   "updated_at": "2026-05-06T10:00:00Z"
 }
@@ -119,6 +120,56 @@ Updates one data source.
 
 ### DELETE `/projects/{project_id}/datasources/{data_source_id}/`
 Deletes one data source.
+
+Deleting a data source also deletes its version history.
+
+### GET `/projects/{project_id}/datasources/{data_source_id}/versions/`
+Returns immutable historical snapshots for the current data source.
+
+Versions are returned newest first. Version numbers are assigned by the backend.
+
+Response:
+```
+{
+  "data_source": 1,
+  "project": 1,
+  "versions": [
+    {
+      "id": 2,
+      "data_source": 1,
+      "project": 1,
+      "version_number": 2,
+      "name": "Customer emails updated",
+      "source_type": "manual",
+      "source_type_display": "Manual",
+      "data_format": "text",
+      "data_format_display": "Text",
+      "description": "",
+      "location": "manual input",
+      "contains_personal_data": true,
+      "risk_level": "medium",
+      "risk_level_display": "Medium",
+      "art_9_data": "no",
+      "art_9_data_display": "No",
+      "contains_art9_data": false,
+      "metadata": {
+        "manual_data": "Email: anna@example.com",
+        "risk_level": "medium"
+      },
+      "compliance_violations": [],
+      "last_scanned_at": "2026-05-06T10:10:00Z",
+      "created_at": "2026-05-06T10:10:00Z"
+    }
+  ]
+}
+```
+
+### GET `/projects/{project_id}/datasources/{data_source_id}/versions/{version_number}/`
+Returns one immutable data source version snapshot.
+
+Historical risk fields are snapshots. They are not recalculated when the current risk assessment logic changes.
+
+If a data source is moved to another project, the same data source keeps its complete version lineage. The history is available through the data source's current project route.
 
 ## Risk Assessment
 ### GET `/projects/{id}/risk-assessment/`

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { deleteDataSource, getAllDataSources } from 'api/dataSources'
+import { deleteDataSource, getAllDataSources, getDataSourceVersions } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import DataSources from '../DataSources'
 
@@ -29,6 +29,7 @@ const dataSources = [
     data_format_display: 'Text',
     contains_personal_data: true,
     risk_level: 'medium',
+    current_version_number: 2,
     art_9_data: 'possible',
     // More than three findings verifies the compact card limit and the all-findings popup.
     compliance_violations: [
@@ -45,6 +46,45 @@ const dataSources = [
       risk_source: 'compliance_violations',
     },
     updated_at: '2026-05-18T10:00:00Z',
+  },
+]
+
+const supportTicketVersions = [
+  {
+    id: 112,
+    version_number: 2,
+    name: 'Support Tickets',
+    source_type: 'manual',
+    source_type_display: 'Manual',
+    data_format: 'text',
+    data_format_display: 'Text',
+    location: 'datasets/support.json',
+    contains_personal_data: true,
+    risk_level: 'medium',
+    art_9_data: 'possible',
+    compliance_violations: ['Health-related speech patterns or medical vocal biomarkers'],
+    metadata: {
+      manual_data: 'Name: Anna Mueller\nEmail: anna@example.com\nTicket: Needs medical support.',
+    },
+    created_at: '2026-05-18T10:00:00Z',
+  },
+  {
+    id: 111,
+    version_number: 1,
+    name: 'Support Tickets',
+    source_type: 'manual',
+    source_type_display: 'Manual',
+    data_format: 'text',
+    data_format_display: 'Text',
+    location: 'datasets/support.json',
+    contains_personal_data: false,
+    risk_level: 'low',
+    art_9_data: 'no',
+    compliance_violations: [],
+    metadata: {
+      manual_data: 'Ticket: Needs support.',
+    },
+    created_at: '2026-05-17T10:00:00Z',
   },
 ]
 
@@ -65,6 +105,7 @@ beforeEach(() => {
   window.sessionStorage.clear()
   getAllDataSources.mockResolvedValue(dataSources)
   getProjects.mockResolvedValue([project])
+  getDataSourceVersions.mockResolvedValue(supportTicketVersions)
   deleteDataSource.mockResolvedValue()
 })
 
@@ -88,6 +129,10 @@ describe('DataSources page', () => {
     expect(within(dialog).queryByText('Format review risk')).not.toBeInTheDocument()
     expect(within(dialog).getAllByText('Yes').length).toBeGreaterThan(0)
     expect(screen.getByText('Selected compliance findings')).toBeInTheDocument()
+    expect(screen.getByText('Change History')).toBeInTheDocument()
+    expect(await screen.findByText('Current v2')).toBeInTheDocument()
+    expect(screen.getByText('Compared with v1')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'View full history' })).toBeInTheDocument()
     expect(within(dialog).getByTestId('risk-severity-marker')).toHaveAttribute('data-severity-position', '50')
     within(dialog)
       .getAllByTestId('compliance-finding-marker')
@@ -133,6 +178,30 @@ describe('DataSources page', () => {
     })
   })
 
+  test('opens the complete version history from the dataset preview', async () => {
+    const user = userEvent.setup()
+
+    renderDataSources()
+
+    await screen.findByText('Support Tickets')
+    await user.click(screen.getByRole('button', { name: 'Preview Support Tickets' }))
+
+    const previewDialog = screen.getByRole('dialog', { name: /Dataset Preview/ })
+    await within(previewDialog).findByText('Current v2')
+    await user.click(within(previewDialog).getByRole('button', { name: 'View full history' }))
+
+    const historyDialog = screen.getByRole('dialog', { name: /Version History/ })
+    expect(within(historyDialog).getByText('Version 2 Snapshot')).toBeInTheDocument()
+    expect(within(historyDialog).getByRole('button', { name: 'Select version 1' })).toBeInTheDocument()
+
+    await user.click(within(historyDialog).getByRole('button', { name: 'Close version history' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Version History/ })).not.toBeInTheDocument()
+    })
+    expect(screen.getByRole('dialog', { name: /Dataset Preview/ })).toBeInTheDocument()
+  })
+
   test('opens the same dataset preview from the action button', async () => {
     const user = userEvent.setup()
 
@@ -143,5 +212,24 @@ describe('DataSources page', () => {
 
     expect(screen.getByRole('dialog', { name: /Dataset Preview/ })).toBeInTheDocument()
     expect(screen.getByText(/Ticket: Needs support/)).toBeInTheDocument()
+  })
+
+  test('opens version history from the main data sources table', async () => {
+    const user = userEvent.setup()
+
+    renderDataSources()
+
+    await screen.findByText('Support Tickets')
+
+    expect(screen.getByRole('columnheader', { name: 'Version' })).toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /Support Tickets/ })).toHaveTextContent('v2')
+
+    await user.click(screen.getByRole('button', { name: 'Version history Support Tickets' }))
+
+    expect(getDataSourceVersions).toHaveBeenCalledWith(1, 11)
+    await screen.findByText('Version History')
+    expect(screen.getByText('Version 2 Snapshot')).toBeInTheDocument()
+    expect(screen.getByText('Privacy Status Changes')).toBeInTheDocument()
+    expect(screen.getAllByText(/Risk level/).length).toBeGreaterThan(0)
   })
 })

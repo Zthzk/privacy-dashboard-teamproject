@@ -40,6 +40,7 @@ import {
   FileTextOutlined,
   FolderFilled,
   GlobalOutlined,
+  HistoryOutlined,
   HeartFilled,
   IdcardOutlined,
   LeftOutlined,
@@ -51,6 +52,7 @@ import {
   WarningFilled,
 } from '@ant-design/icons'
 
+import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
 import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import MainCard from 'components/MainCard'
 import ProjectPdfExportButton from 'components/pdf/ProjectPdfExport'
@@ -739,6 +741,7 @@ export default function ProjectDetails() {
   const [deletingDataSourceId, setDeletingDataSourceId] = useState(null)
   const [dataSourcePendingDelete, setDataSourcePendingDelete] = useState(null)
   const [dataSourcePendingPreview, setDataSourcePendingPreview] = useState(null)
+  const [dataSourcePendingHistory, setDataSourcePendingHistory] = useState(null)
   const [editingProject, setEditingProject] = useState(false)
   const [editForm, setEditForm] = useState(initialEditForm)
   const [savingProject, setSavingProject] = useState(false)
@@ -1140,7 +1143,7 @@ export default function ProjectDetails() {
                 <Table
                   size="small"
                   sx={{
-                    minWidth: 1180,
+                    minWidth: 1280,
                     tableLayout: 'fixed',
                     '& .MuiTableCell-root': { py: 1.05 },
                     '& .MuiTableHead-root .MuiTableCell-root': {
@@ -1159,14 +1162,15 @@ export default function ProjectDetails() {
                       <TableCell sx={{ width: 115 }}>Risk</TableCell>
                       <TableCell sx={{ width: 135 }}>Personal Data</TableCell>
                       <TableCell sx={{ width: 115 }}>Art. 9</TableCell>
+                      <TableCell sx={{ width: 105 }}>Version</TableCell>
                       <TableCell sx={{ width: 150 }}>Last Updated</TableCell>
-                      <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
+                      <TableCell align="right" sx={{ width: 180 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredDataSources.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                        <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                           <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
                             <Typography variant="subtitle1">
                               {dataSources.length === 0 ? 'No data sources added yet.' : 'No data sources match your search.'}
@@ -1264,18 +1268,38 @@ export default function ProjectDetails() {
                           <TableCell>
                             <Chip label={art9Chip.label} color={art9Chip.color} size="small" variant="outlined" />
                           </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={`v${source.current_version_number ?? 1}`}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          </TableCell>
                           <TableCell>{formatDate(source.updated_at)}</TableCell>
-                          <TableCell align="right">
+                          <TableCell
+                            align="right"
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
                             <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                              <Tooltip title="View version history">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    aria-label={`Version history ${source.name}`}
+                                    onClick={() => setDataSourcePendingHistory(source)}
+                                  >
+                                    <HistoryOutlined />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
                               <Tooltip title="Preview data source">
                                 <span>
                                   <IconButton
                                     size="small"
                                     aria-label={`Preview ${source.name}`}
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      setDataSourcePendingPreview(source)
-                                    }}
+                                    onClick={() => setDataSourcePendingPreview(source)}
                                   >
                                     <EyeOutlined />
                                   </IconButton>
@@ -1286,8 +1310,7 @@ export default function ProjectDetails() {
                                   <IconButton
                                     size="small"
                                     aria-label={`Edit ${source.name}`}
-                                    onClick={(event) => {
-                                      event.stopPropagation()
+                                    onClick={() => {
                                       // Keep edits scoped to this project detail page on save/cancel.
                                       navigate(`/data-sources/${source.id}/edit?project=${source.project}&returnTo=project`)
                                     }}
@@ -1354,6 +1377,11 @@ export default function ProjectDetails() {
             }}
           />
 
+          <DataSourceVersionHistoryDialog
+            open={Boolean(dataSourcePendingHistory)}
+            source={dataSourcePendingHistory}
+            onClose={() => setDataSourcePendingHistory(null)}
+          />
           <Dialog
             open={Boolean(dataSourcePendingDelete)}
             onClose={() => setDataSourcePendingDelete(null)}

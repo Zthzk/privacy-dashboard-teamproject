@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -17,11 +17,14 @@ import {
   ExportOutlined,
   FileSearchOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   OrderedListOutlined,
   RightOutlined,
   SecurityScanOutlined,
 } from '@ant-design/icons'
 
+import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
+import { getDataSourceVersions } from 'api/dataSources'
 import { getComplianceFindings, getDataSourcePreviewText } from 'utils/data-source-preview'
 
 // Keep the inline card compact; the popup exposes the full selected findings list.
@@ -41,6 +44,7 @@ function titleCase(value) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+// Supports both the current top-level API field and versions using the earlier metadata-based structure
 function getArt9Display(source) {
   return titleCase(source?.art_9_data ?? source?.metadata?.art_9_data)
 }
@@ -49,6 +53,53 @@ function getArt9Color(value) {
   if (String(value).toLowerCase() === 'possible') return 'warning'
   if (String(value).toLowerCase() === 'yes') return 'error'
   return 'default'
+}
+
+function getArt9Value(source) {
+  return source?.art_9_data ?? source?.metadata?.art_9_data ?? 'unknown'
+}
+
+// Extract only the privacy-relevant fields that should be tracked across versions
+// avoids comparing the whole source object
+function getPrivacyStatus(source) {
+  return {
+    risk: source?.risk_level ?? 'low',
+    personalData: Boolean(source?.contains_personal_data),
+    art9: getArt9Value(source),
+    findings: getComplianceFindings(source).length,
+  }
+}
+
+// A change summary is only useful when two versions exist
+// For the first version is no previous state to compare with
+function buildChangeItems(currentSource, previousSource) {
+  if (!currentSource || !previousSource) return []
+
+  const current = getPrivacyStatus(currentSource)
+  const previous = getPrivacyStatus(previousSource)
+  const changes = []
+
+  if (current.risk !== previous.risk) {
+    changes.push({ label: 'Risk level', before: titleCase(previous.risk), after: titleCase(current.risk) })
+  }
+
+  if (current.personalData !== previous.personalData) {
+    changes.push({
+      label: 'Personal data',
+      before: previous.personalData ? 'Yes' : 'No',
+      after: current.personalData ? 'Yes' : 'No',
+    })
+  }
+
+  if (current.art9 !== previous.art9) {
+    changes.push({ label: 'Art. 9 data', before: titleCase(previous.art9), after: titleCase(current.art9) })
+  }
+
+  if (current.findings !== previous.findings) {
+    changes.push({ label: 'Compliance findings', before: String(previous.findings), after: String(current.findings) })
+  }
+
+  return changes
 }
 
 function PreviewPanel({ icon: Icon, title, children, sx }) {
@@ -151,6 +202,9 @@ function RiskRow({ label, children }) {
   )
 }
 
+
+// Reuse the same renderer in the preview and full findings dialog so their
+// structure, spacing, and accessibility behavior remain consistent 
 function ComplianceFindingsList({ findings }) {
   // Use one list renderer for the card and popup so bullet alignment cannot drift.
   return (
@@ -190,16 +244,77 @@ function ComplianceFindingsList({ findings }) {
 
 export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenProject }) {
   const [findingsPopupOpen, setFindingsPopupOpen] = useState(false)
+  const [historyPopupOpen, setHistoryPopupOpen] = useState(false)
+  
+  // Keep the history request state together because the values describe one
+  // asynchronous operation and should normally be updated at the same time
+  const [versionPreview, setVersionPreview] = useState({ versions: [], loading: false, error: '' })
   const previewText = getDataSourcePreviewText(source)
   const riskChip = getRiskChip(source?.risk_level)
   const complianceFindings = getComplianceFindings(source)
   const containsPersonalData = Boolean(source?.contains_personal_data)
+  
   // Split findings into the visible teaser list and hidden items opened from the popup.
   const visibleFindings = complianceFindings.slice(0, PREVIEW_FINDINGS_LIMIT)
   const hiddenFindingsCount = complianceFindings.length - PREVIEW_FINDINGS_LIMIT
+  const latestVersion = versionPreview.versions[0] // The preview dialog shows a comparison between the latest and recent ones
+  const previousVersion = versionPreview.versions[1]
 
+  // Recalculate the change summary only when the compared versions change
+  const changeItems = useMemo(
+    () => buildChangeItems(latestVersion, previousVersion),
+    [latestVersion, previousVersion],
+  )
+
+  useEffect(() => {
+    /*
+     * Ignore responses after the selected source changes or this component
+     * unmounts. Otherwise an older request could overwrite the history of a
+     * newly selected source
+     */
+    let isActive = true
+
+    if (!source?.project || !source?.id) {
+      // Reset the history panel when no valid data source is selected
+      queueMicrotask(() => {
+        if (isActive) {
+          setVersionPreview({ versions: [], loading: false, error: '' })
+        }
+      })
+
+      return () => {
+        isActive = false
+      }
+    }
+
+    // show a loading state 
+    queueMicrotask(() => {
+      if (isActive) {
+        setVersionPreview({ versions: [], loading: true, error: '' })
+      }
+    })
+
+    getDataSourceVersions(source.project, source.id)
+      .then((versionList) => {
+        if (!isActive) return
+        setVersionPreview({ versions: Array.isArray(versionList) ? versionList : [], loading: false, error: '' })
+      })
+      .catch(() => {
+        if (isActive) {
+          setVersionPreview({ versions: [], loading: false, error: 'Could not load change history.' })
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [source])
+
+  // Closing the parent dialog also resets its nested dialogs so they do not
+  // reopen unexpectedly when another data source is selected
   function handleClose() {
     setFindingsPopupOpen(false)
+    setHistoryPopupOpen(false)
     onClose()
   }
 
@@ -379,6 +494,85 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
                 </Typography>
               )}
             </PreviewPanel>
+
+            <PreviewPanel icon={HistoryOutlined} title="Change History" sx={{ p: { xs: 2, sm: 2.25 } }}>
+              {versionPreview.loading ? (
+                <Typography variant="body2" color="text.secondary">
+                  Loading recent changes...
+                </Typography>
+              ) : versionPreview.error ? (
+                <Typography variant="body2" color="error">
+                  {versionPreview.error}
+                </Typography>
+              ) : versionPreview.versions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No version history is available for this data source.
+                </Typography>
+              ) : (
+                <Stack spacing={1.25}>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+                    <Chip
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      label={`Current v${latestVersion?.version_number ?? source?.current_version_number ?? 1}`}
+                      sx={{ fontWeight: 700 }}
+                    />
+                    {previousVersion && (
+                      <Typography variant="caption" color="text.secondary">
+                        Compared with v{previousVersion.version_number}
+                      </Typography>
+                    )}
+                  </Stack>
+
+                  {!previousVersion ? (
+                    <Typography variant="body2" color="text.secondary">
+                      This is the first recorded version.
+                    </Typography>
+                  ) : changeItems.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      No privacy status changes detected in the latest version.
+                    </Typography>
+                  ) : (
+                    <Stack spacing={0.75}>
+                      {changeItems.slice(0, 3).map((change) => (
+                        <Stack
+                          key={change.label}
+                          direction="row"
+                          spacing={1.25}
+                          sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                        >
+                          <Typography variant="body2" color="text.secondary">
+                            {change.label}
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700, textAlign: 'right' }}>
+                            {change.before}
+                            {' -> '}
+                            {change.after}
+                          </Typography>
+                        </Stack>
+                      ))}
+                      {changeItems.length > 3 && (
+                        <Typography variant="caption" color="text.secondary">
+                          +{changeItems.length - 3} more change{changeItems.length - 3 === 1 ? '' : 's'} in full history.
+                        </Typography>
+                      )}
+                    </Stack>
+                  )}
+
+                  <Button
+                    size="small"
+                    color="primary"
+                    aria-label="View full history"
+                    endIcon={<RightOutlined />}
+                    sx={{ alignSelf: 'flex-start', px: 0, minWidth: 'auto' }}
+                    onClick={() => setHistoryPopupOpen(true)}
+                  >
+                    View full history
+                  </Button>
+                </Stack>
+              )}
+            </PreviewPanel>
           </Stack>
         </Box>
       </DialogContent>
@@ -463,6 +657,11 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
           </Button>
         </DialogActions>
       </Dialog>
+      <DataSourceVersionHistoryDialog
+        source={source}
+        open={historyPopupOpen}
+        onClose={() => setHistoryPopupOpen(false)}
+      />
     </Dialog>
   )
 }
