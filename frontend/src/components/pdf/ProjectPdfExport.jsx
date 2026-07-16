@@ -521,7 +521,7 @@ export default function ProjectPdfExportButton({ project, dataSources, riskAsses
 
   return (
     <Button
-      variant="outlined"
+      variant="contained"
       startIcon={<FileTextOutlined aria-hidden="true" />}
       onClick={handleExport}
       disabled={generating || !riskAssessment}
