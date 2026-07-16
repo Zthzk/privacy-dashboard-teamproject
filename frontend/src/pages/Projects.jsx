@@ -861,7 +861,21 @@ export default function Projects() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={createDialogOpen} onClose={closeCreateDialog} fullWidth maxWidth="sm">
+      <Dialog
+        open={createDialogOpen}
+        onClose={closeCreateDialog}
+        fullWidth
+        maxWidth="sm"
+        slotProps={{
+          paper: {
+            // MUI lightens Paper surfaces by elevation in dark mode (getOverlayAlpha).
+            // Dialogs default to elevation 24, which otherwise washes this out far
+            // lighter than the low-elevation MainCards used elsewhere (stat tiles,
+            // table, search bar) that already sit at background.paper.
+            sx: { backgroundImage: 'none', bgcolor: 'background.paper' },
+          },
+        }}
+      >
         <Box component="form" onSubmit={handleCreateProject}>
           <DialogTitle>Create New Project</DialogTitle>
           <DialogContent>
