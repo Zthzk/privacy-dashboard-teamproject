@@ -148,7 +148,8 @@ function MetricCard({ title, value, helper, color, icon: Icon }) {
     <MainCard
       sx={{
         height: '100%',
-        borderColor: 'divider',
+        borderColor: `${color}.light`,
+        bgcolor: `${color}.lighter`,
         '& .MuiCardContent-root': { p: 2.5 },
       }}
     >
@@ -162,21 +163,21 @@ function MetricCard({ title, value, helper, color, icon: Icon }) {
             flexShrink: 0,
             placeItems: 'center',
             border: 1,
-            borderColor: `${color}.light`,
-            bgcolor: `${color}.lighter`,
+            borderColor: `background.paper`,
+            bgcolor: `background.paper`,
             color: `${color}.main`,
           }}
         >
           <Icon style={{ fontSize: 26 }} />
         </Box>
         <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700 }}>
+          <Typography variant="subtitle2" sx={{color: "common.black", fontWeight: 700}}>
             {title}
-          </Typography>
-          <Typography variant="h2" sx={{ lineHeight: 1.05 }}>
+          </Typography>  
+          <Typography variant="h2" sx={{ color: 'common.black', lineHeight: 1.05 }}>
             {value}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'common.black' }}>
             {helper}
           </Typography>
         </Stack>
@@ -392,7 +393,7 @@ export default function Projects() {
             title: 'Total Data Sources',
             value: projects.reduce((total, project) => total + (project.data_sources_count ?? 0), 0),
             helper: 'Across all projects',
-            color: 'secondary',
+            color: 'success',
             icon: DatabaseOutlined,
           },
           {
