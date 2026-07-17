@@ -405,7 +405,7 @@ export default function DashboardPdfExportButton({ projects, riskSummary }) {
 
   return (
     <Button
-      variant="outlined"
+      variant="contained"
       startIcon={<FileTextOutlined aria-hidden="true" />}
       onClick={handleExport}
       disabled={generating}
