@@ -16,14 +16,16 @@ import Link from '@mui/material/Link'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
-import { InfoCircleOutlined, SaveOutlined } from '@ant-design/icons'
+import { InfoCircleOutlined, SaveOutlined, UploadOutlined } from '@ant-design/icons'
 
 import DataFormatHintAlert from 'components/DataFormatHintAlert'
 import MainCard from 'components/MainCard'
 import { createDataSource, getDataFormatHints } from 'api/dataSources'
 import { getProjects } from 'api/projects'
 import { upsertCachedDataSource } from 'utils/data-source-cache'
+import ImportDataSourcesDialog from './ImportDataSourcesDialog'
 
 const sourceTypeOptions = [
   { value: 'file', label: 'File' },
@@ -44,6 +46,7 @@ const dataFormatOptions = [
   { value: 'other', label: 'Other' },
 ]
 
+// Initial form state with default values
 const initialForm = {
   project: '',
   name: '',
@@ -65,10 +68,17 @@ function getProjectDetailsPath(projectId) {
   return projectId ? `/projects/${projectId}` : '/data-sources'
 }
 
+function getReturnPath(returnTo, projectId) {
+  // Project-origin flows should land back on the overview; global flows should use the full data-source list.
+  return returnTo === 'project' ? getProjectDetailsPath(projectId) : '/data-sources'
+}
+
 export default function AddDataSource() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  // The project detail page passes these params so creation can return to the same project.
   const presetProject = searchParams.get('project') ?? ''
+  const returnTo = searchParams.get('returnTo') ?? 'data-sources'
   const [projects, setProjects] = useState([])
   const [form, setForm] = useState({ ...initialForm, project: presetProject })
   const [errors, setErrors] = useState({})
@@ -78,6 +88,9 @@ export default function AddDataSource() {
   const [dataFormatHints, setDataFormatHints] = useState({})
   const [isNotCompliant, setIsNotCompliant] = useState(false)
   const [violations, setViolations] = useState([])
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+
+  // Refs for keyboard navigation between form fields
   const nameInputRef = useRef(null)
   const locationInputRef = useRef(null)
   const manualDataInputRef = useRef(null)
@@ -91,6 +104,7 @@ export default function AddDataSource() {
 
   const activeHint = dataFormatHints[form.data_format] ?? null
 
+  // Load available projects on component mount
   useEffect(() => {
     let isActive = true
 
@@ -122,21 +136,29 @@ export default function AddDataSource() {
   )
   const submitDisabled = saving || projects.length === 0 || !form.name.trim()
 
+  // Import requires a project to be selected so the backend knows where to create the data sources.
+  // presetProject covers the case where the user arrived via a project-specific link (URL param).
+  const noProjectSelected = !form.project && !presetProject
+
+  // Auto-focus name input after projects are loaded
   useEffect(() => {
     if (!loading) {
       nameInputRef.current?.focus()
     }
   }, [loading])
 
+  // Update form field and clear associated error
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: '' }))
     if (field === 'data_format') {
+      // Compliance checklists are format-specific, so clear stale selections when the format changes.
       setIsNotCompliant(false)
       setViolations([])
     }
   }
 
+  // Handle source type changes with auto-fill logic for manual entries
   function updateSourceType(value) {
     setForm((current) => ({
       ...current,
@@ -145,6 +167,7 @@ export default function AddDataSource() {
     }))
   }
 
+  // Enable arrow key navigation between form inputs
   function moveFocusOnArrow(event, nextRef, previousRef) {
     if (event.key === 'ArrowDown' && nextRef?.current) {
       event.preventDefault()
@@ -157,6 +180,7 @@ export default function AddDataSource() {
     }
   }
 
+  // Validate form before submission - checks required fields
   function validateForm() {
     const nextErrors = {}
     if (!form.project) nextErrors.project = 'Project is required.'
@@ -167,6 +191,7 @@ export default function AddDataSource() {
     return Object.keys(nextErrors).length === 0
   }
 
+  // Submit form: validate, create data source, cache it, and navigate
   async function handleSubmit(event) {
     event.preventDefault()
 
@@ -185,19 +210,26 @@ export default function AddDataSource() {
         metadata: {
           manual_data: form.manual_data.trim(),
         },
+        // Risk assessment is driven by selected checklist items, not by free-text analysis.
         compliance_violations: isNotCompliant ? violations : [],
       })
 
+      // Cache the newly created data source for quick access
       upsertCachedDataSource({
         ...createdDataSource,
         project_name: createdDataSource.project_name ?? selectedProject?.name ?? '',
       })
 
-      navigate(getProjectDetailsPath(createdDataSource.project ?? form.project))
+      navigate(getReturnPath(returnTo, createdDataSource.project ?? form.project))
     } catch (saveError) {
       setError(saveError?.error ?? 'Could not save data source. Please check the form and try again.')
       setSaving(false)
     }
+  }
+
+  // After successful bulk import, navigate to project
+  function handleImported() {
+    navigate(getProjectDetailsPath(form.project))
   }
 
   return (
@@ -336,6 +368,7 @@ export default function AddDataSource() {
 
                 {activeHint && (
                   <Stack spacing={1}>
+                    {/* The top-level checkbox keeps compliant sources from sending empty checklist noise. */}
                     <FormControlLabel
                       control={
                         <Checkbox
@@ -363,6 +396,7 @@ export default function AddDataSource() {
                         <Typography variant="body2" fontWeight={500}>Select all that apply:</Typography>
                         <FormGroup>
                           {activeHint.checklist?.map((item) => {
+                            // Checklist items may be plain strings or enriched objects with label/weight/article.
                             const label = item?.label ?? item
                             const weight = item?.weight
                             const article = item?.article
@@ -381,6 +415,7 @@ export default function AddDataSource() {
                                 label={
                                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                                     <Typography variant="body2">{label}</Typography>
+                                    {/* Article chip color reflects GDPR fine tier: weight 3 = red (Art. 9), 2 = yellow, 1 = grey */}
                                     {article && (
                                       <Chip
                                         size="small"
@@ -471,15 +506,40 @@ export default function AddDataSource() {
           }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
-            <Button variant="outlined" color="secondary" onClick={() => navigate(getProjectDetailsPath(form.project))}>
+            <Button variant="outlined" color="secondary" onClick={() => navigate(getReturnPath(returnTo, form.project))}>
               Cancel
             </Button>
-            <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={submitDisabled}>
-              {saving ? 'Adding...' : 'Add Data Source'}
-            </Button>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              {/* Tooltip explains why the button is greyed out when no project is selected.
+                  The <span> wrapper is required because disabled buttons suppress mouse events,
+                  which would otherwise prevent the tooltip from appearing. */}
+              <Tooltip title={noProjectSelected ? 'Please select a project first' : ''}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={<UploadOutlined />}
+                    onClick={() => setImportDialogOpen(true)}
+                    disabled={saving || noProjectSelected}
+                  >
+                    Import JSON
+                  </Button>
+                </span>
+              </Tooltip>
+              <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={submitDisabled}>
+                {saving ? 'Adding...' : 'Add Data Source'}
+              </Button>
+            </Stack>
           </Stack>
         </Box>
       </Stack>
+
+      <ImportDataSourcesDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        projectId={form.project || presetProject}
+        projectName={selectedProject?.name}
+        onImported={handleImported}
+      />
     </Box>
   )
 }

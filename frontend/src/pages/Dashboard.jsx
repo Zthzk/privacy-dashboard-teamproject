@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import Avatar from '@mui/material/Avatar'
@@ -11,6 +11,10 @@ import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -18,13 +22,14 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import {
-  CarOutlined,
   CloseOutlined,
   DatabaseOutlined,
+  EditOutlined,
   EyeOutlined,
-  MailOutlined,
+  HistoryOutlined,
   MessageOutlined,
   MoreOutlined,
   RightOutlined,
@@ -33,6 +38,8 @@ import {
 } from '@ant-design/icons'
 
 import MainCard from 'components/MainCard'
+import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
+import DatasetPreviewDialog from 'components/DatasetPreviewDialog'
 import DashboardPdfExportButton from 'components/pdf/DashboardPdfExport'
 import { getAllDataSources } from 'api/dataSources'
 import { getProjects } from 'api/projects'
@@ -91,10 +98,6 @@ function getProjectRisk(project) {
   return projectRiskChipProps(project)
 }
 
-function countSourcesByCategory(dataSources, categoryKey) {
-  return dataSources.filter((source) => source.metadata?.data_category_keys?.includes(categoryKey)).length
-}
-
 function ProjectIcon({ project }) {
   const style = getProjectStyle(project)
   const Icon = project.icon || projectIconMap[style.key] || MessageOutlined
@@ -120,6 +123,9 @@ export default function Dashboard() {
   const [dataSources, setDataSources] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [dataSourcePendingPreview, setDataSourcePendingPreview] = useState(null)
+  const [dataSourcePendingHistory, setDataSourcePendingHistory] = useState(null)
+  const [dataSourceActionMenu, setDataSourceActionMenu] = useState({ anchorEl: null, source: null })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -169,12 +175,40 @@ export default function Dashboard() {
   }, [selectedProjectSources])
   const riskSummary = useMemo(
     () => [
-      { label: 'Contact data sources', value: countSourcesByCategory(dataSources, 'contact_data'), icon: MailOutlined, color: 'primary' },
-      { label: 'Location data sources', value: countSourcesByCategory(dataSources, 'location_data'), icon: CarOutlined, color: 'secondary' },
+      { label: 'Total data sources', value: dataSources.length, icon: DatabaseOutlined, color: 'primary' },
       { label: 'Personal data sources', value: dataSources.filter((source) => source.contains_personal_data).length, icon: TeamOutlined, color: 'success' },
+      { label: 'High risk sources', value: dataSources.filter((source) => getSourceRisk(source).label === 'High').length, icon: ThunderboltOutlined, color: 'error' },
+      { label: 'Art. 9 sources', value: dataSources.filter(hasArt9Data).length, icon: EyeOutlined, color: 'secondary' },
     ],
     [dataSources],
   )
+
+  const closeDataSourceActionMenu = () => {
+    setDataSourceActionMenu({ anchorEl: null, source: null })
+  }
+
+  const openDataSourceActionMenu = (event, source) => {
+    event.stopPropagation()
+    setDataSourceActionMenu({ anchorEl: event.currentTarget, source })
+  }
+
+  const openDataSourcePreview = (source) => {
+    closeDataSourceActionMenu()
+    setDataSourcePendingPreview(source)
+  }
+
+  const openDataSourceHistory = (source) => {
+    closeDataSourceActionMenu()
+    setDataSourcePendingHistory(source)
+  }
+
+  const editDataSource = (source) => {
+    closeDataSourceActionMenu()
+    if (source?.id) {
+      setPreviewOpen(false)
+      navigate(`/data-sources/${source.id}/edit?project=${source.project ?? selectedProject?.id}&returnTo=dashboard`)
+    }
+  }
 
   return (
     <Stack spacing={2.5}>
@@ -201,6 +235,7 @@ export default function Dashboard() {
 
       {error && <Alert severity="error">{error}</Alert>}
 
+      {/* Main overview table */}
       <MainCard content={false}>
         <Stack
           direction="row"
@@ -224,6 +259,7 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
+              {/* Keep the table structure stable while projects and data sources are being fetched. */}
               {loading && (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
@@ -232,6 +268,7 @@ export default function Dashboard() {
                 </TableRow>
               )}
 
+              {/* Empty state for a fresh workspace or when all projects are hidden. */}
               {!loading && projects.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
@@ -240,11 +277,13 @@ export default function Dashboard() {
                 </TableRow>
               )}
 
+              {/* Render one overview row per project. */}
               {!loading && projects.map((project) => {
                 const risk = getProjectRisk(project)
-                const selected = String(project.id) === String(selectedProjectId)
+                const selected = String(project.id) === String(selectedProjectId) 
 
                 return (
+                  /* Selecting a row updates the preview data before opening the dialog. */
                   <TableRow
                     hover
                     key={project.id}
@@ -252,9 +291,10 @@ export default function Dashboard() {
                     onClick={() => {
                       setSelectedProjectId(project.id)
                       setPreviewOpen(true)
-                    }}
+                    }} 
                     sx={{
                       cursor: 'pointer',
+                      /* Highlight selected row */
                       '&.Mui-selected': {
                         bgcolor: 'action.selected',
                         outline: '1px solid',
@@ -276,7 +316,8 @@ export default function Dashboard() {
                     <TableCell>
                       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                         <DatabaseOutlined />
-                        <Typography>{project.data_sources_count ?? project.sources ?? 0}</Typography>
+                        {/* Prefer the API count, then fall back to older cached/mock fields. */}
+                        <Typography>{project.data_sources_count ?? project.sources ?? 0}</Typography> 
                       </Stack>
                     </TableCell>
                     <TableCell>
@@ -294,12 +335,13 @@ export default function Dashboard() {
         </TableContainer>
       </MainCard>
 
+      {/* Quick project preview dialog shown from the overview table without leaving the dashboard. */}
       {selectedProject && (
       <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} fullWidth maxWidth="lg">
         <DialogTitle sx={{ pr: 7 }}>
-          Data Source Preview
+          Project Preview
           <IconButton
-            aria-label="Close data source preview"
+            aria-label="Close project preview"
             onClick={() => setPreviewOpen(false)}
             sx={{ position: 'absolute', right: 12, top: 12 }}
           >
@@ -397,7 +439,19 @@ export default function Dashboard() {
                     const containsPersonalData = source.personal ?? (source.contains_personal_data ? 'Yes' : 'No')
 
                     return (
-                      <TableRow key={source.id ?? source.name}>
+                      <TableRow
+                        key={source.id ?? source.name}
+                        hover
+                        tabIndex={0}
+                        onClick={() => setDataSourcePendingPreview(source)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            setDataSourcePendingPreview(source)
+                          }
+                        }}
+                        sx={{ cursor: 'pointer' }}
+                      >
                         <TableCell>{source.name}</TableCell>
                         <TableCell>{source.type ?? source.source_type_display ?? source.source_type}</TableCell>
                         <TableCell>{source.format ?? source.data_format_display ?? source.data_format}</TableCell>
@@ -413,12 +467,32 @@ export default function Dashboard() {
                           />
                         </TableCell>
                         <TableCell align="right">
-                          <IconButton size="small" aria-label={`View ${source.name}`}>
-                            <EyeOutlined />
-                          </IconButton>
-                          <IconButton size="small" aria-label={`More actions for ${source.name}`}>
-                            <MoreOutlined />
-                          </IconButton>
+                          <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+                            <Tooltip title="Preview data source">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Preview ${source.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    openDataSourcePreview(source)
+                                  }}
+                                >
+                                  <EyeOutlined />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <IconButton
+                              size="small"
+                              aria-label={`More actions for ${source.name}`}
+                              aria-controls={dataSourceActionMenu.source?.id === source.id ? 'dashboard-data-source-actions' : undefined}
+                              aria-haspopup="menu"
+                              aria-expanded={dataSourceActionMenu.source?.id === source.id ? 'true' : undefined}
+                              onClick={(event) => openDataSourceActionMenu(event, source)}
+                            >
+                              <MoreOutlined />
+                            </IconButton>
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     )
@@ -435,6 +509,61 @@ export default function Dashboard() {
       </Dialog>
       )}
 
+      <Menu
+        id="dashboard-data-source-actions"
+        anchorEl={dataSourceActionMenu.anchorEl}
+        open={Boolean(dataSourceActionMenu.anchorEl)}
+        onClose={closeDataSourceActionMenu}
+        onClick={(event) => event.stopPropagation()}
+        slotProps={{
+          list: {
+            'aria-label': dataSourceActionMenu.source ? `Actions for ${dataSourceActionMenu.source.name}` : 'Data source actions',
+          },
+        }}
+      >
+        <MenuItem onClick={() => openDataSourcePreview(dataSourceActionMenu.source)}>
+          <ListItemIcon>
+            <EyeOutlined aria-hidden="true" />
+          </ListItemIcon>
+          <ListItemText>Preview data source</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => openDataSourceHistory(dataSourceActionMenu.source)}>
+          <ListItemIcon>
+            <HistoryOutlined aria-hidden="true" />
+          </ListItemIcon>
+          <ListItemText>View version history</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => editDataSource(dataSourceActionMenu.source)}>
+          <ListItemIcon>
+            <EditOutlined aria-hidden="true" />
+          </ListItemIcon>
+          <ListItemText>Edit data source</ListItemText>
+        </MenuItem>
+      </Menu>
+      <DatasetPreviewDialog
+        source={dataSourcePendingPreview}
+        onClose={() => setDataSourcePendingPreview(null)}
+        onOpenProject={() => {
+          const projectId = dataSourcePendingPreview?.project ?? selectedProject?.id
+          setDataSourcePendingPreview(null)
+          if (projectId) {
+            setPreviewOpen(false)
+            navigate(`/projects/${projectId}`)
+          }
+        }}
+        onEdit={() => {
+          const source = dataSourcePendingPreview
+          setDataSourcePendingPreview(null)
+          editDataSource(source)
+        }}
+      />
+
+      <DataSourceVersionHistoryDialog
+        open={Boolean(dataSourcePendingHistory)}
+        source={dataSourcePendingHistory}
+        onClose={() => setDataSourcePendingHistory(null)}
+      />
+      {/* Aggregated risk indicators across all loaded data sources. */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr' }, gap: 2.5 }}>
         <MainCard>
           <Stack spacing={2.25}>
@@ -484,7 +613,7 @@ export default function Dashboard() {
               <Box>
                 <Typography variant="subtitle1">Recommendation</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Review projects with personal data or Art. 9 categories before using their data sources in model training.
+                  Review projects with personal data or Art. 9 data before using their data sources in model training.
                 </Typography>
                 <Button size="small" endIcon={<RightOutlined aria-hidden="true" />}>
                   View details

@@ -16,6 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from apps.users.views import (
+    current_user,
+    password_reset_confirm,
+    password_reset_request,
+    register_user,
+)
 
 from apps.projects.views import health_check
 
@@ -25,4 +32,11 @@ urlpatterns = [
     path("api/", include("apps.data_sources.urls")),
     path("api/", include("apps.risk_assessments.urls")),
     path("api/health/", health_check, name="health-check"),
+
+    path("api/auth/register/", register_user, name="register_user"),
+    path("api/auth/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/me/", current_user, name="current_user"),
+    path("api/auth/password-reset/", password_reset_request, name="password_reset_request"),
+    path("api/auth/password-reset-confirm/",password_reset_confirm, name="password_reset_confirm"),
 ]

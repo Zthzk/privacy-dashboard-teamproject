@@ -7,9 +7,30 @@ import DataSources from 'pages/DataSources'
 import EditDataSource from 'pages/EditDataSource'
 import ProjectDetails from 'pages/ProjectDetails'
 import Projects from 'pages/Projects'
+import Login from 'pages/Login'
+import Register from 'pages/Register'
+import ForgotPassword from 'pages/ForgotPassword'
+import ResetPassword from 'pages/ResetPassword'
+
 
 const router = createBrowserRouter(
   [
+    {
+      path: '/login',
+      element: <Login />,
+    },
+    {
+      path: '/register',
+      element: <Register />,
+    },
+    {
+      path: '/forgot-password',
+      element: <ForgotPassword />,
+    },
+    {
+      path: '/reset-password',
+      element: <ResetPassword />,
+    },
     {
       path: '/',
       element: <DashboardLayout />,
