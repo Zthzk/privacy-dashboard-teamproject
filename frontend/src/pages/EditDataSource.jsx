@@ -28,6 +28,7 @@ import DataFormatHintAlert from 'components/DataFormatHintAlert'
 import MainCard from 'components/MainCard'
 import { deleteDataSource, getDataFormatHints, getDataSource, updateDataSource } from 'api/dataSources'
 import { getProjects } from 'api/projects'
+import { resolveArticleUrl } from 'utils/articleUrls'
 import { removeCachedDataSource, upsertCachedDataSource } from 'utils/data-source-cache'
 
 const sourceTypeOptions = [
@@ -456,6 +457,7 @@ export default function EditDataSource() {
                                 const label = item?.label ?? item
                                 const weight = item?.weight
                                 const article = item?.article
+                                const articleUrl = resolveArticleUrl(article)
                                 return (
                                   <FormControlLabel
                                     key={label}
@@ -471,12 +473,20 @@ export default function EditDataSource() {
                                     label={
                                       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                                         <Typography variant="body2">{label}</Typography>
+                                        {/* preventDefault+stopPropagation keep the click from also toggling the checkbox,
+                                            since the chip sits inside the FormControlLabel's native <label> element. */}
                                         {article && (
                                           <Chip
                                             size="small"
                                             label={article}
                                             color={weight === 3 ? 'error' : weight === 2 ? 'warning' : 'default'}
                                             variant="outlined"
+                                            clickable={Boolean(articleUrl)}
+                                            onClick={articleUrl ? (e) => {
+                                              e.preventDefault()
+                                              e.stopPropagation()
+                                              window.open(articleUrl, '_blank', 'noopener,noreferrer')
+                                            } : undefined}
                                             sx={{ fontSize: 11, height: 18, '& .MuiChip-label': { px: 0.75 } }}
                                           />
                                         )}
