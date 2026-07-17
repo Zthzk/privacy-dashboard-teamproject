@@ -24,6 +24,7 @@ import DataFormatHintAlert from 'components/DataFormatHintAlert'
 import MainCard from 'components/MainCard'
 import { createDataSource, getDataFormatHints } from 'api/dataSources'
 import { getProjects } from 'api/projects'
+import { resolveArticleUrl } from 'utils/articleUrls'
 import { upsertCachedDataSource } from 'utils/data-source-cache'
 import ImportDataSourcesDialog from './ImportDataSourcesDialog'
 
@@ -400,6 +401,7 @@ export default function AddDataSource() {
                             const label = item?.label ?? item
                             const weight = item?.weight
                             const article = item?.article
+                            const articleUrl = resolveArticleUrl(article)
                             return (
                               <FormControlLabel
                                 key={label}
@@ -415,13 +417,21 @@ export default function AddDataSource() {
                                 label={
                                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                                     <Typography variant="body2">{label}</Typography>
-                                    {/* Article chip color reflects GDPR fine tier: weight 3 = red (Art. 9), 2 = yellow, 1 = grey */}
+                                    {/* Article chip color reflects GDPR fine tier: weight 3 = red (Art. 9), 2 = yellow, 1 = grey.
+                                        preventDefault+stopPropagation keep the click from also toggling the checkbox,
+                                        since the chip sits inside the FormControlLabel's native <label> element. */}
                                     {article && (
                                       <Chip
                                         size="small"
                                         label={article}
                                         color={weight === 3 ? 'error' : weight === 2 ? 'warning' : 'default'}
                                         variant="outlined"
+                                        clickable={Boolean(articleUrl)}
+                                        onClick={articleUrl ? (e) => {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          window.open(articleUrl, '_blank', 'noopener,noreferrer')
+                                        } : undefined}
                                         sx={{ fontSize: 11, height: 18, '& .MuiChip-label': { px: 0.75 } }}
                                       />
                                     )}
