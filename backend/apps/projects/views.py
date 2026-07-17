@@ -9,6 +9,8 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.risk_assessments.services import calculate_project_risk
 
 from .models import Project
@@ -98,6 +100,12 @@ def projects(request):
             errors=error.message_dict,
         )
 
+    create_notification(
+        Notification.Type.PROJECT_CREATED,
+        "Project created",
+        f'Project "{project.name}" was created.',
+        f"/projects/{project.id}",
+    )
     return JsonResponse(serialize_project(project), status=201)
 
 
@@ -111,7 +119,13 @@ def project_detail(request, project_id):
 
     if request.method == "DELETE":
         deleted_id = project.id
+        project_name = project.name
         project.delete()
+        create_notification(
+            Notification.Type.PROJECT_DELETED,
+            "Project deleted",
+            f'Project "{project_name}" was deleted.',
+        )
         return JsonResponse({"deleted": deleted_id})
 
     payload = parse_json_body(request)

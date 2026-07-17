@@ -12,6 +12,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from apps.projects.models import Project
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.risk_assessments.services import apply_data_source_risk_assessment
 
 from apps.risk_assessments.violation_weights import VIOLATION_WEIGHTS
@@ -355,6 +357,19 @@ def project_data_sources(request, project_id):
             data_source.save()
             # Version 1 captures the assessed current state immediately on create.
             create_data_source_version_snapshot(data_source, force=True)
+            create_notification(
+                Notification.Type.DATA_SOURCE_CREATED,
+                "Data source created",
+                f'Data source "{data_source.name}" was added to "{project.name}".',
+                f"/projects/{project.id}",
+            )
+            if normalize_risk_level(data_source) == "high":
+                create_notification(
+                    Notification.Type.HIGH_RISK_DETECTED,
+                    "High-risk data source detected",
+                    f'Data source "{data_source.name}" was assessed as high risk.',
+                    f"/projects/{project.id}",
+                )
     except ValidationError as error:
         return json_error(
             "Data source validation failed.",
@@ -383,7 +398,15 @@ def project_data_source_detail(request, project_id, data_source_id):
 
     if request.method == "DELETE":
         deleted_id = data_source.id
+        data_source_name = data_source.name
+        project_name = data_source.project.name
         data_source.delete()
+        create_notification(
+            Notification.Type.DATA_SOURCE_DELETED,
+            "Data source deleted",
+            f'Data source "{data_source_name}" was deleted from "{project_name}".',
+            f"/projects/{project_id}",
+        )
         return JsonResponse({"deleted": deleted_id})
 
     payload = parse_json_body(request)
@@ -399,6 +422,7 @@ def project_data_source_detail(request, project_id, data_source_id):
                 pk=data_source_id,
                 project_id=project_id,
             )
+            original_risk_level = normalize_risk_level(data_source)
             if "project" in payload:
                 data_source.project = get_object_or_404(Project, pk=payload.get("project"))
             if "name" in payload:
@@ -441,6 +465,16 @@ def project_data_source_detail(request, project_id, data_source_id):
             data_source.save()
             # Append a snapshot only when versioned state actually changed.
             create_data_source_version_snapshot(data_source)
+            if (
+                original_risk_level != "high"
+                and normalize_risk_level(data_source) == "high"
+            ):
+                create_notification(
+                    Notification.Type.HIGH_RISK_DETECTED,
+                    "High-risk data source detected",
+                    f'Data source "{data_source.name}" is now high risk.',
+                    f"/projects/{data_source.project_id}",
+                )
     except ValidationError as error:
         return json_error(
             "Data source validation failed.",
