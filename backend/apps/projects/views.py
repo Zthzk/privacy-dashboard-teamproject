@@ -1,3 +1,5 @@
+"""HTTP views and serialization helpers for projects and project overviews."""
+
 import json
 
 from django.core.exceptions import ValidationError
@@ -16,15 +18,20 @@ from .models import Project
 
 @api_view(["GET"])
 def health_check(request):
+    """Return a lightweight response confirming that the backend is available."""
     return Response({"message": "Privacy Dashboard backend is running"})
 
 
+# Converts a Project model instance to the shared dictionary used by project APIs.
 def serialize_project(project):
+    """Convert a Project instance and its current risk summary into an API payload."""
     # List views annotate this count; detail views fall back to the related manager.
     data_sources_count = getattr(project, "data_sources_count", None)
     if data_sources_count is None:
         data_sources_count = project.data_sources.count()
 
+    # Keep project list, detail, and overview responses aligned with the current
+    # project-level risk assessment.
     risk_assessment = calculate_project_risk(project)
     metrics = risk_assessment["metrics"]
 
@@ -46,7 +53,9 @@ def serialize_project(project):
     }
 
 
+# Builds a consistent JSON error response with optional field-level validation errors.
 def json_error(message, status=400, errors=None):
+    """Build a JSON error response for malformed or invalid project requests."""
     payload = {"error": message}
     if errors:
         payload["errors"] = errors
@@ -54,7 +63,9 @@ def json_error(message, status=400, errors=None):
     return JsonResponse(payload, status=status)
 
 
+# Parses the request body as JSON, returning None when the body is malformed.
 def parse_json_body(request):
+    """Parse a JSON request body, returning None when decoding fails."""
     try:
         return json.loads(request.body or "{}")
     except json.JSONDecodeError:
@@ -64,7 +75,10 @@ def parse_json_body(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def projects(request):
+    """List all projects or create and validate a new project."""
     if request.method == "GET":
+        # Annotate the displayed count and prefetch sources because serialization
+        # also calculates each project's risk summary from its related sources.
         project_queryset = Project.objects.annotate(
             data_sources_count=Count("data_sources"),
         ).prefetch_related("data_sources")
@@ -78,6 +92,7 @@ def projects(request):
             }
         )
 
+    # POST requests must contain an object so project fields can be read safely.
     payload = parse_json_body(request)
     if payload is None:
         return json_error("Invalid JSON body.")
@@ -104,16 +119,19 @@ def projects(request):
 @csrf_exempt
 @require_http_methods(["GET", "PATCH", "DELETE"])
 def project_detail(request, project_id):
+    """Retrieve, partially update, or delete one project."""
     project = get_object_or_404(Project, pk=project_id)
 
     if request.method == "GET":
         return JsonResponse(serialize_project(project))
 
     if request.method == "DELETE":
+        # Preserve the identifier before deletion for the confirmation payload.
         deleted_id = project.id
         project.delete()
         return JsonResponse({"deleted": deleted_id})
 
+    # Only fields explicitly included in a PATCH request are changed.
     payload = parse_json_body(request)
     if payload is None:
         return json_error("Invalid JSON body.")
@@ -139,6 +157,9 @@ def project_detail(request, project_id):
 
 @require_http_methods(["GET"])
 def project_overview(request, project_id):
+    """Return a project together with its sources and current risk assessment."""
+    # The same prefetched source collection is reused by project serialization,
+    # source serialization, and the project risk calculation below.
     project = get_object_or_404(
         Project.objects.prefetch_related("data_sources"),
         pk=project_id,
