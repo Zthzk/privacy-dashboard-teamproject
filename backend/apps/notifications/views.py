@@ -23,6 +23,8 @@ def notifications(request):
     queryset = Notification.objects.all()
     return JsonResponse(
         {
+            # The badge represents every unread row, while the dropdown stays
+            # compact by returning only the ten newest notifications.
             "unread_count": queryset.filter(is_read=False).count(),
             "notifications": [
                 serialize_notification(notification)
@@ -36,6 +38,7 @@ def notifications(request):
 @require_http_methods(["PATCH"])
 def mark_notification_read(request, notification_id):
     notification = get_object_or_404(Notification, pk=notification_id)
+    # Keep repeated clicks idempotent and avoid an unnecessary database write.
     if not notification.is_read:
         notification.is_read = True
         notification.save(update_fields=["is_read"])

@@ -7,6 +7,8 @@ const apiClient = axios.create({
 export const NOTIFICATIONS_REFRESH_EVENT = 'notifications:refresh';
 
 export function requestNotificationsRefresh() {
+  // Mutation APIs emit this browser-local event after the backend has created
+  // its notification, allowing the header badge to refresh immediately.
   window.dispatchEvent(new Event(NOTIFICATIONS_REFRESH_EVENT));
 }
 

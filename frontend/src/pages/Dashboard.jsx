@@ -296,7 +296,7 @@ export default function Dashboard() {
                       cursor: 'pointer',
                       /* Highlight selected row */
                       '&.Mui-selected': {
-                        bgcolor: 'primary.lighter',
+                        bgcolor: 'action.selected',
                         outline: '1px solid',
                         outlineColor: 'primary.light',
                       },

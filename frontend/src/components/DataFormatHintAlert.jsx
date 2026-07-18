@@ -2,12 +2,13 @@ import { useState } from 'react'
 
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { InfoCircleOutlined } from '@ant-design/icons'
+
+import { resolveArticleUrl } from 'utils/articleUrls'
 
 export default function DataFormatHintAlert({ hint }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -30,46 +31,31 @@ export default function DataFormatHintAlert({ hint }) {
 
         <Collapse in={detailsOpen}>
           <Stack spacing={1} sx={{ mt: 0.5 }}>
-            {/* Optional chaining guards against API responses predating these fields. */}
-            {hint.relevant_articles?.length > 0 && (
-              <Stack spacing={0.25}>
-                <Typography variant="body2" fontWeight={500}>Relevant GDPR / EU AI Act articles:</Typography>
-                {hint.relevant_articles.map((article) => (
-                  <Link
-                    key={article.title}
-                    href={article.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="body2"
-                    underline="none"
-                    sx={{ color: 'rgb(113, 128, 150)', '&:hover': { color: 'primary.main' } }}
-                  >
-                    • {article.title}
-                  </Link>
-                ))}
-              </Stack>
-            )}
-
             {hint.checklist?.length > 0 && (
               <Stack spacing={0.25}>
                 <Typography variant="body2" fontWeight={500}>Check your data for:</Typography>
                 {hint.checklist.map((item) => {
                   const label = item?.label ?? item
-                  const weight = item?.weight
                   const article = item?.article
+                  const text = article ? `${article} — ${label}` : label
+                  const url = resolveArticleUrl(article)
+
+                  if (!url) {
+                    return <Typography key={label} variant="body2">• {text}</Typography>
+                  }
+
                   return (
-                    <Stack key={label} direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Typography variant="body2">• {label}</Typography>
-                      {article && (
-                        <Chip
-                          size="small"
-                          label={article}
-                          color={weight === 3 ? 'error' : weight === 2 ? 'warning' : 'default'}
-                          variant="outlined"
-                          sx={{ fontSize: 11, height: 18, '& .MuiChip-label': { px: 0.75 } }}
-                        />
-                      )}
-                    </Stack>
+                    <Link
+                      key={label}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="body2"
+                      underline="none"
+                      sx={{ color: 'rgb(113, 128, 150)', '&:hover': { color: 'primary.main' } }}
+                    >
+                      • {text}
+                    </Link>
                   )
                 })}
               </Stack>

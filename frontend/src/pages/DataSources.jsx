@@ -86,9 +86,9 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
           <Icon style={{ fontSize: 24 }} />
         </Box>
         <Stack spacing={0.75}>
-          <Typography color="text.secondary">{title}</Typography>
-          <Typography variant="h2">{value}</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography sx={{ color: 'common.black' }}>{title}</Typography>
+          <Typography variant="h2" sx={{ color: 'common.black' }}>{value}</Typography>
+          <Typography variant="body2" sx={{ color: 'common.black' }}>
             {helper}
           </Typography>
         </Stack>
@@ -193,7 +193,7 @@ export default function DataSources() {
           title: 'Manual Entries',
           value: isInitialLoad ? '-' : dataSources.filter((source) => source.source_type === 'manual').length,
           helper: 'Entered directly in the dashboard',
-          color: 'secondary',
+          color: 'info',
           icon: DatabaseOutlined,
         },
       ]

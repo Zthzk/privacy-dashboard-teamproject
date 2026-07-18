@@ -48,6 +48,8 @@ export default function Notification() {
   }, []);
 
   useEffect(() => {
+    // Action events provide immediate updates; polling remains a fallback for
+    // changes made in another tab or outside the current frontend session.
     const initialLoadId = window.setTimeout(loadNotifications, 0);
     const intervalId = window.setInterval(loadNotifications, 30000);
     window.addEventListener(NOTIFICATIONS_REFRESH_EVENT, loadNotifications);
@@ -66,6 +68,7 @@ export default function Notification() {
 
   const handleNotificationClick = async (notification) => {
     if (!notification.is_read) {
+      // Update the badge immediately, then restore server state if the request fails.
       setNotifications((current) => current.map((item) => (
         item.id === notification.id ? { ...item, is_read: true } : item
       )));
@@ -83,6 +86,7 @@ export default function Notification() {
   };
 
   const handleMarkAllRead = async () => {
+    // Preserve the current values so the optimistic update can be rolled back.
     const previousNotifications = notifications;
     const previousUnreadCount = unreadCount;
     setNotifications((current) => current.map((item) => ({ ...item, is_read: true })));

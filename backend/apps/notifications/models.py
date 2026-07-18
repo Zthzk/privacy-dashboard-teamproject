@@ -5,6 +5,8 @@ class Notification(models.Model):
     """A persistent, application-wide notification for the single-user dashboard."""
 
     class Type(models.TextChoices):
+        # Update types remain valid for historical rows, although regular edits
+        # no longer create new notifications.
         PROJECT_CREATED = "project_created", "Project created"
         PROJECT_UPDATED = "project_updated", "Project updated"
         PROJECT_DELETED = "project_deleted", "Project deleted"
@@ -16,6 +18,8 @@ class Notification(models.Model):
     notification_type = models.CharField(max_length=40, choices=Type.choices)
     title = models.CharField(max_length=200)
     message = models.TextField()
+    # Store a frontend route rather than a database relation so deleted objects
+    # do not invalidate the notification history.
     link = models.CharField(max_length=255, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

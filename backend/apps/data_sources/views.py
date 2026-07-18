@@ -363,6 +363,8 @@ def project_data_sources(request, project_id):
                 f'Data source "{data_source.name}" was added to "{project.name}".',
                 f"/projects/{project.id}",
             )
+            # A newly created high-risk source needs a separate alert in
+            # addition to the normal creation activity.
             if normalize_risk_level(data_source) == "high":
                 create_notification(
                     Notification.Type.HIGH_RISK_DETECTED,
@@ -422,6 +424,8 @@ def project_data_source_detail(request, project_id, data_source_id):
                 pk=data_source_id,
                 project_id=project_id,
             )
+            # Capture the pre-edit risk so an alert is emitted only on the
+            # transition into high risk, not on every later edit.
             original_risk_level = normalize_risk_level(data_source)
             if "project" in payload:
                 data_source.project = get_object_or_404(Project, pk=payload.get("project"))
@@ -465,6 +469,8 @@ def project_data_source_detail(request, project_id, data_source_id):
             data_source.save()
             # Append a snapshot only when versioned state actually changed.
             create_data_source_version_snapshot(data_source)
+            # Regular edits do not create activity notifications; crossing the
+            # high-risk threshold is the only edit event that does.
             if (
                 original_risk_level != "high"
                 and normalize_risk_level(data_source) == "high"

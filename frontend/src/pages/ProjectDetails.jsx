@@ -440,8 +440,8 @@ function SummaryCard({ title, value, helper, color, icon: Icon, iconSx }) {
     <MainCard
       sx={{
         height: '100%',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
+        borderColor: `${color}.light`,
+        bgcolor: `${color}.lighter`,
         '& .MuiCardContent-root': { height: '100%' },
       }}
     >
@@ -470,11 +470,11 @@ function SummaryCard({ title, value, helper, color, icon: Icon, iconSx }) {
           <Icon style={{ fontSize: 27 }} />
         </Box>
         <Stack spacing={0.75} sx={{ minWidth: 0, alignSelf: 'center' }}>
-          <Typography variant="subtitle2" color="text.primary">
+          <Typography variant="subtitle2" sx={{color:"common.black"}}>
             {title}
           </Typography>
-          <Typography variant="h2">{value}</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="h2" sx={{color:"common.black"}}>{value}</Typography>
+          <Typography variant="body2" sx={{color:"common.black"}}>
             {helper}
           </Typography>
         </Stack>
@@ -962,7 +962,7 @@ export default function ProjectDetails() {
       title: 'Art. 9 Data',
       value: metrics.art_9_sources ?? dataSources.filter((source) => ['possible', 'yes'].includes(source.art_9_data)).length,
       helper: 'Special category data',
-      color: 'secondary',
+      color: 'success',
       icon: Art9Icon,
       iconSx: {
         bgcolor: '#f0e7ff',
