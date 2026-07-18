@@ -110,6 +110,25 @@ beforeEach(() => {
 })
 
 describe('DataSources page', () => {
+  test('summarizes data sources by risk level', async () => {
+    getAllDataSources.mockResolvedValue([
+      { ...dataSources[0], id: 1, name: 'High Source', risk_level: 'high' },
+      { ...dataSources[0], id: 2, name: 'Medium Source', risk_level: 'medium' },
+      { ...dataSources[0], id: 3, name: 'Low Source', risk_level: 'low' },
+    ])
+
+    renderDataSources()
+
+    await screen.findByText('High Source')
+    expect(screen.getByText('Total Data Sources').parentElement).toHaveTextContent('3')
+    expect(screen.getByText('High Risk').parentElement).toHaveTextContent('1')
+    expect(screen.getByText('Medium Risk').parentElement).toHaveTextContent('1')
+    expect(screen.getByText('Low Risk').parentElement).toHaveTextContent('1')
+    expect(screen.queryByText('File Sources')).not.toBeInTheDocument()
+    expect(screen.queryByText('API Sources')).not.toBeInTheDocument()
+    expect(screen.queryByText('Manual Entries')).not.toBeInTheDocument()
+  })
+
   test('shows the most recently edited data source first', async () => {
     getAllDataSources.mockResolvedValue([
       { ...dataSources[0], id: 12, name: 'Older Source', updated_at: '2026-05-17T10:00:00Z' },
