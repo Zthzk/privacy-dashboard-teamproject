@@ -145,6 +145,17 @@ describe('DataSources page', () => {
     expect(recentRowIndex).toBeLessThan(olderRowIndex)
   })
 
+  test('shows risk level instead of location in the data sources table', async () => {
+    renderDataSources()
+
+    const sourceRow = await screen.findByRole('row', { name: /Support Tickets/ })
+
+    expect(screen.getByRole('columnheader', { name: 'Risk Level' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Location / Reference' })).not.toBeInTheDocument()
+    expect(within(sourceRow).getByText('Medium')).toBeInTheDocument()
+    expect(within(sourceRow).queryByText('datasets/support.json')).not.toBeInTheDocument()
+  })
+
   test('paginates the main data sources table', async () => {
     const sourceList = Array.from({ length: 12 }, (_, index) => ({
       ...dataSources[0],
