@@ -82,24 +82,29 @@ The screenshots below provide a visual overview of the main application workflow
 
 The dashboard summarizes the available projects, data sources, and identified privacy-risk levels.
 
-![Privacy Dashboard overview](docs/screenshots/dashboard-overview.png)
+![Privacy Dashboard overview](docs/images/Dashboard-Overview.png)
+![Projects Overview](docs/images/Projects-overview.png)
+![Data Sources Overview](docs/images/Data-Sources-Overview.png)
+
 
 ### Project Details
 
 The project detail page groups the relevant data sources and privacy information for one ML project or pipeline.
 
-![Project detail view](docs/screenshots/project-details.png)
+![Project detail view](docs/images/Project-Details.png)
 
 ### Data Source Assessment
 
 The data-source form allows users to document whether personal data or special categories of personal data are involved.
 
-![Data source assessment form](docs/screenshots/data-source-assessment.png)
+![Dataset preview](docs/images/Dataset-Preview.png)
+![Data source assessment form](docs/images/Risk-Assessment.png)
 
 ### Privacy Risk Result
 
 The risk result presents the calculated risk level and relevant recommendations in an understandable format.
 
-![Privacy risk result](docs/screenshots/privacy-risk-result.png)
+![Privacy risk result](docs/images/ProjectsDetails-2.png)
+![Risk Recommendation](docs/images/Risk-Recommendations.png)
 
 
