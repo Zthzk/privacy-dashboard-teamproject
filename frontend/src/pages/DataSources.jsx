@@ -24,9 +24,11 @@ import Typography from '@mui/material/Typography'
 import {
   ApiOutlined,
   AudioOutlined,
+  CheckCircleOutlined,
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
+  ExclamationCircleOutlined,
   EyeOutlined,
   FileTextOutlined,
   HistoryOutlined,
@@ -35,6 +37,7 @@ import {
   RightOutlined,
   SearchOutlined,
   VideoCameraOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 
 import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
@@ -107,6 +110,15 @@ function getDataSourceTimestamp(source) {
 
 function sortDataSourcesByRecentActivity(dataSources) {
   return [...dataSources].sort((firstSource, secondSource) => getDataSourceTimestamp(secondSource) - getDataSourceTimestamp(firstSource))
+}
+
+// Normalize current and legacy risk values before using them in summary counts.
+function getDataSourceRiskLevel(source) {
+  const riskLevel = String(source.risk_level ?? source.risk_level_display ?? source.risk ?? '').toLowerCase()
+
+  if (riskLevel === 'high' || riskLevel === 'red') return 'high'
+  if (riskLevel === 'medium' || riskLevel === 'yellow') return 'medium'
+  return 'low'
 }
 
 export default function DataSources() {
@@ -189,6 +201,11 @@ export default function DataSources() {
   const summaryCards = useMemo(
     () => {
       const isInitialLoad = loading && dataSources.length === 0
+      // Summary cards always describe the complete source list, independent of search and pagination.
+      const riskCounts = dataSources.reduce((counts, source) => {
+        const riskLevel = getDataSourceRiskLevel(source)
+        return { ...counts, [riskLevel]: counts[riskLevel] + 1 }
+      }, { high: 0, medium: 0, low: 0 })
 
       return [
         {
@@ -199,25 +216,25 @@ export default function DataSources() {
           icon: DatabaseOutlined,
         },
         {
-          title: 'File Sources',
-          value: isInitialLoad ? '-' : dataSources.filter((source) => source.source_type === 'file').length,
-          helper: 'Uploaded or referenced files',
-          color: 'success',
-          icon: FileTextOutlined,
+          title: 'High Risk',
+          value: isInitialLoad ? '-' : riskCounts.high,
+          helper: 'Needs immediate attention',
+          color: 'error',
+          icon: WarningOutlined,
         },
         {
-          title: 'API Sources',
-          value: isInitialLoad ? '-' : dataSources.filter((source) => source.source_type === 'api').length,
-          helper: 'External or internal APIs',
+          title: 'Medium Risk',
+          value: isInitialLoad ? '-' : riskCounts.medium,
+          helper: 'Sources needing review',
           color: 'warning',
-          icon: ApiOutlined,
+          icon: ExclamationCircleOutlined,
         },
         {
-          title: 'Manual Entries',
-          value: isInitialLoad ? '-' : dataSources.filter((source) => source.source_type === 'manual').length,
-          helper: 'Entered directly in the dashboard',
-          color: 'info',
-          icon: DatabaseOutlined,
+          title: 'Low Risk',
+          value: isInitialLoad ? '-' : riskCounts.low,
+          helper: 'No immediate action required',
+          color: 'success',
+          icon: CheckCircleOutlined,
         },
       ]
     },

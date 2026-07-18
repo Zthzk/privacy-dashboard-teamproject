@@ -1,3 +1,4 @@
+import React from 'react';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,7 +15,6 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import DownOutlined from '@ant-design/icons/DownOutlined';
 import LogoutOutlined from '@ant-design/icons/LogoutOutlined';
-import UserOutlined from '@ant-design/icons/UserOutlined';
 
 function readCurrentUser() {
   try {
@@ -96,10 +96,6 @@ export default function Profile() {
             </Stack>
             <Divider />
             <List disablePadding>
-              <ListItemButton>
-                <UserOutlined style={{ marginRight: 12 }} />
-                <ListItemText primary="Profile" />
-              </ListItemButton>
               <ListItemButton
                   onClick={() => {
                       localStorage.removeItem('accessToken');
