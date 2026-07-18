@@ -110,6 +110,57 @@ beforeEach(() => {
 })
 
 describe('DataSources page', () => {
+  test('shows risk summaries and risk levels instead of source locations', async () => {
+    const riskSources = [
+      { ...dataSources[0], id: 1, name: 'High Source', risk_level: 'high' },
+      { ...dataSources[0], id: 2, name: 'Medium Source', risk_level: 'medium' },
+      { ...dataSources[0], id: 3, name: 'Low Source', risk_level: 'low' },
+    ]
+    getAllDataSources.mockResolvedValue(riskSources)
+
+    renderDataSources()
+
+    await screen.findByText('High Source')
+    expect(screen.getByText('Total Data Sources').parentElement).toHaveTextContent('3')
+    expect(screen.getByText('High Risk').parentElement).toHaveTextContent('1')
+    expect(screen.getByText('Medium Risk').parentElement).toHaveTextContent('1')
+    expect(screen.getByText('Low Risk').parentElement).toHaveTextContent('1')
+    expect(screen.getByRole('columnheader', { name: 'Risk Level' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Location / Reference' })).not.toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /High Source/ })).toHaveTextContent('High')
+    expect(screen.getByRole('row', { name: /Medium Source/ })).toHaveTextContent('Medium')
+    expect(screen.getByRole('row', { name: /Low Source/ })).toHaveTextContent('Low')
+  })
+
+  test('paginates the data source table with 5 and 10 row options', async () => {
+    const user = userEvent.setup()
+    const paginatedSources = Array.from({ length: 12 }, (_, index) => ({
+      ...dataSources[0],
+      id: index + 1,
+      name: `Data Source ${index + 1}`,
+    }))
+    getAllDataSources.mockResolvedValue(paginatedSources)
+
+    renderDataSources()
+
+    await screen.findByText('Data Source 1')
+    expect(screen.getByText('Data Source 10')).toBeInTheDocument()
+    expect(screen.queryByText('Data Source 11')).not.toBeInTheDocument()
+    expect(screen.getByText('1–10 of 12')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Go to next page' }))
+
+    expect(screen.queryByText('Data Source 1')).not.toBeInTheDocument()
+    expect(screen.getByText('Data Source 11')).toBeInTheDocument()
+    expect(screen.getByText('Data Source 12')).toBeInTheDocument()
+    expect(screen.getByText('11–12 of 12')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('combobox', { name: 'Rows per page:' }))
+    expect(screen.getByRole('option', { name: '5' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '10' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: '25' })).not.toBeInTheDocument()
+  })
+
   test('opens dataset preview when clicking a data source row', async () => {
     const user = userEvent.setup()
 
