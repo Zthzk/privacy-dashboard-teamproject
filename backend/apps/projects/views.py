@@ -11,6 +11,8 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.risk_assessments.services import calculate_project_risk
 
 from .models import Project
@@ -39,6 +41,8 @@ def serialize_project(project):
         "id": project.id,
         "name": project.name,
         "description": project.description,
+        "icon_key": project.icon_key,
+        "color": project.color,
         "data_sources_count": data_sources_count,
         "overall_status": risk_assessment["overall_status"],
         "overall_status_display": risk_assessment["overall_status_display"],
@@ -102,6 +106,8 @@ def projects(request):
     project = Project(
         name=payload.get("name", ""),
         description=payload.get("description", ""),
+        icon_key=payload.get("icon_key", Project.Icon.MESSAGE),
+        color=payload.get("color", Project.Color.PRIMARY),
     )
 
     try:
@@ -113,6 +119,12 @@ def projects(request):
             errors=error.message_dict,
         )
 
+    create_notification(
+        Notification.Type.PROJECT_CREATED,
+        "Project created",
+        f'Project "{project.name}" was created.',
+        f"/projects/{project.id}",
+    )
     return JsonResponse(serialize_project(project), status=201)
 
 
@@ -126,9 +138,14 @@ def project_detail(request, project_id):
         return JsonResponse(serialize_project(project))
 
     if request.method == "DELETE":
-        # Preserve the identifier before deletion for the confirmation payload.
         deleted_id = project.id
+        project_name = project.name
         project.delete()
+        create_notification(
+            Notification.Type.PROJECT_DELETED,
+            "Project deleted",
+            f'Project "{project_name}" was deleted.',
+        )
         return JsonResponse({"deleted": deleted_id})
 
     # Only fields explicitly included in a PATCH request are changed.
@@ -142,6 +159,10 @@ def project_detail(request, project_id):
         project.name = payload.get("name", "")
     if "description" in payload:
         project.description = payload.get("description", "")
+    if "icon_key" in payload:
+        project.icon_key = payload.get("icon_key", "")
+    if "color" in payload:
+        project.color = payload.get("color", "")
 
     try:
         project.full_clean()

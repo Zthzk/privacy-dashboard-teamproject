@@ -7,7 +7,6 @@ import Popper from '@mui/material/Popper';
 import Stack from '@mui/material/Stack';
 import MoreOutlined from '@ant-design/icons/MoreOutlined';
 
-import Notification from './Notification';
 import Profile from './Profile';
 
 export default function MobileSection() {
@@ -30,7 +29,6 @@ export default function MobileSection() {
         <ClickAwayListener onClickAway={() => setOpen(false)}>
           <Paper sx={{ p: 1, boxShadow: 3 }}>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Notification />
               <Profile />
             </Stack>
           </Paper>
