@@ -869,18 +869,16 @@ export default function ProjectDetails() {
       const updateData = {
         name: editForm.name.trim(),
         description: editForm.description.trim(),
-      }
-      const styleData = {
         icon_key: editForm.icon_key,
         color: editForm.color,
       }
-      const updatedProject = {
-        ...(await updateProject(project.id, updateData)),
-        ...styleData,
-      }
+      const updatedProject = await updateProject(project.id, updateData)
 
       setProject(updatedProject)
-      writeProjectStyleOverride(updatedProject.id, styleData)
+      writeProjectStyleOverride(updatedProject.id, {
+        icon_key: updatedProject.icon_key,
+        color: updatedProject.color,
+      })
 
       const cachedProjects = readCachedProjects()
       const nextCachedProjects = cachedProjects.some((cachedProject) => cachedProject.id === updatedProject.id)

@@ -34,6 +34,8 @@ def serialize_project(project):
         "id": project.id,
         "name": project.name,
         "description": project.description,
+        "icon_key": project.icon_key,
+        "color": project.color,
         "data_sources_count": data_sources_count,
         "overall_status": risk_assessment["overall_status"],
         "overall_status_display": risk_assessment["overall_status_display"],
@@ -89,6 +91,8 @@ def projects(request):
     project = Project(
         name=payload.get("name", ""),
         description=payload.get("description", ""),
+        icon_key=payload.get("icon_key", Project.Icon.MESSAGE),
+        color=payload.get("color", Project.Color.PRIMARY),
     )
 
     try:
@@ -138,6 +142,10 @@ def project_detail(request, project_id):
         project.name = payload.get("name", "")
     if "description" in payload:
         project.description = payload.get("description", "")
+    if "icon_key" in payload:
+        project.icon_key = payload.get("icon_key", "")
+    if "color" in payload:
+        project.color = payload.get("color", "")
 
     try:
         project.full_clean()

@@ -52,10 +52,17 @@ export function sortProjectsNewestFirst(projects) {
 }
 
 export function applyProjectStyleOverrides(projects, styleOverrides) {
-  return projects.map((project) => ({
-    ...project,
-    ...(styleOverrides[String(project.id)] ?? {}),
-  }))
+  return projects.map((project) => {
+    const cachedStyle = styleOverrides[String(project.id)] ?? {}
+
+    // Backend values are authoritative. Cache overrides only support projects
+    // returned by older API versions that did not persist display styles.
+    return {
+      ...project,
+      icon_key: project.icon_key ?? cachedStyle.icon_key,
+      color: project.color ?? cachedStyle.color,
+    }
+  })
 }
 
 export function getVisibleProjects(primaryProjects) {

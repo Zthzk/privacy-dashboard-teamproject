@@ -928,8 +928,16 @@ class DataFormatHintsApiTests(TestCase):
         for data_format in ["text", "csv", "json", "other"]:
             self.assertFalse(payload[data_format]["art9_risk"])
 class DataSourceVersionMigrationTests(TransactionTestCase):
-    migrate_from = [("data_sources", "0003_datasource_compliance_violations")]
-    migrate_to = [("data_sources", "0004_datasourceversion")]
+    # Keep unrelated Project schema at its current migration while exercising
+    # the historical DataSource version backfill in isolation.
+    migrate_from = [
+        ("projects", "0002_project_style"),
+        ("data_sources", "0003_datasource_compliance_violations"),
+    ]
+    migrate_to = [
+        ("projects", "0002_project_style"),
+        ("data_sources", "0004_datasourceversion"),
+    ]
 
     def setUp(self):
         super().setUp()

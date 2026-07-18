@@ -459,6 +459,8 @@ export default function Projects() {
       const createdProject = await createProject({
         name: createForm.name.trim(),
         description: createForm.description.trim(),
+        icon_key: createForm.icon_key,
+        color: createForm.color,
       })
       const timestampedProject = {
         ...createdProject,
