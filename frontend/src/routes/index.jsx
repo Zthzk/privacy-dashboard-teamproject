@@ -16,6 +16,10 @@ import ResetPassword from 'pages/ResetPassword'
 const router = createBrowserRouter(
   [
     {
+      path: '/',
+      element: <Navigate to="/login" replace />,
+    },
+    {
       path: '/login',
       element: <Login />,
     },
@@ -35,10 +39,6 @@ const router = createBrowserRouter(
       path: '/',
       element: <DashboardLayout />,
       children: [
-        {
-          index: true,
-          element: <Navigate to="/dashboard" replace />,
-        },
         {
           path: 'dashboard',
           element: <Dashboard />,
