@@ -109,6 +109,15 @@ function sortDataSourcesByRecentActivity(dataSources) {
   return [...dataSources].sort((firstSource, secondSource) => getDataSourceTimestamp(secondSource) - getDataSourceTimestamp(firstSource))
 }
 
+// Support both current risk names and legacy traffic-light values returned by the backend.
+function getRiskChip(source) {
+  const riskLevel = String(source.risk_level ?? source.risk_level_display ?? source.risk ?? '').toLowerCase()
+
+  if (riskLevel === 'high' || riskLevel === 'red') return { label: 'High', color: 'error' }
+  if (riskLevel === 'medium' || riskLevel === 'yellow') return { label: 'Medium', color: 'warning' }
+  return { label: 'Low', color: 'success' }
+}
+
 export default function DataSources() {
   const navigate = useNavigate()
   // Seed from session cache so newly added or edited sources appear before the API refresh returns.
@@ -333,7 +342,7 @@ export default function DataSources() {
                 <TableCell sx={{ width: 180 }}>Project</TableCell>
                 <TableCell sx={{ width: 120 }}>Type</TableCell>
                 <TableCell sx={{ width: 120 }}>Format</TableCell>
-                <TableCell sx={{ width: 270 }}>Location / Reference</TableCell>
+                <TableCell sx={{ width: 150 }}>Risk Level</TableCell>
                 <TableCell sx={{ width: 105 }}>Version</TableCell>
                 <TableCell sx={{ width: 150 }}>Last Updated</TableCell>
                 <TableCell align="right" sx={{ width: 180 }}>Actions</TableCell>
@@ -414,13 +423,10 @@ export default function DataSources() {
                         <Chip size="small" variant="outlined" color="secondary" label={source.data_format_display} />
                       </TableCell>
                       <TableCell>
-                        <Typography
-                          variant="body2"
-                          title={source.location || '-'}
-                          sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        >
-                          {source.location || '-'}
-                        </Typography>
+                        {(() => {
+                          const riskChip = getRiskChip(source)
+                          return <Chip size="small" variant="outlined" color={riskChip.color} label={riskChip.label} />
+                        })()}
                       </TableCell>
                       <TableCell>
                         <Chip
