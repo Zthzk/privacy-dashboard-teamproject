@@ -1,5 +1,7 @@
 ﻿import axios from "axios";
 
+import { requestNotificationsRefresh } from "api/notifications";
+
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
 });
@@ -40,6 +42,7 @@ function normalizeError(error) {
 export async function createProject(projectData) {
   try {
     const response = await apiClient.post("/projects/", projectData);
+    requestNotificationsRefresh();
     return response.data;
   } catch (error) {
     throw normalizeError(error);
@@ -95,6 +98,7 @@ export async function getProjectOverview(projectId) {
 export async function updateProject(projectId, updateData) {
   try {
     const response = await apiClient.patch(`/projects/${projectId}/`, updateData);
+    requestNotificationsRefresh();
     return response.data;
   } catch (error) {
     throw normalizeError(error);
@@ -108,6 +112,7 @@ export async function updateProject(projectId, updateData) {
 export async function deleteProject(projectId) {
   try {
     await apiClient.delete(`/projects/${projectId}/`);
+    requestNotificationsRefresh();
   } catch (error) {
     console.error("Failed to delete project:", error);
     throw normalizeError(error);

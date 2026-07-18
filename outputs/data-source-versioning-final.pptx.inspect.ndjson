@@ -1,0 +1,100 @@
+{"kind":"deck","id":"pr/3ql1l0","name":"Deck"}
+{"kind":"layout","layoutId":"061c4e10-294c-49f9-8b01-fc2062d00b50","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"4c81504c-cfa8-4417-8367-da5eea8384a2","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/fclask","slide":1,"title":"Tonghe","textShapes":23}
+{"kind":"textbox","id":"sh/sv254zad","slide":1,"name":"presenter-name","text":"Tonghe","textPreview":"Tonghe","textChars":6,"textLines":1,"bbox":[70,26,320,48]}
+{"kind":"shape","id":"sh/7utovu98","slide":1,"name":"proud-banner","bbox":[64,86,1152,62]}
+{"kind":"textbox","id":"sh/69kn2psn","slide":1,"name":"proud-label","text":"PROUD OF THIS","textPreview":"PROUD OF THIS","textChars":13,"textLines":1,"bbox":[92,105,170,26]}
+{"kind":"textbox","id":"sh/58b6tkr2","slide":1,"name":"proud-headline","text":"A reliable version history for every data source change","textPreview":"A reliable version history for every data source change","textChars":55,"textLines":1,"bbox":[270,101,875,34]}
+{"kind":"textbox","id":"sh/k7250fah","slide":1,"name":"cover-explanation","text":"A privacy dashboard should not only show the current state. It should preserve each meaningful change, keep historical risk results auditable, and remain correct when updates happen concurrently.","textPreview":"A privacy dashboard should not only show the current state. It should preserve each meaningful change, keep historical risk results audit...","textChars":195,"textLines":1,"bbox":[102,179,1076,70]}
+{"kind":"shape","id":"sh/j694ra9w","slide":1,"name":"cover-arrow-a-145","bbox":[145,336,0,48]}
+{"kind":"shape","id":"sh/i50ny5sb","slide":1,"name":"cover-arrow-b-145","bbox":[145,444,0,48]}
+{"kind":"shape","id":"sh/p4v65or6","slide":1,"name":"cover-arrow-a-342","bbox":[342,336,0,48]}
+{"kind":"shape","id":"sh/43m5cjql","slide":1,"name":"cover-arrow-b-342","bbox":[342,444,0,48]}
+{"kind":"shape","id":"sh/ilgrq5ob","slide":1,"name":"flow-CREATE-82","bbox":[82,270,126,66]}
+{"kind":"textbox","id":"sh/jmp8ja5w","slide":1,"name":"flow-label-CREATE-82","text":"CREATE","textPreview":"CREATE","textChars":6,"textLines":1,"bbox":[90,289,110,28]}
+{"kind":"shape","id":"sh/4ny9sf6h","slide":1,"name":"flow-VERSION 1-82","bbox":[82,384,126,66]}
+{"kind":"textbox","id":"sh/5o7ql0n2","slide":1,"name":"flow-label-VERSION 1-82","text":"VERSION 1","textPreview":"VERSION 1","textChars":9,"textLines":1,"bbox":[90,403,110,28]}
+{"kind":"shape","id":"sh/uhw7mlof","slide":1,"name":"flow-HISTORY-82","bbox":[82,498,126,66]}
+{"kind":"textbox","id":"sh/vi58fq50","slide":1,"name":"flow-label-HISTORY-82","text":"HISTORY","textPreview":"HISTORY","textChars":7,"textLines":1,"bbox":[90,517,110,28]}
+{"kind":"shape","id":"sh/wjy9ov65","slide":1,"name":"flow-EDIT-279","bbox":[279,270,126,66]}
+{"kind":"textbox","id":"sh/hk7qh0nq","slide":1,"name":"flow-label-EDIT-279","text":"EDIT","textPreview":"EDIT","textChars":4,"textLines":1,"bbox":[287,289,110,28]}
+{"kind":"shape","id":"sh/ed0rypoj","slide":1,"name":"flow-COMPARE-279","bbox":[279,384,126,66]}
+{"kind":"textbox","id":"sh/fe98ru54","slide":1,"name":"flow-label-COMPARE-279","text":"COMPARE","textPreview":"COMPARE","textChars":7,"textLines":1,"bbox":[287,403,110,28]}
+{"kind":"shape","id":"sh/by1ojmlg","slide":1,"name":"flow-VERSION 2-279","bbox":[279,498,126,66]}
+{"kind":"textbox","id":"sh/axsnah4v","slide":1,"name":"flow-label-VERSION 2-279","text":"VERSION 2","textPreview":"VERSION 2","textChars":9,"textLines":1,"bbox":[287,517,110,28]}
+{"kind":"shape","id":"sh/xk36lw3m","slide":1,"name":"current-source-backdrop","bbox":[455,274,330,302]}
+{"kind":"shape","id":"sh/cju5crm1","slide":1,"name":"current-source-card","bbox":[480,292,280,258]}
+{"kind":"textbox","id":"sh/zmlonmls","slide":1,"name":"current-card-title","text":"Current Data Source","textPreview":"Current Data Source","textChars":19,"textLines":1,"bbox":[510,317,220,34]}
+{"kind":"textbox","id":"sh/ylcneh47","slide":1,"name":"current-name","text":"Customer CSV","textPreview":"Customer CSV","textChars":12,"textLines":1,"bbox":[505,378,230,30]}
+{"kind":"textbox","id":"sh/lo36pw3i","slide":1,"name":"current-format-label","text":"Format","textPreview":"Format","textChars":6,"textLines":1,"bbox":[505,425,90,24]}
+{"kind":"textbox","id":"sh/knu5grmx","slide":1,"name":"current-format","text":"CSV","textPreview":"CSV","textChars":3,"textLines":1,"bbox":[650,425,75,24]}
+{"kind":"textbox","id":"sh/7qlor6lo","slide":1,"name":"current-risk-label","text":"Risk level","textPreview":"Risk level","textChars":10,"textLines":1,"bbox":[505,470,100,24]}
+{"kind":"shape","id":"sh/mpcni143","slide":1,"name":"risk-pill","bbox":[652,465,74,28]}
+{"kind":"textbox","id":"sh/4ve58bih","slide":1,"name":"risk-pill-text","text":"MEDIUM","textPreview":"MEDIUM","textChars":6,"textLines":1,"bbox":[658,471,62,18]}
+{"kind":"shape","id":"sh/5wnmhgj2","slide":1,"name":"history-VERSION 3","bbox":[827,294,266,78]}
+{"kind":"textbox","id":"sh/itwn610b","slide":1,"name":"history-title-VERSION 3","text":"VERSION 3","textPreview":"VERSION 3","textChars":9,"textLines":1,"bbox":[849,309,150,24]}
+{"kind":"textbox","id":"sh/ju54f61w","slide":1,"name":"history-body-VERSION 3","text":"Latest snapshot","textPreview":"Latest snapshot","textChars":15,"textLines":1,"bbox":[849,337,205,20]}
+{"kind":"shape","id":"sh/wre54ri5","slide":1,"name":"history-VERSION 2","bbox":[868,382,266,78]}
+{"kind":"textbox","id":"sh/hsnmdwjq","slide":1,"name":"history-title-VERSION 2","text":"VERSION 2","textPreview":"VERSION 2","textChars":9,"textLines":1,"bbox":[890,397,150,24]}
+{"kind":"textbox","id":"sh/upcn210z","slide":1,"name":"history-body-VERSION 2","text":"Previous risk state","textPreview":"Previous risk state","textChars":19,"textLines":1,"bbox":[890,425,205,20]}
+{"kind":"shape","id":"sh/vq54bm1k","slide":1,"name":"history-VERSION 1","bbox":[909,470,266,78]}
+{"kind":"textbox","id":"sh/8nul0ri9","slide":1,"name":"history-title-VERSION 1","text":"VERSION 1","textPreview":"VERSION 1","textChars":9,"textLines":1,"bbox":[931,485,150,24]}
+{"kind":"textbox","id":"sh/9o3m9wju","slide":1,"name":"history-body-VERSION 1","text":"Original source","textPreview":"Original source","textChars":15,"textLines":1,"bbox":[931,513,205,20]}
+{"kind":"textbox","id":"sh/dgzalova","slide":1,"name":"cover-page-number","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[1170,632,34,22]}
+{"kind":"notes","id":"nt/fclask","slide":1,"text":"About 45 seconds. One contribution I am especially proud of is the backend for data source versioning. A privacy dashboard should not only show the current state of a dataset. It should preserve earlier states and their risk results, so changes remain auditable. My implementation creates immutable snapshots while also handling duplicate and concurrent updates safely."}
+{"kind":"slide","id":"sl/4lwhuy","slide":2,"title":"A mutable record was not enough","textShapes":8}
+{"kind":"textbox","id":"sh/p4j6do76","slide":2,"name":"title-2","text":"A mutable record was not enough","textPreview":"A mutable record was not enough","textChars":31,"textLines":1,"bbox":[42,34,1160,72]}
+{"kind":"shape","id":"sh/21s7i9of","slide":2,"name":"accent-2","bbox":[42,112,94,6]}
+{"kind":"textbox","id":"sh/n21obep0","slide":2,"name":"slide-number-2","text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"textbox","id":"sh/crapo36h","slide":2,"name":"problem-context","text":"Privacy decisions depend on what a data source looked like at a specific moment. Overwriting the current record destroys that context.","textPreview":"Privacy decisions depend on what a data source looked like at a specific moment. Overwriting the current record destroys that context.","textChars":134,"textLines":1,"bbox":[42,145,1160,86]}
+{"kind":"shape","id":"sh/xs3qh872","slide":2,"name":"overwrite-panel","bbox":[42,280,565,220]}
+{"kind":"shape","id":"sh/aps7mtor","slide":2,"name":"history-panel","bbox":[632,280,606,220]}
+{"kind":"textbox","id":"sh/bq18fypw","slide":2,"name":"without-title","text":"Without versioning","textPreview":"Without versioning","textChars":18,"textLines":1,"bbox":[76,310,480,44]}
+{"kind":"textbox","id":"sh/svqpcz6d","slide":2,"name":"without-body","text":"Edit → overwrite\n\nPrevious metadata and risk results disappear","textPreview":"Edit → overwrite |  | Previous metadata and risk results disappear","textChars":62,"textLines":3,"bbox":[76,375,480,100]}
+{"kind":"textbox","id":"sh/dwz6547y","slide":2,"name":"with-title","text":"With immutable snapshots","textPreview":"With immutable snapshots","textChars":24,"textLines":1,"bbox":[668,310,510,44]}
+{"kind":"textbox","id":"sh/tonuxwb6","slide":2,"name":"with-body","text":"Edit → append a new version\n\nEarlier states stay available for review","textPreview":"Edit → append a new version |  | Earlier states stay available for review","textChars":69,"textLines":3,"bbox":[668,375,510,100]}
+{"kind":"textbox","id":"sh/snut4ral","slide":2,"name":"goal-line","text":"The goal: current data stays easy to use, while history remains trustworthy.","textPreview":"The goal: current data stays easy to use, while history remains trustworthy.","textChars":76,"textLines":1,"bbox":[42,555,1100,52]}
+{"kind":"notes","id":"nt/4lwhuy","slide":2,"text":"About 55 seconds. Before this feature, a data source was just one mutable database record. Every edit replaced the previous state. For a privacy dashboard, that is a problem because the risk level and metadata may change over time. My goal was therefore to keep the current record simple for normal use, but append an immutable snapshot whenever its meaningful state changes."}
+{"kind":"slide","id":"sl/txlf66","slide":3,"title":"The backend owns every version number","textShapes":16}
+{"kind":"textbox","id":"sh/kv2xsv6l","slide":3,"name":"title-3","text":"The backend owns every version number","textPreview":"The backend owns every version number","textChars":37,"textLines":1,"bbox":[42,34,1160,72]}
+{"kind":"shape","id":"sh/zutwzq50","slide":3,"name":"accent-3","bbox":[42,112,94,6]}
+{"kind":"textbox","id":"sh/ytkfq5of","slide":3,"name":"slide-number-3","text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"textbox","id":"sh/8jmxwf6x","slide":3,"name":"code-explanation-title","text":"What the code guarantees","textPreview":"What the code guarantees","textChars":24,"textLines":1,"bbox":[842,151,350,38]}
+{"kind":"textbox","id":"sh/7idw3a5c","slide":3,"name":"code-number-1","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[842,220,42,28]}
+{"kind":"textbox","id":"sh/mh4fu5or","slide":3,"name":"code-label-1","text":"LOCK","textPreview":"LOCK","textChars":4,"textLines":1,"bbox":[900,220,240,28]}
+{"kind":"textbox","id":"sh/pobetgny","slide":3,"name":"code-body-1","text":"Prevent concurrent allocation","textPreview":"Prevent concurrent allocation","textChars":29,"textLines":1,"bbox":[900,254,285,38]}
+{"kind":"shape","id":"sh/onix0b6d","slide":3,"name":"code-rule-1","bbox":[842,302,350,1]}
+{"kind":"textbox","id":"sh/ahszi5w3","slide":3,"name":"code-number-2","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[842,321,42,28]}
+{"kind":"textbox","id":"sh/bi1gbado","slide":3,"name":"code-label-2","text":"SKIP","textPreview":"SKIP","textChars":4,"textLines":1,"bbox":[900,321,240,28]}
+{"kind":"textbox","id":"sh/wjuhkfe9","slide":3,"name":"code-body-2","text":"Avoid duplicate snapshots","textPreview":"Avoid duplicate snapshots","textChars":25,"textLines":1,"bbox":[900,355,285,38]}
+{"kind":"shape","id":"sh/xk3ydkvu","slide":3,"name":"code-rule-2","bbox":[842,403,350,1]}
+{"kind":"textbox","id":"sh/ylczm5wf","slide":3,"name":"code-number-3","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[842,422,42,28]}
+{"kind":"textbox","id":"sh/jmlgfadk","slide":3,"name":"code-label-3","text":"NUMBER","textPreview":"NUMBER","textChars":6,"textLines":1,"bbox":[900,422,240,28]}
+{"kind":"textbox","id":"sh/knuhofe5","slide":3,"name":"code-body-3","text":"Assign latest version + 1","textPreview":"Assign latest version + 1","textChars":25,"textLines":1,"bbox":[900,456,285,38]}
+{"kind":"shape","id":"sh/lo3yhkvq","slide":3,"name":"code-rule-3","bbox":[842,504,350,1]}
+{"kind":"textbox","id":"sh/69czqpwb","slide":3,"name":"code-number-4","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[842,523,42,28]}
+{"kind":"textbox","id":"sh/7a5gjudw","slide":3,"name":"code-label-4","text":"APPEND","textPreview":"APPEND","textChars":6,"textLines":1,"bbox":[900,523,240,28]}
+{"kind":"textbox","id":"sh/3e5g7ut4","slide":3,"name":"code-body-4","text":"Store the complete state","textPreview":"Store the complete state","textChars":24,"textLines":1,"bbox":[900,557,285,38]}
+{"kind":"textbox","id":"sh/idwfepsj","slide":3,"name":"code-conclusion","text":"The client cannot create gaps or conflicting versions.","textPreview":"The client cannot create gaps or conflicting versions.","textChars":54,"textLines":1,"bbox":[842,615,350,42]}
+{"kind":"image","id":"im/obq5wnud","slide":3,"name":"","alt":"Python function that creates an immutable data source version snapshot","bbox":[42,150,758,504]}
+{"kind":"notes","id":"nt/txlf66","slide":3,"text":"About 60 seconds. This is the core function from my implementation. First, select_for_update locks the parent data source while the transaction is running, so concurrent requests cannot allocate the same number. Next, the backend compares the current state with the latest snapshot. If nothing meaningful changed, it returns the existing version and avoids a duplicate. Otherwise, it calculates the next version number and stores the complete snapshot. The client never controls the number, so it cannot create gaps or conflicts."}
+{"kind":"slide","id":"sl/j4vm9a","slide":4,"title":"Edge cases define whether history can be trusted","textShapes":4}
+{"kind":"textbox","id":"sh/lkb2pk36","slide":4,"name":"title-4","text":"Edge cases define whether history can be trusted","textPreview":"Edge cases define whether history can be trusted","textChars":48,"textLines":1,"bbox":[42,34,1160,72]}
+{"kind":"shape","id":"sh/yh0ju54f","slide":4,"name":"accent-4","bbox":[42,112,94,6]}
+{"kind":"textbox","id":"sh/zi9kna50","slide":4,"name":"slide-number-4","text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"textbox","id":"sh/cfi1svm9","slide":4,"name":"edge-intro","text":"The implementation handles the cases that usually break a first versioning design.","textPreview":"The implementation handles the cases that usually break a first versioning design.","textChars":82,"textLines":1,"bbox":[42,140,1160,52]}
+{"kind":"textbox","id":"sh/qd0jq54j","slide":4,"name":"test-callout","text":"Covered by automated backend tests","textPreview":"Covered by automated backend tests","textChars":34,"textLines":1,"bbox":[42,603,520,34]}
+{"kind":"table","id":"tb/gze94juh","slide":4,"name":"","rows":5,"cols":3,"preview":"Scenario | Backend behavior | Why it matters","bbox":[42,230,1196,330]}
+{"kind":"notes","id":"nt/j4vm9a","slide":4,"text":"About 75 seconds. The most interesting work was in the edge cases. Creation must immediately store version one. A changed edit appends the next snapshot, but a no-op update must not create noise. Concurrent requests must not receive the same number, which is why the row lock matters. I added tests for these behaviors, as well as history retrieval, project scoping, deletion, and migration of existing data."}
+{"kind":"slide","id":"sl/6cfdqk","slide":5,"title":"WHY I AM PROUD OF IT","textShapes":8}
+{"kind":"textbox","id":"sh/horuhwju","slide":5,"name":"closing-eyebrow","text":"WHY I AM PROUD OF IT","textPreview":"WHY I AM PROUD OF IT","textChars":20,"textLines":1,"bbox":[42,42,500,34]}
+{"kind":"textbox","id":"sh/ulgvmhkj","slide":5,"name":"closing-title","text":"It turns change\ninto evidence.","textPreview":"It turns change | into evidence.","textChars":30,"textLines":2,"bbox":[42,170,920,190]}
+{"kind":"textbox","id":"sh/vm9cfm14","slide":5,"name":"close-1-title","text":"Auditable","textPreview":"Auditable","textChars":9,"textLines":1,"bbox":[42,465,250,40]}
+{"kind":"textbox","id":"sh/8zytk72d","slide":5,"name":"close-1-body","text":"Every meaningful state is preserved.","textPreview":"Every meaningful state is preserved.","textChars":36,"textLines":1,"bbox":[42,515,300,60]}
+{"kind":"textbox","id":"sh/907udcjy","slide":5,"name":"close-2-title","text":"Reliable","textPreview":"Reliable","textChars":8,"textLines":1,"bbox":[400,465,250,40]}
+{"kind":"textbox","id":"sh/mxgbixk7","slide":5,"name":"close-2-body","text":"Transactions and locks protect ordering.","textPreview":"Transactions and locks protect ordering.","textChars":40,"textLines":1,"bbox":[400,515,310,60]}
+{"kind":"textbox","id":"sh/7ypcb21s","slide":5,"name":"close-3-title","text":"Maintainable","textPreview":"Maintainable","textChars":12,"textLines":1,"bbox":[780,465,260,40]}
+{"kind":"textbox","id":"sh/kvytg72h","slide":5,"name":"close-3-body","text":"Snapshots stay stable as risk logic evolves.","textPreview":"Snapshots stay stable as risk logic evolves.","textChars":44,"textLines":1,"bbox":[780,515,330,60]}
+{"kind":"shape","id":"sh/lw7u9cjm","slide":5,"name":"closing-accent","bbox":[1135,0,145,720]}
+{"kind":"notes","id":"nt/6cfdqk","slide":5,"text":"About 55 seconds. I am proud of this contribution because it is not only a visible feature. It creates trustworthy evidence. The snapshots make changes auditable, transaction and locking make the ordering reliable, and historical risk results remain stable even if the assessment algorithm changes later. For me, this was a good example of turning a user story into a robust backend design."}

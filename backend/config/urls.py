@@ -31,6 +31,7 @@ urlpatterns = [
     path("api/", include("apps.projects.urls")),
     path("api/", include("apps.data_sources.urls")),
     path("api/", include("apps.risk_assessments.urls")),
+    path("api/", include("apps.notifications.urls")),
     path("api/health/", health_check, name="health-check"),
 
     path("api/auth/register/", register_user, name="register_user"),

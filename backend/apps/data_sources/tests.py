@@ -1,4 +1,5 @@
 ﻿import json
+from datetime import timedelta
 
 from unittest.mock import patch
 
@@ -6,6 +7,7 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.projects.models import Project
 
@@ -243,6 +245,27 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertIn("project_name", first_source)
         self.assertIn("risk_level", first_source)
         self.assertIn("art_9_data", first_source)
+
+    def test_all_data_sources_are_ordered_by_most_recent_update(self):
+        recently_edited = DataSource.objects.create(
+            project=self.project,
+            name="Recently edited",
+        )
+        newly_created = DataSource.objects.create(
+            project=self.project,
+            name="Newly created",
+        )
+        DataSource.objects.filter(pk=recently_edited.pk).update(
+            updated_at=timezone.now() + timedelta(minutes=1),
+        )
+
+        response = self.client.get(reverse("data-sources"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [source["id"] for source in response.json()["data_sources"]],
+            [recently_edited.id, newly_created.id],
+        )
 
     def test_all_data_sources_list_uses_annotated_current_version_number(self):
         data_sources = [
@@ -928,8 +951,16 @@ class DataFormatHintsApiTests(TestCase):
         for data_format in ["text", "csv", "json", "other"]:
             self.assertFalse(payload[data_format]["art9_risk"])
 class DataSourceVersionMigrationTests(TransactionTestCase):
-    migrate_from = [("data_sources", "0003_datasource_compliance_violations")]
-    migrate_to = [("data_sources", "0004_datasourceversion")]
+    # Keep unrelated Project schema at its current migration while exercising
+    # the historical DataSource version backfill in isolation.
+    migrate_from = [
+        ("projects", "0002_project_style"),
+        ("data_sources", "0003_datasource_compliance_violations"),
+    ]
+    migrate_to = [
+        ("projects", "0002_project_style"),
+        ("data_sources", "0004_datasourceversion"),
+    ]
 
     def setUp(self):
         super().setUp()

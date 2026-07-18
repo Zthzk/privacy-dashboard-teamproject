@@ -9,14 +9,15 @@ import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Link from '@mui/material/Link'
+import MenuItem from '@mui/material/MenuItem'
 import OutlinedInput from '@mui/material/OutlinedInput'
+import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
-import TablePagination from '@mui/material/TablePagination'
 import TableRow from '@mui/material/TableRow'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
@@ -33,6 +34,7 @@ import {
   HistoryOutlined,
   PictureOutlined,
   PlusOutlined,
+  RightOutlined,
   SearchOutlined,
   VideoCameraOutlined,
   WarningOutlined,
@@ -114,6 +116,15 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
   )
 }
 
+function getDataSourceTimestamp(source) {
+  const timestamp = Date.parse(source?.updated_at ?? source?.created_at ?? '')
+  return Number.isNaN(timestamp) ? 0 : timestamp
+}
+
+function sortDataSourcesByRecentActivity(dataSources) {
+  return [...dataSources].sort((firstSource, secondSource) => getDataSourceTimestamp(secondSource) - getDataSourceTimestamp(firstSource))
+}
+
 export default function DataSources() {
   const navigate = useNavigate()
   // Seed from session cache so newly added or edited sources appear before the API refresh returns.
@@ -174,9 +185,7 @@ export default function DataSources() {
   const filteredDataSources = useMemo(() => {
     const query = search.trim().toLowerCase()
 
-    if (!query) return dataSources
-
-    return dataSources.filter((source) => {
+    const matchingDataSources = query ? dataSources.filter((source) => {
       const fields = [
         source.name,
         source.project_name,
@@ -185,15 +194,19 @@ export default function DataSources() {
         getSourceRisk(source).label,
       ]
       return fields.some((field) => field?.toLowerCase().includes(query))
-    })
+    }) : dataSources
+
+    return sortDataSourcesByRecentActivity(matchingDataSources)
   }, [dataSources, search])
 
   // Clamp the active page when searching or deleting reduces the number of available rows.
   const pageCount = Math.max(1, Math.ceil(filteredDataSources.length / rowsPerPage))
   const currentPage = Math.min(page, pageCount - 1)
-  const visibleDataSources = useMemo(
-    () => filteredDataSources.slice(currentPage * rowsPerPage, currentPage * rowsPerPage + rowsPerPage),
-    [currentPage, filteredDataSources, rowsPerPage],
+  const firstVisibleDataSource = filteredDataSources.length === 0 ? 0 : currentPage * rowsPerPage + 1
+  const lastVisibleDataSource = Math.min(filteredDataSources.length, (currentPage + 1) * rowsPerPage)
+  const paginatedDataSources = filteredDataSources.slice(
+    currentPage * rowsPerPage,
+    currentPage * rowsPerPage + rowsPerPage,
   )
 
   const summaryCards = useMemo(
@@ -379,7 +392,7 @@ export default function DataSources() {
               )}
 
               {!loading &&
-                visibleDataSources.map((source) => (
+                paginatedDataSources.map((source) => (
                     // Rows open the same preview as the eye action
                     <TableRow
                       key={source.id}
@@ -501,18 +514,48 @@ export default function DataSources() {
             </TableBody>
           </Table>
         </TableContainer>
-        <TablePagination
-          component="div"
-          count={filteredDataSources.length}
-          page={currentPage}
-          rowsPerPage={rowsPerPage}
-          rowsPerPageOptions={[5, 10]}
-          onPageChange={(_, nextPage) => setPage(nextPage)}
-          onRowsPerPageChange={(event) => {
-            setRowsPerPage(Number(event.target.value))
-            setPage(0)
-          }}
-        />
+        {!loading && filteredDataSources.length > 0 && (
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            sx={{ p: 2, borderTop: 1, borderColor: 'divider', alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Showing {firstVisibleDataSource} to {lastVisibleDataSource} of {filteredDataSources.length} data sources
+            </Typography>
+            <Stack direction="row" spacing={1.5} sx={{ justifyContent: { xs: 'space-between', sm: 'flex-end' }, alignItems: 'center' }}>
+              <IconButton
+                disabled={currentPage === 0}
+                aria-label="Previous page"
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+                sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
+              >
+                <RightOutlined style={{ transform: 'rotate(180deg)' }} />
+              </IconButton>
+              <Button variant="outlined" sx={{ minWidth: 44, bgcolor: 'primary.lighter' }}>{currentPage + 1}</Button>
+              <IconButton
+                disabled={currentPage >= pageCount - 1}
+                aria-label="Next page"
+                onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+                sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
+              >
+                <RightOutlined />
+              </IconButton>
+              <Select
+                size="small"
+                value={rowsPerPage}
+                onChange={(event) => {
+                  setRowsPerPage(Number(event.target.value))
+                  setPage(0)
+                }}
+                sx={{ minWidth: 115 }}
+              >
+                <MenuItem value={5}>5 / page</MenuItem>
+                <MenuItem value={10}>10 / page</MenuItem>
+              </Select>
+            </Stack>
+          </Stack>
+        )}
       </MainCard>
 
       <DatasetPreviewDialog

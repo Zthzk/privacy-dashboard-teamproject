@@ -338,15 +338,20 @@ export default function DatasetPreviewDialog({ source, onClose, onEdit, onOpenPr
     >
       <DialogTitle
         id="dataset-preview-title"
-        sx={{ px: { xs: 3, sm: 3.5 }, pt: { xs: 2.25, sm: 2.5 }, pb: 0.5, pr: 8, fontSize: { xs: '1.5rem', sm: '1.85rem' }, fontWeight: 800 }}
+        sx={{ px: { xs: 3, sm: 3.5 }, pt: { xs: 2.25, sm: 2.5 }, pb: 0.5, pr: 8, fontSize: { xs: '0.95rem', sm: '1rem' }, fontWeight: 700, color: 'text.secondary' }}
       >
         Dataset Preview
       </DialogTitle>
       <Box sx={{ px: { xs: 3, sm: 3.5 }, pb: 1.75 }}>
         <Stack spacing={1.25}>
-          <Typography variant="body2" color="text.secondary">
-            {source?.name ?? 'Untitled data source'} &middot; {source?.location || 'No source location provided'}
-          </Typography>
+          <Box>
+            <Typography component="h3" sx={{ fontSize: { xs: '1.55rem', sm: '1.85rem' }, fontWeight: 800, lineHeight: 1.25 }}>
+              {source?.name ?? 'Untitled data source'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {source?.location || 'No source location provided'}
+            </Typography>
+          </Box>
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
             <Chip
               size="small"
