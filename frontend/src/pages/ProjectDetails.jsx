@@ -29,24 +29,17 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   CloseOutlined,
-  CreditCardOutlined,
   DatabaseFilled,
   DeleteOutlined,
   EditOutlined,
-  EnvironmentOutlined,
-  ExperimentFilled,
   EyeOutlined,
   FileFilled,
   FileTextOutlined,
   FolderFilled,
   GlobalOutlined,
   HistoryOutlined,
-  HeartFilled,
-  IdcardOutlined,
   LeftOutlined,
-  MailOutlined,
   PlusCircleFilled,
-  SafetyCertificateFilled,
   SearchOutlined,
   UserOutlined,
   WarningFilled,
@@ -187,184 +180,6 @@ function isMediumRisk(source) {
   return ['medium', 'yellow'].includes(source.risk_level)
 }
 
-// icon design for detected data categories 
-const dataCategoryDisplay = {
-  contact_data: {
-    label: 'Contact Data',
-    description: 'Email addresses, phone numbers, postal addresses',
-    icon: MailOutlined,
-    color: '#1677ff',
-    bg: '#e6f4ff',
-    isArt9: false,
-  },
-  direct_identifiers: {
-    label: 'Direct Identifiers',
-    description: 'Names, ID numbers, employee IDs, passport numbers',
-    icon: IdcardOutlined,
-    color: '#08979c',
-    bg: '#e6fffb',
-    isArt9: false,
-  },
-  location_data: {
-    label: 'Location Data',
-    description: 'Addresses, cities, GPS coordinates, postcodes',
-    icon: EnvironmentOutlined,
-    color: '#722ed1',
-    bg: '#f3e8ff',
-    isArt9: false,
-  },
-  online_identifiers: {
-    label: 'Online Identifiers',
-    description: 'IP addresses, device IDs, cookies, session IDs',
-    icon: GlobalOutlined,
-    color: '#2563eb',
-    bg: '#eff6ff',
-    isArt9: false,
-  },
-  financial_data: {
-    label: 'Financial Data',
-    description: 'IBAN, credit card numbers, bank accounts, payments',
-    icon: CreditCardOutlined,
-    color: '#d48806',
-    bg: '#fff7e6',
-    isArt9: false,
-  },
-  health_data: {
-    label: 'Health Data',
-    description: 'Medical records, diagnoses, diseases, medications',
-    icon: HeartFilled,
-    color: '#ef4444',
-    bg: '#fff1f0',
-    isArt9: true,
-  },
-  biometric_genetic_data: {
-    label: 'Biometric / Genetic Data',
-    description: 'Fingerprints, facial recognition, DNA, genetic information',
-    icon: ExperimentFilled,
-    color: '#7c3aed',
-    bg: '#f3e8ff',
-    isArt9: true,
-  },
-  other_art_9_data: {
-    label: 'Other Art. 9 Data',
-    description: 'Political opinions, religion, sexual orientation, trade union',
-    icon: SafetyCertificateFilled,
-    color: '#7c3aed',
-    bg: '#f3e8ff',
-    isArt9: true,
-  },
-}
-
-const dataCategoryOrder = Object.keys(dataCategoryDisplay)
-const dataCategoryPriority = {
-  health_data: 90,
-  biometric_genetic_data: 90,
-  other_art_9_data: 85,
-  financial_data: 80,
-  direct_identifiers: 75,
-  contact_data: 70,
-  location_data: 60,
-  online_identifiers: 55,
-}
-
-function normalizeDataCategory(category) {
-  const key = typeof category === 'string' ? category : category?.key
-  if (!key || !dataCategoryDisplay[key]) return null
-
-  return {
-    key,
-    ...dataCategoryDisplay[key],
-    group: category?.group,
-    is_art_9: category?.is_art_9,
-    source_count: category?.source_count,
-  }
-}
-
-// Reads data category keys from multiple metadata generations.
-// New sources should provide data_category_keys;
-// the fallbacks keep older or raw metadata records visible in 
-// project-level category summaries.
-function getSourceDataCategoryKeys(source) {
-  const keys = source.metadata?.data_category_keys
-  // the most common generation of matadata
-  if (Array.isArray(keys)) {
-    return keys.filter((key) => dataCategoryDisplay[key])
-  }
-
-  // QUESTION: Do we still need these 2 shapes from older versions below? 
-  // Backward-compatible shape: some metadata may store full category objects
-  // instead of just keys, e.g. { key, label, group, is_art_9 }.
-  const categories = source.metadata?.data_categories
-  if (Array.isArray(categories)) {
-    return categories
-      .map((category) => (typeof category === 'string' ? category : category?.key))
-      .filter((key) => dataCategoryDisplay[key])
-  }
-
-
-  // Legacy/raw detection shape: infer display categories from the lower-level
-  // detector outputs when normalized category fields are missing.
-  const inferredKeys = new Set()
-  const personalCategories = source.metadata?.personal_data_categories ?? []
-  const art9Categories = source.metadata?.art_9_categories ?? []
-
-  personalCategories.forEach((category) => {
-    if (['email', 'phone', 'address'].includes(category)) inferredKeys.add('contact_data')
-    if (['name', 'identifier', 'date_of_birth'].includes(category)) inferredKeys.add('direct_identifiers')
-    if (['address', 'location'].includes(category)) inferredKeys.add('location_data')
-    if (['ip_address', 'online_identifier'].includes(category)) inferredKeys.add('online_identifiers')
-    if (category === 'financial') inferredKeys.add('financial_data')
-  })
-
-  art9Categories.forEach((category) => {
-    if (category === 'health') inferredKeys.add('health_data')
-    if (['biometric', 'genetic'].includes(category)) inferredKeys.add('biometric_genetic_data')
-    if (['political_opinion', 'religion', 'sexual_orientation', 'trade_union'].includes(category)) inferredKeys.add('other_art_9_data')
-  })
-
-  return [...inferredKeys]
-}
-
-// counts how many data sources contain each normalized category and
-// returns the backend-compatible summary shape used by the category card
-function buildDetectedDataCategories(dataSources) {
-  const counts = new Map()
-
-  dataSources.forEach((source) => {
-    getSourceDataCategoryKeys(source).forEach((key) => {
-      counts.set(key, (counts.get(key) ?? 0) + 1)
-    })
-  })
-
-  // iterate over the stable display order rather than Map insertion order
-  // so the result remains predictable
-  return dataCategoryOrder
-    .filter((key) => counts.has(key))
-    .map((key) => ({
-      key,
-      label: dataCategoryDisplay[key].label,
-      group: dataCategoryDisplay[key].isArt9 ? 'art_9' : 'personal_data',
-      is_art_9: dataCategoryDisplay[key].isArt9,
-      source_count: counts.get(key),
-    }))
-}
-
-// Sorts categories using three deterministic criteria:
-// 1. Categories detected in more sources appear first.
-// 2. Equal counts are resolved using business/privacy priority.
-// 3. Remaining ties use the stable display order.
-function sortDetectedDataCategories(categories) {
-  return [...categories].sort((first, second) => {
-    const countDiff = (second.source_count ?? 0) - (first.source_count ?? 0)
-    if (countDiff !== 0) return countDiff
-
-    const priorityDiff = (dataCategoryPriority[second.key] ?? 0) - (dataCategoryPriority[first.key] ?? 0)
-    if (priorityDiff !== 0) return priorityDiff
-
-    return dataCategoryOrder.indexOf(first.key) - dataCategoryOrder.indexOf(second.key)
-  })
-}
-
 function buildRiskAssessmentFallback(dataSources) {
   // Local fallback keeps the overview usable while the backend risk endpoint is unavailable.
   const metrics = {
@@ -394,7 +209,6 @@ function buildRiskAssessmentFallback(dataSources) {
     overall_status: overallStatus,
     reason,
     metrics,
-    top_detected_data_categories: buildDetectedDataCategories(dataSources),
     recommendations,
   }
 }
@@ -577,109 +391,6 @@ function RiskDistributionCard({ metrics }) {
   )
 }
 
-function DataCategoryCard({ categories }) {
-  const detectedCategories = sortDetectedDataCategories(categories.map(normalizeDataCategory).filter(Boolean))
-  const visibleCategories = detectedCategories.slice(0, 5)
-  const hiddenCategoryCount = Math.max(detectedCategories.length - visibleCategories.length, 0)
-
-  return (
-    <MainCard>
-      <Stack spacing={1.35}>
-        <Typography variant="h5">Top Detected Data Categories</Typography>
-        {detectedCategories.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            No data categories detected yet.
-          </Typography>
-        )}
-        {visibleCategories.map((category) => {
-          const Icon = category.icon
-
-          return (
-            <Box
-              key={category.key}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: '32px minmax(0, 1fr) 92px',
-                columnGap: 1.25,
-                alignItems: 'center',
-                borderRadius: 1,
-                minHeight: 58,
-                py: 0.65,
-              }}
-            >
-              <Box
-                sx={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 1,
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: category.color,
-                  bgcolor: category.bg,
-                }}
-              >
-                <Icon style={{ fontSize: 17 }} />
-              </Box>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>{category.label}</Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{
-                    display: '-webkit-box',
-                    lineHeight: 1.25,
-                    overflow: 'hidden',
-                    WebkitBoxOrient: 'vertical',
-                    WebkitLineClamp: 2,
-                  }}
-                >
-                  {category.description}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', minWidth: 0 }}>
-                {Number.isFinite(category.source_count) && (
-                  <Chip
-                    label={`${category.source_count} ${category.source_count === 1 ? 'source' : 'sources'}`}
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                      minWidth: 74,
-                      maxWidth: 92,
-                      color: category.color,
-                      borderColor: category.color,
-                      bgcolor: category.bg,
-                      '& .MuiChip-label': {
-                        px: 0.75,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      },
-                    }}
-                  />
-                )}
-              </Box>
-            </Box>
-          )
-        })}
-        {hiddenCategoryCount > 0 && (
-          <Box
-            sx={{
-              borderRadius: 1,
-              bgcolor: 'grey.100',
-              border: '1px dashed',
-              borderColor: 'divider',
-              px: 1.5,
-              py: 1,
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              +{hiddenCategoryCount} more categories detected
-            </Typography>
-          </Box>
-        )}
-      </Stack>
-    </MainCard>
-  )
-}
 function RiskRecommendationsCard({ status, recommendations }) {
   const shouldShowRecommendations =
       status === 'yellow' || status === 'red'
@@ -921,7 +632,6 @@ export default function ProjectDetails() {
     [dataSources, riskAssessment],
   )
   const metrics = effectiveRiskAssessment.metrics ?? {}
-  const detectedDataCategories = effectiveRiskAssessment.top_detected_data_categories ?? buildDetectedDataCategories(dataSources)
   const overallRisk = getOverallRiskChip(effectiveRiskAssessment.overall_status)
   const rowsPerPage = 10
 
@@ -1361,7 +1071,6 @@ export default function ProjectDetails() {
 
               <RiskDistributionCard metrics={metrics} />
 
-              <DataCategoryCard categories={detectedDataCategories} />
             </Stack>
           </Box>
 
