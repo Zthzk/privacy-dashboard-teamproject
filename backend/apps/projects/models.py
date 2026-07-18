@@ -30,7 +30,7 @@ class Project(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-updated_at", "-created_at", "-id"]
 
     def __str__(self):
         return self.name

@@ -110,6 +110,22 @@ beforeEach(() => {
 })
 
 describe('DataSources page', () => {
+  test('shows the most recently edited data source first', async () => {
+    getAllDataSources.mockResolvedValue([
+      { ...dataSources[0], id: 12, name: 'Older Source', updated_at: '2026-05-17T10:00:00Z' },
+      { ...dataSources[0], id: 13, name: 'Recently Edited Source', updated_at: '2026-05-19T10:00:00Z' },
+    ])
+
+    renderDataSources()
+
+    await screen.findByText('Recently Edited Source')
+    const rows = screen.getAllByRole('row')
+    const recentRowIndex = rows.findIndex((row) => within(row).queryByText('Recently Edited Source'))
+    const olderRowIndex = rows.findIndex((row) => within(row).queryByText('Older Source'))
+
+    expect(recentRowIndex).toBeLessThan(olderRowIndex)
+  })
+
   test('opens dataset preview when clicking a data source row', async () => {
     const user = userEvent.setup()
 

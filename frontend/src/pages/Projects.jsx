@@ -46,6 +46,7 @@ import {
 } from 'utils/project-cache'
 import {
   defaultProjectStyle,
+  getProjectTimestamp,
   getProjectStyle,
   getVisibleProjects,
   projectColorOptions,
@@ -142,7 +143,7 @@ function sortProjectsForOverview(projects, sortMode) {
       return secondProject.name.localeCompare(firstProject.name)
     }
 
-    return Date.parse(secondProject.updated_at ?? '') - Date.parse(firstProject.updated_at ?? '')
+    return getProjectTimestamp(secondProject) - getProjectTimestamp(firstProject)
   })
 }
 

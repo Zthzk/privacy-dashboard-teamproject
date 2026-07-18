@@ -1,7 +1,9 @@
 import json
+from datetime import timedelta
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.data_sources.models import DataSource
 
@@ -32,11 +34,14 @@ class ProjectModelTests(TestCase):
 
         self.assertEqual(str(project), "Privacy Dashboard")
 
-    def test_projects_are_ordered_newest_first(self):
+    def test_projects_are_ordered_by_most_recent_update(self):
         older_project = Project.objects.create(name="Older Project")
         newer_project = Project.objects.create(name="Newer Project")
+        Project.objects.filter(pk=older_project.pk).update(
+            updated_at=timezone.now() + timedelta(minutes=1),
+        )
 
-        self.assertEqual(list(Project.objects.all()), [newer_project, older_project])
+        self.assertEqual(list(Project.objects.all()), [older_project, newer_project])
 
 
 class HealthCheckTests(TestCase):

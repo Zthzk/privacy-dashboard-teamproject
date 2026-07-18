@@ -97,6 +97,15 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
   )
 }
 
+function getDataSourceTimestamp(source) {
+  const timestamp = Date.parse(source?.updated_at ?? source?.created_at ?? '')
+  return Number.isNaN(timestamp) ? 0 : timestamp
+}
+
+function sortDataSourcesByRecentActivity(dataSources) {
+  return [...dataSources].sort((firstSource, secondSource) => getDataSourceTimestamp(secondSource) - getDataSourceTimestamp(firstSource))
+}
+
 export default function DataSources() {
   const navigate = useNavigate()
   // Seed from session cache so newly added or edited sources appear before the API refresh returns.
@@ -155,12 +164,12 @@ export default function DataSources() {
   const filteredDataSources = useMemo(() => {
     const query = search.trim().toLowerCase()
 
-    if (!query) return dataSources
-
-    return dataSources.filter((source) => {
+    const matchingDataSources = query ? dataSources.filter((source) => {
       const fields = [source.name, source.location, source.project_name, source.source_type_display, source.data_format_display]
       return fields.some((field) => field?.toLowerCase().includes(query))
-    })
+    }) : dataSources
+
+    return sortDataSourcesByRecentActivity(matchingDataSources)
   }, [dataSources, search])
 
   const summaryCards = useMemo(

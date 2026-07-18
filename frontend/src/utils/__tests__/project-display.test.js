@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { applyProjectStyleOverrides } from '../project-display'
+import { applyProjectStyleOverrides, sortProjectsNewestFirst } from '../project-display'
 
 
 describe('applyProjectStyleOverrides', () => {
@@ -20,5 +20,16 @@ describe('applyProjectStyleOverrides', () => {
     )
 
     expect(project).toMatchObject({ icon_key: 'traffic', color: 'warning' })
+  })
+})
+
+describe('sortProjectsNewestFirst', () => {
+  test('puts a recently edited project ahead of a newer but unedited project', () => {
+    const projects = [
+      { id: 1, created_at: '2026-07-18T10:00:00Z', updated_at: '2026-07-18T10:00:00Z' },
+      { id: 2, created_at: '2026-07-17T10:00:00Z', updated_at: '2026-07-18T11:00:00Z' },
+    ]
+
+    expect(sortProjectsNewestFirst(projects).map((project) => project.id)).toEqual([2, 1])
   })
 })

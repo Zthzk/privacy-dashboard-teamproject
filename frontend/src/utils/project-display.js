@@ -43,7 +43,7 @@ export function getProjectStyle(project) {
 }
 
 export function getProjectTimestamp(project) {
-  const timestamp = Date.parse(project?.created_at ?? project?.created ?? project?.updated_at ?? project?.updated ?? '')
+  const timestamp = Date.parse(project?.updated_at ?? project?.updated ?? project?.created_at ?? project?.created ?? '')
   return Number.isNaN(timestamp) ? 0 : timestamp
 }
 

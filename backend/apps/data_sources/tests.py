@@ -1,4 +1,5 @@
 ﻿import json
+from datetime import timedelta
 
 from unittest.mock import patch
 
@@ -6,6 +7,7 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.projects.models import Project
 
@@ -243,6 +245,27 @@ class ProjectDataSourcesApiTests(TestCase):
         self.assertIn("project_name", first_source)
         self.assertIn("risk_level", first_source)
         self.assertIn("art_9_data", first_source)
+
+    def test_all_data_sources_are_ordered_by_most_recent_update(self):
+        recently_edited = DataSource.objects.create(
+            project=self.project,
+            name="Recently edited",
+        )
+        newly_created = DataSource.objects.create(
+            project=self.project,
+            name="Newly created",
+        )
+        DataSource.objects.filter(pk=recently_edited.pk).update(
+            updated_at=timezone.now() + timedelta(minutes=1),
+        )
+
+        response = self.client.get(reverse("data-sources"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [source["id"] for source in response.json()["data_sources"]],
+            [recently_edited.id, newly_created.id],
+        )
 
     def test_all_data_sources_list_uses_annotated_current_version_number(self):
         data_sources = [
