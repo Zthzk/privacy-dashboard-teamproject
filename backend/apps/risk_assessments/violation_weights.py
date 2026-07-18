@@ -8,9 +8,10 @@
 #       (Art. 83(5): €20M / 4% tier) AND EU AI Act Art. 5 prohibited practices
 #       (Art. 99(3): €35M / 7% tier — the single most severe category in either law).
 #   2 — Elevated risk: heightened personal data (e.g. financial data, ID numbers)
-#       and EU AI Act Art. 10 / 50 / 53 governance & transparency obligations
+#       and EU AI Act Art. 10 / 50 governance & transparency obligations
 #       (Art. 99(4): €15M / 3% tier).
-#   1 — Standard personal data under GDPR Art. 6.
+#   1 — Standard personal data under GDPR Art. 6, plus lower-severity obligations
+#       such as the GPAI copyright duty (Art. 53, a separate copyright regime).
 #
 # Note: under the GDPR, Art. 6 and Art. 9 share the same statutory ceiling
 # (€20M / 4%). Art. 9 still scores higher because Art. 83(2)(g) names the
@@ -58,9 +59,8 @@ VIOLATION_WEIGHTS = {
         {"weight": 2, "article": "Art. 6 GDPR", "is_personal_data": True, "is_art_9": False},
     "Check for toxic language, hate speech, or historical biases within the text":
         {"weight": 2, "article": "Art. 10 EU AI Act", "is_personal_data": False, "is_art_9": False},
-    # GPAI copyright obligation — separate regime (Art. 101), comparable €15M / 3% magnitude.
     "Verify presence of copyrighted text or content extracted in violation of opt-out mechanisms":
-        {"weight": 2, "article": "Art. 53(1)(c) EU AI Act", "is_personal_data": False, "is_art_9": False},
+        {"weight": 1, "article": "Art. 53(1)(c) EU AI Act", "is_personal_data": False, "is_art_9": False},
     "Identify synthetic text that could be used for public information dissemination requiring labeling":
         {"weight": 2, "article": "Art. 50(4) EU AI Act", "is_personal_data": False, "is_art_9": False},
 
