@@ -1,5 +1,7 @@
 import axios from "axios";
 
+import { requestNotificationsRefresh } from "api/notifications";
+
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
 });
@@ -115,6 +117,7 @@ export async function createDataSource(projectId, dataSourceData) {
       `/projects/${projectId}/datasources/`,
       dataSourceData,
     );
+    requestNotificationsRefresh();
     return response.data;
   } catch (error) {
     throw normalizeError(error);
@@ -131,6 +134,7 @@ export async function updateDataSource(projectId, dataSourceId, dataSourceData) 
       `/projects/${projectId}/datasources/${dataSourceId}/`,
       dataSourceData,
     );
+    requestNotificationsRefresh();
     return response.data;
   } catch (error) {
     throw normalizeError(error);
@@ -156,6 +160,7 @@ export async function getDataFormatHints() {
 export async function deleteDataSource(projectId, dataSourceId) {
   try {
     await apiClient.delete(`/projects/${projectId}/datasources/${dataSourceId}/`);
+    requestNotificationsRefresh();
   } catch (error) {
     throw normalizeError(error);
   }

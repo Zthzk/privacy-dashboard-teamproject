@@ -46,6 +46,7 @@ import {
 } from 'utils/project-cache'
 import {
   defaultProjectStyle,
+  getProjectTimestamp,
   getProjectStyle,
   getVisibleProjects,
   projectColorOptions,
@@ -142,7 +143,7 @@ function sortProjectsForOverview(projects, sortMode) {
       return secondProject.name.localeCompare(firstProject.name)
     }
 
-    return Date.parse(secondProject.updated_at ?? '') - Date.parse(firstProject.updated_at ?? '')
+    return getProjectTimestamp(secondProject) - getProjectTimestamp(firstProject)
   })
 }
 
@@ -459,6 +460,8 @@ export default function Projects() {
       const createdProject = await createProject({
         name: createForm.name.trim(),
         description: createForm.description.trim(),
+        icon_key: createForm.icon_key,
+        color: createForm.color,
       })
       const timestampedProject = {
         ...createdProject,

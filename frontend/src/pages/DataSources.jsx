@@ -9,7 +9,9 @@ import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Link from '@mui/material/Link'
+import MenuItem from '@mui/material/MenuItem'
 import OutlinedInput from '@mui/material/OutlinedInput'
+import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -22,16 +24,20 @@ import Typography from '@mui/material/Typography'
 import {
   ApiOutlined,
   AudioOutlined,
+  CheckCircleOutlined,
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
+  ExclamationCircleOutlined,
   EyeOutlined,
   FileTextOutlined,
   HistoryOutlined,
   PictureOutlined,
   PlusOutlined,
+  RightOutlined,
   SearchOutlined,
   VideoCameraOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 
 import DataSourceVersionHistoryDialog from 'components/DataSourceVersionHistoryDialog'
@@ -97,12 +103,40 @@ function SummaryCard({ title, value, helper, color, icon: Icon }) {
   )
 }
 
+function getDataSourceTimestamp(source) {
+  const timestamp = Date.parse(source?.updated_at ?? source?.created_at ?? '')
+  return Number.isNaN(timestamp) ? 0 : timestamp
+}
+
+function sortDataSourcesByRecentActivity(dataSources) {
+  return [...dataSources].sort((firstSource, secondSource) => getDataSourceTimestamp(secondSource) - getDataSourceTimestamp(firstSource))
+}
+
+// Normalize current and legacy risk values before using them in summary counts.
+function getDataSourceRiskLevel(source) {
+  const riskLevel = String(source.risk_level ?? source.risk_level_display ?? source.risk ?? '').toLowerCase()
+
+  if (riskLevel === 'high' || riskLevel === 'red') return 'high'
+  if (riskLevel === 'medium' || riskLevel === 'yellow') return 'medium'
+  return 'low'
+}
+
+function getRiskChip(source) {
+  const riskLevel = getDataSourceRiskLevel(source)
+
+  if (riskLevel === 'high') return { label: 'High', color: 'error' }
+  if (riskLevel === 'medium') return { label: 'Medium', color: 'warning' }
+  return { label: 'Low', color: 'success' }
+}
+
 export default function DataSources() {
   const navigate = useNavigate()
   // Seed from session cache so newly added or edited sources appear before the API refresh returns.
   const [dataSources, setDataSources] = useState(() => readCachedDataSources())
   const [projects, setProjects] = useState([])
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   const [loading, setLoading] = useState(() => readCachedDataSources().length === 0)
   const [projectsLoaded, setProjectsLoaded] = useState(false)
   const [error, setError] = useState('')
@@ -155,17 +189,31 @@ export default function DataSources() {
   const filteredDataSources = useMemo(() => {
     const query = search.trim().toLowerCase()
 
-    if (!query) return dataSources
-
-    return dataSources.filter((source) => {
+    const matchingDataSources = query ? dataSources.filter((source) => {
       const fields = [source.name, source.location, source.project_name, source.source_type_display, source.data_format_display]
       return fields.some((field) => field?.toLowerCase().includes(query))
-    })
+    }) : dataSources
+
+    return sortDataSourcesByRecentActivity(matchingDataSources)
   }, [dataSources, search])
+
+  const pageCount = Math.max(1, Math.ceil(filteredDataSources.length / rowsPerPage))
+  const currentPage = Math.min(page, pageCount - 1)
+  const firstVisibleDataSource = filteredDataSources.length === 0 ? 0 : currentPage * rowsPerPage + 1
+  const lastVisibleDataSource = Math.min(filteredDataSources.length, (currentPage + 1) * rowsPerPage)
+  const paginatedDataSources = filteredDataSources.slice(
+    currentPage * rowsPerPage,
+    currentPage * rowsPerPage + rowsPerPage,
+  )
 
   const summaryCards = useMemo(
     () => {
       const isInitialLoad = loading && dataSources.length === 0
+      // Summary cards always describe the complete source list, independent of search and pagination.
+      const riskCounts = dataSources.reduce((counts, source) => {
+        const riskLevel = getDataSourceRiskLevel(source)
+        return { ...counts, [riskLevel]: counts[riskLevel] + 1 }
+      }, { high: 0, medium: 0, low: 0 })
 
       return [
         {
@@ -176,25 +224,25 @@ export default function DataSources() {
           icon: DatabaseOutlined,
         },
         {
-          title: 'File Sources',
-          value: isInitialLoad ? '-' : dataSources.filter((source) => source.source_type === 'file').length,
-          helper: 'Uploaded or referenced files',
-          color: 'success',
-          icon: FileTextOutlined,
+          title: 'High Risk',
+          value: isInitialLoad ? '-' : riskCounts.high,
+          helper: 'Needs immediate attention',
+          color: 'error',
+          icon: WarningOutlined,
         },
         {
-          title: 'API Sources',
-          value: isInitialLoad ? '-' : dataSources.filter((source) => source.source_type === 'api').length,
-          helper: 'External or internal APIs',
+          title: 'Medium Risk',
+          value: isInitialLoad ? '-' : riskCounts.medium,
+          helper: 'Sources needing review',
           color: 'warning',
-          icon: ApiOutlined,
+          icon: ExclamationCircleOutlined,
         },
         {
-          title: 'Manual Entries',
-          value: isInitialLoad ? '-' : dataSources.filter((source) => source.source_type === 'manual').length,
-          helper: 'Entered directly in the dashboard',
-          color: 'info',
-          icon: DatabaseOutlined,
+          title: 'Low Risk',
+          value: isInitialLoad ? '-' : riskCounts.low,
+          helper: 'No immediate action required',
+          color: 'success',
+          icon: CheckCircleOutlined,
         },
       ]
     },
@@ -252,7 +300,10 @@ export default function DataSources() {
             size="small"
             placeholder="Search data sources..."
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value)
+              setPage(0)
+            }}
             startAdornment={
               <InputAdornment position="start">
                 <SearchOutlined />
@@ -307,7 +358,7 @@ export default function DataSources() {
                 <TableCell sx={{ width: 180 }}>Project</TableCell>
                 <TableCell sx={{ width: 120 }}>Type</TableCell>
                 <TableCell sx={{ width: 120 }}>Format</TableCell>
-                <TableCell sx={{ width: 270 }}>Location / Reference</TableCell>
+                <TableCell sx={{ width: 150 }}>Risk Level</TableCell>
                 <TableCell sx={{ width: 105 }}>Version</TableCell>
                 <TableCell sx={{ width: 150 }}>Last Updated</TableCell>
                 <TableCell align="right" sx={{ width: 180 }}>Actions</TableCell>
@@ -338,7 +389,7 @@ export default function DataSources() {
               )}
 
               {!loading &&
-                filteredDataSources.map((source) => (
+                paginatedDataSources.map((source) => (
                     // Rows open the same preview as the eye action
                     <TableRow
                       key={source.id}
@@ -388,13 +439,10 @@ export default function DataSources() {
                         <Chip size="small" variant="outlined" color="secondary" label={source.data_format_display} />
                       </TableCell>
                       <TableCell>
-                        <Typography
-                          variant="body2"
-                          title={source.location || '-'}
-                          sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        >
-                          {source.location || '-'}
-                        </Typography>
+                        {(() => {
+                          const riskChip = getRiskChip(source)
+                          return <Chip size="small" variant="outlined" color={riskChip.color} label={riskChip.label} />
+                        })()}
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -463,6 +511,48 @@ export default function DataSources() {
             </TableBody>
           </Table>
         </TableContainer>
+        {!loading && filteredDataSources.length > 0 && (
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            sx={{ p: 2, borderTop: 1, borderColor: 'divider', alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Showing {firstVisibleDataSource} to {lastVisibleDataSource} of {filteredDataSources.length} data sources
+            </Typography>
+            <Stack direction="row" spacing={1.5} sx={{ justifyContent: { xs: 'space-between', sm: 'flex-end' }, alignItems: 'center' }}>
+              <IconButton
+                disabled={currentPage === 0}
+                aria-label="Previous page"
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+                sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
+              >
+                <RightOutlined style={{ transform: 'rotate(180deg)' }} />
+              </IconButton>
+              <Button variant="outlined" sx={{ minWidth: 44, bgcolor: 'primary.lighter' }}>{currentPage + 1}</Button>
+              <IconButton
+                disabled={currentPage >= pageCount - 1}
+                aria-label="Next page"
+                onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+                sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
+              >
+                <RightOutlined />
+              </IconButton>
+              <Select
+                size="small"
+                value={rowsPerPage}
+                onChange={(event) => {
+                  setRowsPerPage(Number(event.target.value))
+                  setPage(0)
+                }}
+                sx={{ minWidth: 115 }}
+              >
+                <MenuItem value={5}>5 / page</MenuItem>
+                <MenuItem value={10}>10 / page</MenuItem>
+              </Select>
+            </Stack>
+          </Stack>
+        )}
       </MainCard>
 
       <DatasetPreviewDialog

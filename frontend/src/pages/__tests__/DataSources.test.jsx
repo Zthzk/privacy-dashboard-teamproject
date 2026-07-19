@@ -110,6 +110,72 @@ beforeEach(() => {
 })
 
 describe('DataSources page', () => {
+  test('summarizes data sources by risk level', async () => {
+    getAllDataSources.mockResolvedValue([
+      { ...dataSources[0], id: 1, name: 'High Source', risk_level: 'high' },
+      { ...dataSources[0], id: 2, name: 'Medium Source', risk_level: 'medium' },
+      { ...dataSources[0], id: 3, name: 'Low Source', risk_level: 'low' },
+    ])
+
+    renderDataSources()
+
+    await screen.findByText('High Source')
+    expect(screen.getByText('Total Data Sources').parentElement).toHaveTextContent('3')
+    expect(screen.getByText('High Risk').parentElement).toHaveTextContent('1')
+    expect(screen.getByText('Medium Risk').parentElement).toHaveTextContent('1')
+    expect(screen.getByText('Low Risk').parentElement).toHaveTextContent('1')
+    expect(screen.queryByText('File Sources')).not.toBeInTheDocument()
+    expect(screen.queryByText('API Sources')).not.toBeInTheDocument()
+    expect(screen.queryByText('Manual Entries')).not.toBeInTheDocument()
+  })
+
+  test('shows the most recently edited data source first', async () => {
+    getAllDataSources.mockResolvedValue([
+      { ...dataSources[0], id: 12, name: 'Older Source', updated_at: '2026-05-17T10:00:00Z' },
+      { ...dataSources[0], id: 13, name: 'Recently Edited Source', updated_at: '2026-05-19T10:00:00Z' },
+    ])
+
+    renderDataSources()
+
+    await screen.findByText('Recently Edited Source')
+    const rows = screen.getAllByRole('row')
+    const recentRowIndex = rows.findIndex((row) => within(row).queryByText('Recently Edited Source'))
+    const olderRowIndex = rows.findIndex((row) => within(row).queryByText('Older Source'))
+
+    expect(recentRowIndex).toBeLessThan(olderRowIndex)
+  })
+
+  test('shows risk level instead of location in the data sources table', async () => {
+    renderDataSources()
+
+    const sourceRow = await screen.findByRole('row', { name: /Support Tickets/ })
+
+    expect(screen.getByRole('columnheader', { name: 'Risk Level' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Location / Reference' })).not.toBeInTheDocument()
+    expect(within(sourceRow).getByText('Medium')).toBeInTheDocument()
+    expect(within(sourceRow).queryByText('datasets/support.json')).not.toBeInTheDocument()
+  })
+
+  test('paginates the main data sources table', async () => {
+    const sourceList = Array.from({ length: 12 }, (_, index) => ({
+      ...dataSources[0],
+      id: index + 1,
+      name: `Data Source ${String(index + 1).padStart(2, '0')}`,
+      updated_at: `2026-05-${String(index + 1).padStart(2, '0')}T10:00:00Z`,
+    }))
+    getAllDataSources.mockResolvedValue(sourceList)
+
+    renderDataSources()
+
+    await screen.findByText('Showing 1 to 10 of 12 data sources')
+    expect(screen.queryByText('Data Source 01')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByLabelText('Next page'))
+
+    expect(screen.getByText('Showing 11 to 12 of 12 data sources')).toBeInTheDocument()
+    expect(screen.getByText('Data Source 01')).toBeInTheDocument()
+  })
+
   test('opens dataset preview when clicking a data source row', async () => {
     const user = userEvent.setup()
 

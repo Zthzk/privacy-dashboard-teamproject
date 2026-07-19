@@ -1,7 +1,9 @@
 import json
+from datetime import timedelta
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.data_sources.models import DataSource
 
@@ -13,6 +15,8 @@ def assert_serialized_project(test_case, payload, project):
     test_case.assertEqual(payload["id"], project.id)
     test_case.assertEqual(payload["name"], project.name)
     test_case.assertEqual(payload["description"], project.description)
+    test_case.assertEqual(payload["icon_key"], project.icon_key)
+    test_case.assertEqual(payload["color"], project.color)
     test_case.assertIn("data_sources_count", payload)
     test_case.assertIn("overall_status", payload)
     test_case.assertIn("risk_level", payload)
@@ -30,11 +34,14 @@ class ProjectModelTests(TestCase):
 
         self.assertEqual(str(project), "Privacy Dashboard")
 
-    def test_projects_are_ordered_newest_first(self):
+    def test_projects_are_ordered_by_most_recent_update(self):
         older_project = Project.objects.create(name="Older Project")
         newer_project = Project.objects.create(name="Newer Project")
+        Project.objects.filter(pk=older_project.pk).update(
+            updated_at=timezone.now() + timedelta(minutes=1),
+        )
 
-        self.assertEqual(list(Project.objects.all()), [newer_project, older_project])
+        self.assertEqual(list(Project.objects.all()), [older_project, newer_project])
 
 
 class HealthCheckTests(TestCase):
@@ -78,6 +85,8 @@ class ProjectsApiTests(TestCase):
             {
                 "name": "Privacy Dashboard",
                 "description": "ML project inventory",
+                "icon_key": "health",
+                "color": "error",
             },
         )
 
@@ -86,6 +95,8 @@ class ProjectsApiTests(TestCase):
         project = Project.objects.get()
         payload = response.json()
         assert_serialized_project(self, payload, project)
+        self.assertEqual(project.icon_key, Project.Icon.HEALTH)
+        self.assertEqual(project.color, Project.Color.ERROR)
         self.assertEqual(payload["data_sources_count"], 0)
 
     def test_can_list_projects(self):
@@ -147,7 +158,7 @@ class ProjectsApiTests(TestCase):
         self.assertIn("name", response.json()["errors"])
         self.assertIn("name", response.json())
 
-    def test_can_update_project_name_and_description(self):
+    def test_can_update_project_name_description_and_style(self):
         project = Project.objects.create(name="Old Name")
 
         response = self.patch_json(
@@ -155,6 +166,8 @@ class ProjectsApiTests(TestCase):
             {
                 "name": "New Name",
                 "description": "Updated description",
+                "icon_key": "traffic",
+                "color": "warning",
             },
         )
 
@@ -162,7 +175,23 @@ class ProjectsApiTests(TestCase):
         project.refresh_from_db()
         self.assertEqual(project.name, "New Name")
         self.assertEqual(project.description, "Updated description")
+        self.assertEqual(project.icon_key, Project.Icon.TRAFFIC)
+        self.assertEqual(project.color, Project.Color.WARNING)
         self.assertEqual(response.json()["name"], "New Name")
+        self.assertEqual(response.json()["icon_key"], "traffic")
+        self.assertEqual(response.json()["color"], "warning")
+
+    def test_rejects_unknown_project_style_values(self):
+        project = Project.objects.create(name="Styled Project")
+
+        response = self.patch_json(
+            self.detail_url(project),
+            {"icon_key": "unknown", "color": "purple"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("icon_key", response.json()["errors"])
+        self.assertIn("color", response.json()["errors"])
 
     def test_can_delete_project(self):
         project = Project.objects.create(name="Temporary Project")

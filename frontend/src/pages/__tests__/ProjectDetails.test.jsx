@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { deleteDataSource, getDataSourceVersions } from 'api/dataSources'
-import { getProjectOverview } from 'api/projects'
+import { getProjectOverview, updateProject } from 'api/projects'
 import ProjectDetails from '../ProjectDetails'
 
 vi.mock('api/dataSources')
@@ -176,6 +176,7 @@ beforeEach(() => {
   })
   deleteDataSource.mockResolvedValue()
   getDataSourceVersions.mockResolvedValue(supportTicketVersions)
+  updateProject.mockImplementation(async (_, updateData) => ({ ...project, ...updateData }))
 })
 
 describe('ProjectDetails page', () => {
@@ -199,8 +200,8 @@ describe('ProjectDetails page', () => {
     expect(screen.getByRole('button', { name: /Add Data Source/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Edit Support Tickets' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete Support Tickets' })).toBeInTheDocument()
-    expect(screen.getByText('Top Detected Data Categories')).toBeInTheDocument()
-    expect(screen.getByText('No data categories detected yet.')).toBeInTheDocument()
+    expect(screen.queryByText('Top Detected Data Categories')).not.toBeInTheDocument()
+    expect(screen.queryByText('No data categories detected yet.')).not.toBeInTheDocument()
     expect(screen.queryByText('Contact Data')).not.toBeInTheDocument()
     expect(screen.queryByText('Direct Identifiers')).not.toBeInTheDocument()
     expect(screen.queryByText('Risk Drivers')).not.toBeInTheDocument()
@@ -268,6 +269,28 @@ describe('ProjectDetails page', () => {
     expect(within(dialog).queryByText('Synthetic speech / voice clone disclosure issue')).not.toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'View all findings' })).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Close' })).toBeInTheDocument()
+  })
+
+  test('saves project icon and color through the backend API', async () => {
+    const user = userEvent.setup()
+    renderProjectDetails()
+    await screen.findByText('Support Analytics Project')
+
+    await user.click(screen.getByRole('button', { name: /Edit Project/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Project' })
+    await user.click(within(dialog).getByRole('button', { name: /Health/ }))
+    await user.click(within(dialog).getByRole('button', { name: 'Red' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Save Changes' }))
+
+    await waitFor(() => {
+      expect(updateProject).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          icon_key: 'health',
+          color: 'error',
+        }),
+      )
+    })
   })
 
   test('opens dataset preview when clicking a data source row', async () => {

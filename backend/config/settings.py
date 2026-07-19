@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.projects",
     "apps.data_sources",
     "apps.risk_assessments",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [

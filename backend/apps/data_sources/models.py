@@ -63,8 +63,8 @@ class DataSource(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        # Show the most recently created data sources first by default.
-        ordering = ["-created_at"]
+        # Keep newly created or recently edited data sources at the top.
+        ordering = ["-updated_at", "-created_at", "-id"]
         constraints = [
             # A project cannot contain two data sources with the same name.
             models.UniqueConstraint(
