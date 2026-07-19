@@ -733,7 +733,9 @@ class ComplianceViolationRiskTests(TestCase):
         self.assertEqual(payload["art_9_data"], "possible")
         self.assertTrue(payload["contains_personal_data"])
 
-    def test_license_plate_violation_raises_risk_to_medium(self):
+    def test_single_personal_data_violation_stays_low_but_flags_personal_data(self):
+        # A single weight-1 finding is below the medium threshold (2), so the
+        # risk level stays low while the personal-data flag is still set.
         response = self.post_json({
             "name": "Traffic Camera Feed",
             "source_type": DataSource.SourceType.FILE,
@@ -745,7 +747,7 @@ class ComplianceViolationRiskTests(TestCase):
 
         self.assertEqual(response.status_code, 201)
         payload = response.json()
-        self.assertEqual(payload["risk_level"], "medium")
+        self.assertEqual(payload["risk_level"], "low")
         self.assertTrue(payload["contains_personal_data"])
 
     def test_general_compliance_violation_raises_risk_without_personal_data(self):

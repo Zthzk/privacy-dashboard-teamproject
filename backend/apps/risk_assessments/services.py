@@ -47,8 +47,10 @@ RECOMMENDATIONS_BY_STATUS = {
 # lower-weight non-Art. 9 violations may also produce a high total score.
 VIOLATION_HIGH_THRESHOLD = 3
 
-# Every recognized violation requires at least a medium-risk review.
-VIOLATION_MEDIUM_THRESHOLD = 1
+# A single standard personal-data finding (weight 1) is not enough for medium
+# risk on its own; medium requires either two such findings or one elevated
+# (weight 2) violation.
+VIOLATION_MEDIUM_THRESHOLD = 2
 
 
 def score_compliance_violations(violations):

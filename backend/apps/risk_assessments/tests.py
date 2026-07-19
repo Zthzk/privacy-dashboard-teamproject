@@ -60,14 +60,16 @@ class DataSourceRiskAssessmentServiceTests(TestCase):
         self.assertTrue(assessment["contains_art9_data"])
         self.assertEqual(assessment["art_9_data"], "possible")
 
-    def test_personal_data_violation_sets_personal_data_flag(self):
+    def test_single_personal_data_violation_stays_low_but_flags_personal_data(self):
+        # A single weight-1 finding scores below the medium threshold (2), so the
+        # risk level stays low, but the personal-data flag must still be set.
         data_source = DataSource(
             compliance_violations=["License plates or vehicle identifiers"],
         )
 
         assessment = assess_data_source_risk(data_source)
 
-        self.assertEqual(assessment["risk_level"], "medium")
+        self.assertEqual(assessment["risk_level"], "low")
         self.assertTrue(assessment["contains_personal_data"])
         self.assertFalse(assessment["contains_art9_data"])
 
@@ -271,7 +273,9 @@ class ProjectRiskAssessmentApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["metrics"]["total_data_sources"], 2)
         self.assertEqual(payload["metrics"]["personal_data_sources"], 1)
-        self.assertEqual(payload["metrics"]["medium_risk_sources"], 2)
+        # The license plate (weight 1) now stays low; only the weight-2 Art. 10
+        # completeness finding reaches medium risk.
+        self.assertEqual(payload["metrics"]["medium_risk_sources"], 1)
 
     def test_missing_project_returns_404(self):
         response = self.client.get(
