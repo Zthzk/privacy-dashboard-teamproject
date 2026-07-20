@@ -44,6 +44,7 @@ Open a second terminal:
 
 ```text
 cd frontend
+(npm install)
 npm run dev
 ```
 
